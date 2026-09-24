@@ -1,0 +1,99 @@
+{
+  "application": "teacher-companion",
+  "backupVersion": 1,
+  "createdAt": "2026-09-24T00:00:00.000Z",
+  "data": {
+    "version": 1,
+    "onboardingComplete": true,
+    "settings": {
+      "launchOnStartup": false,
+      "alwaysOnTop": false,
+      "locked": false,
+      "widgetSize": "normal",
+      "opacity": 100,
+      "theme": "dark",
+      "closeBehavior": "tray"
+    },
+    "bells": [
+      { "lessonNumber": 1, "start": "08:30", "end": "09:15" },
+      { "lessonNumber": 2, "start": "09:25", "end": "10:10" },
+      { "lessonNumber": 3, "start": "10:20", "end": "11:05" },
+      { "lessonNumber": 4, "start": "11:25", "end": "12:10" },
+      { "lessonNumber": 5, "start": "12:20", "end": "13:05" }
+    ],
+    "lessons": [
+      {
+        "id": "mon-1",
+        "weekday": 1,
+        "lessonNumber": 1,
+        "className": "7А",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "mon-2",
+        "weekday": 1,
+        "lessonNumber": 2,
+        "className": "8Б",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "tue-2",
+        "weekday": 2,
+        "lessonNumber": 2,
+        "className": "6Б",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "wed-1",
+        "weekday": 3,
+        "lessonNumber": 1,
+        "className": "9А",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "thu-1",
+        "weekday": 4,
+        "lessonNumber": 1,
+        "className": "7В",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "fri-1",
+        "weekday": 5,
+        "lessonNumber": 1,
+        "className": "6А",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "fri-2",
+        "weekday": 5,
+        "lessonNumber": 2,
+        "className": "7Б",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "fri-4",
+        "weekday": 5,
+        "lessonNumber": 4,
+        "className": "5А",
+        "subject": "Информатика",
+        "room": "312"
+      },
+      {
+        "id": "fri-5",
+        "weekday": 5,
+        "lessonNumber": 5,
+        "className": "8В",
+        "subject": "Информатика",
+        "room": "312"
+      }
+    ]
+  }
+}

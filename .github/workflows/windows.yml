@@ -1,0 +1,23 @@
+name: Windows portable build (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portable:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm test
+      - run: npm run tauri build -- --no-bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teacher-companion-windows-x64
+          path: src-tauri/target/release/teacher-companion.exe
+          if-no-files-found: error

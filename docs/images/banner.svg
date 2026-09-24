@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#17251e"/><stop offset="1" stop-color="#101217"/></linearGradient></defs>
+  <rect width="1280" height="360" rx="24" fill="url(#bg)"/>
+  <circle cx="1130" cy="40" r="240" fill="none" stroke="#304b3c"/><circle cx="1130" cy="40" r="180" fill="none" stroke="#304b3c"/>
+  <rect x="65" y="65" width="64" height="64" rx="18" fill="#b4d9c2"/><text x="97" y="108" text-anchor="middle" fill="#183224" font-family="Segoe UI,Arial,sans-serif" font-size="37" font-weight="700">У</text>
+  <text x="155" y="102" fill="#b4d9c2" font-family="Segoe UI,Arial,sans-serif" font-size="16" letter-spacing="4">TEACHER COMPANION</text>
+  <text x="65" y="210" fill="#eef3ef" font-family="Segoe UI,Arial,sans-serif" font-size="58" font-weight="600">Завтра стало понятнее.</text>
+  <text x="68" y="259" fill="#a6b7ab" font-family="Segoe UI,Arial,sans-serif" font-size="23">Ваше расписание — всегда под рукой.</text>
+  <text x="68" y="316" fill="#7e9586" font-family="Segoe UI,Arial,sans-serif" font-size="14" letter-spacing="2">WINDOWS  ·  ЛОКАЛЬНО  ·  БЕЗ РЕГИСТРАЦИИ</text>
+</svg>

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src-tauri/target/
+.npm-cache/
+.tools/
+*.log
+src-tauri/gen/
+coverage/
+editor-check.png

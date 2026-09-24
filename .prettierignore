@@ -1,0 +1,8 @@
+node_modules
+dist
+.npm-cache
+src-tauri/target
+src-tauri/gen
+package-lock.json
+PRD.md
+*.png
