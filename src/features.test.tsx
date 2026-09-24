@@ -58,7 +58,17 @@ describe('координаты', () => {
     { x: -2560, y: 0, width: 2560, height: 1400 },
   ];
   it('первый запуск в правом верхнем углу', () =>
-    expect(safePosition(null, { width: 380, height: 560 }, areas)).toEqual({ x: 1516, y: 24 }));
+    expect(safePosition(null, { width: 380, height: 560 }, areas)).toEqual({ x: 1524, y: 16 }));
+  it('ставит виджет в выбранный угол', () => {
+    const size = { width: 300, height: 400 };
+    expect(safePosition(null, size, areas, 'top-left')).toEqual({ x: 16, y: 16 });
+    expect(safePosition(null, size, areas, 'bottom-right')).toEqual({ x: 1604, y: 624 });
+    expect(safePosition(null, size, areas, 'bottom-left')).toEqual({ x: 16, y: 624 });
+  });
+  it('перетащенная позиция важнее выбранного угла', () =>
+    expect(
+      safePosition({ x: 700, y: 300 }, { width: 300, height: 400 }, areas, 'top-left'),
+    ).toEqual({ x: 700, y: 300 }));
   it('сохраняет положение на мониторе с отрицательными координатами', () =>
     expect(safePosition({ x: -1500, y: 50 }, { width: 380, height: 560 }, areas)).toEqual({
       x: -1500,
@@ -91,7 +101,7 @@ it('показывает время, окно и компактный режим
   vi.useFakeTimers();
   vi.setSystemTime(new Date(2026, 8, 24, 12));
   const props = {
-    data: fixture(),
+    data: { ...fixture(), settings: { ...fixture().settings, widgetSize: 'normal' as const } },
     mode: 'next' as const,
     onMode: vi.fn(),
     onSettings: vi.fn(),

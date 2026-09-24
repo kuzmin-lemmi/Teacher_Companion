@@ -76,4 +76,12 @@ describe('валидация', () => {
     expect(() => decode('{"version":2}')).toThrow();
     expect(() => decode(JSON.stringify({ ...emptyData(), settings: {} }))).toThrow();
   });
+  it('принимает старые копии без угла виджета и проверяет угол', () => {
+    const { widgetCorner: _, ...old } = emptyData().settings;
+    expect(decode(JSON.stringify({ ...emptyData(), settings: old })).settings.widgetCorner).toBe(
+      'top-right',
+    );
+    const wrong = { ...emptyData().settings, widgetCorner: 'center' };
+    expect(() => decode(JSON.stringify({ ...emptyData(), settings: wrong }))).toThrow();
+  });
 });

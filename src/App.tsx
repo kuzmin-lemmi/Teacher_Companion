@@ -124,7 +124,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                 : 'Общее время занятий для всех учебных дней.'}
             </p>
           </div>
-          <span className="badge">Локально · v0.1</span>
+          <span className="badge">Локально · v0.2</span>
         </header>
         {failure ? (
           <section role="alert" className="panel">

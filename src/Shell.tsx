@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { App as ScheduleEditor } from './App';
 import { Backups } from './Backups';
-import { Preferences } from './Preferences';
+import { Preferences, cornerLabels } from './Preferences';
 import { Widget } from './Widget';
 import { emptyData, type AppData, type Settings } from './domain';
 import { getStorage, type Storage } from './storage';
@@ -87,10 +87,12 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
           setStep((value.onboardingComplete ?? value.lessons.length > 0) ? null : 0);
         }
       } catch {
-        if (!cancelled)
+        if (!cancelled) {
           setError(
             'Не удалось загрузить расписание. Исходные данные не изменены. Повторите попытку или восстановите резервную копию.',
           );
+          void showWindow().catch(() => {});
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -225,7 +227,9 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
     }
   }
   const saveSettings = async (value: Settings) => {
-    if (data) await persist({ ...data, settings: value });
+    if (!data) return;
+    if (value.widgetCorner !== data.settings.widgetCorner) await resetPosition();
+    await persist({ ...data, settings: value });
   };
   const commonPreferences = data ? (
     <Preferences
@@ -237,7 +241,9 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
         void resetPosition()
           .then(() => {
             setRevision((r) => r + 1);
-            setNativeError('Позиция сброшена. Виджет появится справа сверху при открытии.');
+            setNativeError(
+              `Позиция сброшена. Виджет вернётся в угол: ${cornerLabels[data.settings.widgetCorner].toLowerCase()}.`,
+            );
           })
           .catch(() => setNativeError('Не удалось сбросить позицию.'));
       }}
@@ -420,7 +426,7 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
                 <section className="panel about">
                   <span className="brand-icon">У</span>
                   <h2>Teacher Companion</h2>
-                  <p>Версия 0.1.0 · Помощник учителя</p>
+                  <p>Версия 0.2.0 · Помощник учителя</p>
                   <p className="muted">
                     Небольшое расписание для повседневной работы. Все данные хранятся локально.
                     Приложение не отправляет расписание на сервер и не требует аккаунта.
@@ -430,7 +436,7 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
                       ? 'Windows-приложение · SQLite'
                       : 'Браузерный предпросмотр · данные этого браузера'}
                   </p>
-                  <p>Поставка: .exe без установщика.</p>
+                  <p>Устанавливается в профиль пользователя, права администратора не нужны.</p>
                   <button onClick={() => guard(() => setStep(0))}>Открыть мастер настройки</button>
                 </section>
               )}

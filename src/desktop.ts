@@ -4,8 +4,9 @@ import { safePosition, type Point } from './geometry';
 export type Surface = 'widget' | 'settings';
 let surface: Surface = 'settings';
 let switching = false;
+let lastPlaced: Point | null = null;
 let queue = Promise.resolve();
-const positionKey = 'teacher-companion-widget-position-v1';
+const positionKey = 'teacher-companion-widget-position-v2';
 function readPosition(): Point | null {
   try {
     const p = JSON.parse(localStorage.getItem(positionKey) ?? 'null');
@@ -67,7 +68,6 @@ export function configureWindow(next: Surface, settings: Settings): Promise<void
       const w = getCurrentWindow();
       switching = true;
       try {
-        if (surface === 'widget' && next !== 'widget') writePosition(await w.outerPosition());
         const changed = surface !== next;
         await w.setMinSize(
           new LogicalSize(next === 'widget' ? 280 : 680, next === 'widget' ? 220 : 500),
@@ -82,7 +82,8 @@ export function configureWindow(next: Surface, settings: Settings): Promise<void
           const ordered = primary
             ? [primary, ...monitors.filter((m) => m.name !== primary.name)]
             : monitors;
-          const saved = surface === 'widget' ? await w.outerPosition() : readPosition();
+          // Сохранённая позиция есть только если учитель сам перетащил виджет.
+          const saved = readPosition();
           const target =
             ordered.find(
               (m) =>
@@ -92,44 +93,33 @@ export function configureWindow(next: Surface, settings: Settings): Promise<void
                 saved.y >= m.workArea.position.y &&
                 saved.y < m.workArea.position.y + m.workArea.size.height,
             ) ?? ordered[0];
-          const height = Math.min(
-            settings.widgetSize === 'compact' ? 420 : 560,
-            target ? target.workArea.size.height / target.scaleFactor - 32 : 560,
-          );
-          const width = settings.widgetSize === 'compact' ? 310 : 380;
+          const width = settings.widgetSize === 'compact' ? 300 : 380;
+          const preferred = settings.widgetSize === 'compact' ? 400 : 560;
           if (target) {
-            const initial = safePosition(
-              saved,
-              {
-                width: Math.round(width * target.scaleFactor),
-                height: Math.round(Math.max(220, height) * target.scaleFactor),
-              },
-              ordered.map((m) => ({
-                ...m.workArea.position,
-                width: m.workArea.size.width,
-                height: m.workArea.size.height,
-              })),
+            const scale = target.scaleFactor;
+            const height = Math.max(
+              220,
+              Math.min(preferred, target.workArea.size.height / scale - 32),
             );
-            await w.setPosition(new PhysicalPosition(initial.x, initial.y));
-            await w.setSize(
-              new PhysicalSize(
-                Math.round(width * target.scaleFactor),
-                Math.round(Math.max(220, height) * target.scaleFactor),
-              ),
-            );
-          } else await w.setSize(new LogicalSize(width, Math.max(220, height)));
-          const size = await w.outerSize();
-          const pos = safePosition(
-            saved,
-            { width: size.width, height: size.height },
-            ordered.map((m) => ({
+            const size = { width: Math.round(width * scale), height: Math.round(height * scale) };
+            const areas = [target, ...ordered.filter((m) => m !== target)].map((m) => ({
               ...m.workArea.position,
               width: m.workArea.size.width,
               height: m.workArea.size.height,
-            })),
-          );
-          await w.setPosition(new PhysicalPosition(pos.x, pos.y));
-          writePosition(pos);
+            }));
+            await w.setSize(new PhysicalSize(size.width, size.height));
+            // Внешний размер учитывает невидимую рамку Windows вокруг окна.
+            const outer = await w.outerSize();
+            const pos = safePosition(
+              saved,
+              { width: outer.width, height: outer.height },
+              areas,
+              settings.widgetCorner,
+              Math.round(16 * scale),
+            );
+            lastPlaced = pos;
+            await w.setPosition(new PhysicalPosition(pos.x, pos.y));
+          } else await w.setSize(new LogicalSize(width, preferred));
         } else if (changed) {
           await w.setSize(new LogicalSize(1180, 800));
           await w.center();
@@ -164,7 +154,10 @@ export async function subscribeDesktop(actions: {
     cleanups.push(await listen<string>('tray-action', (e) => actions.tray(e.payload)));
     cleanups.push(
       await w.onMoved((e) => {
-        if (surface === 'widget' && !switching) {
+        const p = e.payload;
+        const programmatic =
+          lastPlaced && Math.abs(p.x - lastPlaced.x) <= 2 && Math.abs(p.y - lastPlaced.y) <= 2;
+        if (surface === 'widget' && !switching && !programmatic) {
           try {
             writePosition(e.payload);
           } catch {

@@ -1,4 +1,4 @@
-name: Windows portable build (manual)
+name: Windows build (manual)
 on:
   workflow_dispatch:
 permissions:
@@ -15,9 +15,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
       - run: npm test
-      - run: npm run tauri build -- --no-bundle
+      - run: npm run installer
       - uses: actions/upload-artifact@v4
         with:
           name: teacher-companion-windows-x64
-          path: src-tauri/target/release/teacher-companion.exe
+          path: |
+            src-tauri/target/release/teacher-companion.exe
+            src-tauri/target/release/bundle/nsis/*-setup.exe
           if-no-files-found: error

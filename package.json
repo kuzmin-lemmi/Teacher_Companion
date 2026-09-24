@@ -1,6 +1,6 @@
 {
   "name": "teacher-companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,9 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "installer": "tauri build",
+    "portable": "tauri build --no-bundle"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

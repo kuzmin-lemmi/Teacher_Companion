@@ -9,7 +9,8 @@
       "launchOnStartup": false,
       "alwaysOnTop": false,
       "locked": false,
-      "widgetSize": "normal",
+      "widgetSize": "compact",
+      "widgetCorner": "top-right",
       "opacity": 100,
       "theme": "dark",
       "closeBehavior": "tray"

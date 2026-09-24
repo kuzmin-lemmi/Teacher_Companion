@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import type { Settings } from './domain';
+import type { Settings, WidgetCorner } from './domain';
+export const cornerLabels: Record<WidgetCorner, string> = {
+  'top-right': 'Справа сверху',
+  'top-left': 'Слева сверху',
+  'bottom-right': 'Справа снизу',
+  'bottom-left': 'Слева снизу',
+};
 export function Preferences({
   settings,
   onSave,
@@ -71,6 +77,19 @@ export function Preferences({
                 <option value="compact">Компактный — номера и классы</option>
               </select>
             </label>
+            <label>
+              Положение на экране
+              <select
+                value={draft.widgetCorner}
+                onChange={(e) => update({ widgetCorner: e.target.value as WidgetCorner })}
+              >
+                {Object.entries(cornerLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <label className="range-label">
             Непрозрачность фона: {draft.opacity}%
@@ -123,7 +142,7 @@ export function Preferences({
               </select>
             </label>
             <button className="text-button" onClick={onResetPosition}>
-              Вернуть виджет в правый верхний угол
+              Вернуть виджет в угол: {cornerLabels[settings.widgetCorner].toLowerCase()}
             </button>
           </section>
         )}
@@ -145,8 +164,8 @@ export function Preferences({
             />
           </label>
           <p className="hint">
-            Для автозапуска храните .exe в постоянной папке. После переноса выключите и снова
-            включите эту настройку.
+            Если вы запускаете переносной .exe, храните его в постоянной папке. После переноса
+            выключите и снова включите эту настройку.
           </p>
         </section>
       </fieldset>

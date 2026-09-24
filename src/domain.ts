@@ -9,11 +9,14 @@ export type Lesson = {
   room: string;
   customTime?: { start: string; end: string };
 };
+export const widgetCorners = ['top-right', 'top-left', 'bottom-right', 'bottom-left'] as const;
+export type WidgetCorner = (typeof widgetCorners)[number];
 export type Settings = {
   launchOnStartup: boolean;
   alwaysOnTop: boolean;
   locked: boolean;
   widgetSize: 'compact' | 'normal';
+  widgetCorner: WidgetCorner;
   opacity: number;
   theme: 'system' | 'light' | 'dark';
   closeBehavior: 'tray' | 'exit';
@@ -34,7 +37,8 @@ export const emptyData = (): AppData => ({
     launchOnStartup: false,
     alwaysOnTop: false,
     locked: false,
-    widgetSize: 'normal',
+    widgetSize: 'compact',
+    widgetCorner: 'top-right',
     opacity: 100,
     theme: 'dark',
     closeBehavior: 'tray',
@@ -133,6 +137,8 @@ export function decode(raw: string): AppData {
   )
     throw new Error('Неподдерживаемый формат данных.');
   const s = data.settings;
+  // Копии до версии 0.2 не содержат угла виджета.
+  if (s && typeof s === 'object' && s.widgetCorner === undefined) s.widgetCorner = 'top-right';
   if (
     data.lessons.length > 100 ||
     data.bells.length > 20 ||
@@ -142,6 +148,7 @@ export function decode(raw: string): AppData {
   if (
     ![s.launchOnStartup, s.alwaysOnTop, s.locked].every((v) => typeof v === 'boolean') ||
     !['compact', 'normal'].includes(s.widgetSize) ||
+    !widgetCorners.includes(s.widgetCorner) ||
     !['system', 'light', 'dark'].includes(s.theme) ||
     !['tray', 'exit'].includes(s.closeBehavior) ||
     !Number.isFinite(s.opacity) ||
