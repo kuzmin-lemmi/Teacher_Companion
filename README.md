@@ -7,6 +7,7 @@
 Расписание ближайшего учебного дня прямо на рабочем столе.
 
 [![Checks](https://github.com/kuzmin-lemmi/Teacher_Companion/actions/workflows/check.yml/badge.svg)](https://github.com/kuzmin-lemmi/Teacher_Companion/actions/workflows/check.yml)
+[![Release](https://img.shields.io/github/v/release/kuzmin-lemmi/Teacher_Companion?label=стабильная%20версия&color=B4D9C2)](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
@@ -68,7 +69,9 @@ _На снимках — демонстрационное расписание, 
 
 ## Текущий статус
 
-**Этапы 1–6 реализованы**, приложение собирается в установщик. На Windows 11 проверены установка, запуск, единственный экземпляр, создание базы SQLite и положение виджета в выбранном углу. Трей, автозапуск, несколько мониторов и разные масштабы экрана ещё нужно пройти по [списку проверок](docs/WINDOWS-CHECKLIST.md).
+**Версия 0.2.0 готова к повседневному использованию.** Этапы 1–6 завершены, приложение собрано и прошло ручную приёмку на Windows: установка и обновление, хранение расписания, виджет и его положение, трей, автозапуск, темы, резервные копии и работа без интернета. Автоматические тесты и сборка также проходят успешно.
+
+Скачать можно со [страницы последнего релиза](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest). Для обычной установки выбирайте `TeacherCompanion-Setup.exe`, для запуска без установки — `TeacherCompanion-Portable.exe`.
 
 ## Быстрый старт
 

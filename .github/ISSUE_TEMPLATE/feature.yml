@@ -1,0 +1,22 @@
+name: Предложить улучшение
+description: Идея, которая упростит ежедневную работу учителя
+title: '[Идея]: '
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: situation
+    attributes:
+      label: Какую ситуацию нужно улучшить?
+      description: Опишите повседневную задачу учителя, а не только желаемую кнопку.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Как должен выглядеть результат?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Как вы решаете это сейчас?

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Инструкция по использованию
+    url: https://github.com/kuzmin-lemmi/Teacher_Companion/blob/main/docs/GUIDE.md
+    about: Установка, первый запуск, расписание, настройки и резервные копии

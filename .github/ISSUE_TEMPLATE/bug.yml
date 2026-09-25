@@ -1,0 +1,55 @@
+name: Сообщить об ошибке
+description: Расскажите, что произошло в Помощнике учителя
+title: '[Ошибка]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: Спасибо, что помогаете сделать приложение надёжнее. Не прикладывайте настоящее расписание, если в нём есть личные данные.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Что произошло?
+      description: Опишите результат и что вы ожидали увидеть.
+      placeholder: После нажатия… я ожидал…, но…
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить?
+      placeholder: |
+        1. Открыть…
+        2. Нажать…
+        3. Увидеть…
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия приложения
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Версия Windows и масштаб экрана
+      placeholder: Windows 11, 1920×1080, 125%
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Вариант запуска
+      options:
+        - Установщик
+        - Переносной EXE
+        - Браузерный предпросмотр
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Дополнительные сведения
+      description: Можно приложить снимок экрана без личных данных.
