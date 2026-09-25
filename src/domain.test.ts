@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { emptyData, getNextSchoolDay, gaps, validate, decode, timeOf, type Lesson } from './domain';
+import {
+  autoDayMode,
+  emptyData,
+  getNextSchoolDay,
+  gaps,
+  validate,
+  decode,
+  timeOf,
+  type Lesson,
+} from './domain';
 const lesson = (weekday = 1, lessonNumber = 1): Lesson => ({
   id: `${weekday}-${lessonNumber}`,
   weekday,
@@ -18,6 +27,38 @@ describe('следующий учебный день', () => {
     expect(getNextSchoolDay([lesson()], new Date(2026, 11, 31))?.getFullYear()).toBe(2027));
   it('игнорирует случайные субботние записи', () =>
     expect(getNextSchoolDay([lesson(6)])).toBeNull());
+});
+describe('автоматический выбор дня', () => {
+  const data = {
+    lessons: [lesson(5, 1), lesson(5, 3)],
+    bells: [
+      { lessonNumber: 1, start: '08:30', end: '09:15' },
+      { lessonNumber: 3, start: '10:20', end: '11:05' },
+    ],
+  };
+  it('утром и во время уроков показывает сегодня', () => {
+    expect(autoDayMode(data, new Date(2026, 8, 25, 7))).toBe('today');
+    expect(autoDayMode(data, new Date(2026, 8, 25, 10, 30))).toBe('today');
+  });
+  it('после последнего урока переключается на следующий день', () =>
+    expect(autoDayMode(data, new Date(2026, 8, 25, 11, 5))).toBe('next'));
+  it('в день без уроков показывает следующий', () =>
+    expect(autoDayMode(data, new Date(2026, 8, 24, 8))).toBe('next'));
+  it('учитывает индивидуальное время последнего урока', () =>
+    expect(
+      autoDayMode(
+        {
+          ...data,
+          lessons: [
+            ...data.lessons,
+            { ...lesson(5, 4), customTime: { start: '12:00', end: '12:45' } },
+          ],
+        },
+        new Date(2026, 8, 25, 12, 10),
+      ),
+    ).toBe('today'));
+  it('без известного времени показывает следующий день', () =>
+    expect(autoDayMode({ ...data, bells: [] }, new Date(2026, 8, 25, 7))).toBe('next'));
 });
 it('находит только внутренние пропущенные номера', () =>
   expect(gaps([lesson(1, 5), lesson(1, 2), lesson(1, 4)])).toEqual([3]));

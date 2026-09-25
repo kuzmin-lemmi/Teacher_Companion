@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import { App as ScheduleEditor } from './App';
 import { Backups } from './Backups';
+import { ConfirmDialog } from './ConfirmDialog';
+import { Onboarding } from './Onboarding';
 import { Preferences, cornerLabels } from './Preferences';
+import { SettingsLayout, type SettingsPage } from './SettingsLayout';
 import { Widget } from './Widget';
-import { emptyData, type AppData, type Settings } from './domain';
+import { dateKey } from './calendar';
+import { emptyData, type AppData, type DayMode, type Settings } from './domain';
 import { getStorage, type Storage } from './storage';
 import {
   configureWindow,
@@ -16,9 +19,8 @@ import {
   subscribeDesktop,
   syncAutostart,
 } from './desktop';
-import { useTheme } from './hooks';
-type Page = 'widget' | 'schedule' | 'preferences' | 'backups' | 'about';
-const steps = ['Добро пожаловать', 'Звонки', 'Расписание', 'Внешний вид', 'Готово'];
+import { useTheme, useToday } from './hooks';
+type Page = 'widget' | SettingsPage;
 export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
   const [data, setData] = useState<AppData | null>(null);
   const [page, setPage] = useState<Page>('widget');
@@ -29,7 +31,8 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
   const [step, setStep] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<'today' | 'next'>('next');
+  // Ручной выбор дня действует до конца суток, затем виджет снова выбирает день сам.
+  const [dayChoice, setDayChoice] = useState<{ mode: DayMode; day: string } | null>(null);
   const [hidden, setHidden] = useState(false);
   const [preview, setPreview] = useState<Settings | null>(null);
   const [widgetHeight, setWidgetHeight] = useState(0);
@@ -40,6 +43,9 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
   const dataRef = useRef(data);
   dataRef.current = data;
   const saving = useRef(false);
+  const today = useToday();
+  const mode = dayChoice?.day === dateKey(today) ? dayChoice.mode : 'auto';
+  const chooseDay = (value: DayMode) => setDayChoice({ mode: value, day: dateKey(new Date()) });
   useTheme(preview?.theme ?? data?.settings.theme ?? 'dark');
   const persist = useCallback(
     async (next: AppData) => {
@@ -183,7 +189,7 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
       guard(() => {
         setPage('widget');
         setHidden(false);
-        if (action === 'today' || action === 'next') setMode(action);
+        if (action === 'today' || action === 'next') chooseDay(action);
         setRevision((r) => r + 1);
       });
     },
@@ -263,196 +269,91 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
     setStep(null);
     setPage('backups');
   };
+  let content: ReactNode;
+  if (loading)
+    content = (
+      <div className="loading-screen" role="status">
+        Загружаем ваше расписание…
+      </div>
+    );
+  else if (!data)
+    content = (
+      <div className="recovery-screen">
+        <h1>Расписание недоступно</h1>
+        <p role="alert">{error}</p>
+        <button onClick={() => setAttempt((a) => a + 1)}>Повторить загрузку</button>
+        <Backups data={null} onRestore={restore} />
+      </div>
+    );
+  else if (hidden)
+    content = (
+      <div className="preview-hidden">
+        <span className="brand-icon">У</span>
+        <h1>Виджет скрыт</h1>
+        <p>В Windows его можно открыть через значок в системном трее.</p>
+        <button className="primary" onClick={() => setHidden(false)}>
+          Показать снова
+        </button>
+      </div>
+    );
+  else if (step !== null)
+    content = (
+      <Onboarding
+        step={step}
+        data={data}
+        busy={busy}
+        dirty={dirty}
+        editorStorage={editorStorage}
+        preferences={commonPreferences}
+        onDirty={setDirty}
+        onStep={(next) => guard(() => setStep(next))}
+        onFinish={() => void finish()}
+      />
+    );
+  else if (page === 'widget')
+    content = (
+      <div className={`widget-stage ${isTauri() ? 'native' : 'browser'}`}>
+        <Widget
+          data={data}
+          mode={mode}
+          onMode={chooseDay}
+          onSettings={() => navigate('schedule')}
+          onClose={() => void close()}
+          onLock={() => {
+            if (!busy)
+              void persist({
+                ...data,
+                settings: { ...data.settings, locked: !data.settings.locked },
+              }).catch((e) => setNativeError(e.message));
+          }}
+          onMeasure={setWidgetHeight}
+          onDrag={() =>
+            void startDrag(data.settings.locked).catch(() =>
+              setNativeError('Не удалось переместить окно.'),
+            )
+          }
+        />
+        {!isTauri() && (
+          <p className="preview-caption">Предпросмотр виджета · функции окна доступны в Windows</p>
+        )}
+      </div>
+    );
+  else
+    content = (
+      <SettingsLayout
+        page={page}
+        data={data}
+        editorStorage={editorStorage}
+        preferences={commonPreferences}
+        onDirty={setDirty}
+        onNavigate={navigate}
+        onRestore={restore}
+        onOpenWizard={() => guard(() => setStep(0))}
+      />
+    );
   return (
     <>
-      {loading ? (
-        <div className="loading-screen" role="status">
-          Загружаем ваше расписание…
-        </div>
-      ) : !data ? (
-        <div className="recovery-screen">
-          <h1>Расписание недоступно</h1>
-          <p role="alert">{error}</p>
-          <button onClick={() => setAttempt((a) => a + 1)}>Повторить загрузку</button>
-          <Backups data={null} onRestore={restore} />
-        </div>
-      ) : hidden ? (
-        <div className="preview-hidden">
-          <span className="brand-icon">У</span>
-          <h1>Виджет скрыт</h1>
-          <p>В Windows его можно открыть через значок в системном трее.</p>
-          <button className="primary" onClick={() => setHidden(false)}>
-            Показать снова
-          </button>
-        </div>
-      ) : step !== null ? (
-        <div className="onboarding">
-          <header className="onboarding-header">
-            <span className="brand-icon">У</span>
-            <div>
-              <p className="eyebrow">ПЕРВЫЙ ЗАПУСК</p>
-              <h1>Настроим ваш рабочий день</h1>
-            </div>
-            <span className="badge">Шаг {step + 1} из 5</span>
-          </header>
-          <ol className="steps">
-            {steps.map((label, i) => (
-              <li key={label} aria-current={step === i ? 'step' : undefined}>
-                <span>{i + 1}</span>
-                {label}
-              </li>
-            ))}
-          </ol>
-          {step === 0 ? (
-            <section className="welcome panel">
-              <p className="eyebrow">МЕНЬШЕ ЗАБОТ О ЗАВТРАШНЕМ ДНЕ</p>
-              <h2>
-                Ваше расписание.
-                <br />
-                Всегда под рукой.
-              </h2>
-              <p>
-                Один раз заполните неделю — помощник покажет ближайший день с занятиями. Без
-                регистрации, интернета и лишних действий.
-              </p>
-              <div className="welcome-features">
-                <span>01 · Настройте звонки</span>
-                <span>02 · Добавьте классы</span>
-                <span>03 · Выберите внешний вид</span>
-              </div>
-            </section>
-          ) : step === 1 || step === 2 ? (
-            <div className="embedded-editor">
-              <ScheduleEditor
-                key={step}
-                initialTab={step === 1 ? 'bells' : 'schedule'}
-                storage={editorStorage}
-                onDirty={setDirty}
-              />
-            </div>
-          ) : step === 3 ? (
-            commonPreferences
-          ) : (
-            <section className="welcome panel">
-              <p className="eyebrow">ВСЁ ГОТОВО</p>
-              <h2>Завтра стало понятнее.</h2>
-              <p>
-                {data.lessons.length
-                  ? 'Расписание сохранено. Откройте виджет и продолжайте работать как обычно.'
-                  : 'Можно начать с пустого виджета и добавить уроки позднее в настройках.'}
-              </p>
-            </section>
-          )}
-          <footer className="onboarding-footer">
-            <button disabled={step === 0 || busy} onClick={() => guard(() => setStep(step - 1))}>
-              Назад
-            </button>
-            <span>
-              {dirty
-                ? 'Сохраните изменения перед продолжением.'
-                : 'Все настройки можно изменить позже.'}
-            </span>
-            <button
-              className="primary"
-              disabled={dirty || busy}
-              onClick={() => {
-                if (step === 4) void finish();
-                else setStep(step + 1);
-              }}
-            >
-              {step === 4 ? 'Открыть виджет' : 'Продолжить'}
-            </button>
-          </footer>
-        </div>
-      ) : page === 'widget' ? (
-        <div className={`widget-stage ${isTauri() ? 'native' : 'browser'}`}>
-          <Widget
-            data={data}
-            mode={mode}
-            onMode={setMode}
-            onSettings={() => navigate('schedule')}
-            onClose={() => void close()}
-            onLock={() => {
-              if (!busy)
-                void persist({
-                  ...data,
-                  settings: { ...data.settings, locked: !data.settings.locked },
-                }).catch((e) => setNativeError(e.message));
-            }}
-            onMeasure={setWidgetHeight}
-            onDrag={() =>
-              void startDrag(data.settings.locked).catch(() =>
-                setNativeError('Не удалось переместить окно.'),
-              )
-            }
-          />
-          {!isTauri() && (
-            <p className="preview-caption">
-              Предпросмотр виджета · функции окна доступны в Windows
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="settings-root">
-          <div className="settings-toolbar">
-            <button onClick={() => navigate('widget')}>← К виджету</button>
-            <nav aria-label="Разделы приложения">
-              {(
-                [
-                  ['schedule', 'Расписание и звонки'],
-                  ['preferences', 'Внешний вид и окно'],
-                  ['backups', 'Резервные копии'],
-                  ['about', 'О программе'],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  aria-current={page === id ? 'page' : undefined}
-                  onClick={() => navigate(id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
-          </div>
-          {page === 'schedule' ? (
-            <ScheduleEditor storage={editorStorage} onDirty={setDirty} />
-          ) : (
-            <main className="settings-content">
-              <p className="eyebrow">ПОМОЩНИК УЧИТЕЛЯ</p>
-              <h1>
-                {page === 'preferences'
-                  ? 'Настройки приложения'
-                  : page === 'backups'
-                    ? 'Ваши данные'
-                    : 'О программе'}
-              </h1>
-              {page === 'preferences' ? (
-                commonPreferences
-              ) : page === 'backups' ? (
-                <Backups data={data} onRestore={restore} />
-              ) : (
-                <section className="panel about">
-                  <span className="brand-icon">У</span>
-                  <h2>Teacher Companion</h2>
-                  <p>Версия 0.2.0 · Помощник учителя</p>
-                  <p className="muted">
-                    Небольшое расписание для повседневной работы. Все данные хранятся локально.
-                    Приложение не отправляет расписание на сервер и не требует аккаунта.
-                  </p>
-                  <p className="hint">
-                    {isTauri()
-                      ? 'Windows-приложение · SQLite'
-                      : 'Браузерный предпросмотр · данные этого браузера'}
-                  </p>
-                  <p>Устанавливается в профиль пользователя, права администратора не нужны.</p>
-                  <button onClick={() => guard(() => setStep(0))}>Открыть мастер настройки</button>
-                </section>
-              )}
-            </main>
-          )}
-        </div>
-      )}
+      {content}
       {nativeError && (
         <div className="app-notice" role="status">
           <span>{nativeError}</span>
@@ -462,47 +363,15 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
         </div>
       )}
       {confirmation && (
-        <div className="modal-backdrop">
-          <section
-            className="confirm-dialog"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="confirm-title"
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setConfirmation(null);
-              if (event.key === 'Tab') {
-                const buttons = event.currentTarget.querySelectorAll('button');
-                const first = buttons[0],
-                  last = buttons[buttons.length - 1];
-                if (event.shiftKey && document.activeElement === first) {
-                  event.preventDefault();
-                  last.focus();
-                } else if (!event.shiftKey && document.activeElement === last) {
-                  event.preventDefault();
-                  first.focus();
-                }
-              }
-            }}
-          >
-            <h2 id="confirm-title">Несохранённые изменения</h2>
-            <p>{confirmation.message}</p>
-            <div>
-              <button autoFocus onClick={() => setConfirmation(null)}>
-                Остаться
-              </button>
-              <button
-                className="primary"
-                onClick={() => {
-                  const action = confirmation.action;
-                  setConfirmation(null);
-                  action();
-                }}
-              >
-                Выйти без сохранения
-              </button>
-            </div>
-          </section>
-        </div>
+        <ConfirmDialog
+          message={confirmation.message}
+          onCancel={() => setConfirmation(null)}
+          onConfirm={() => {
+            const action = confirmation.action;
+            setConfirmation(null);
+            action();
+          }}
+        />
       )}
     </>
   );

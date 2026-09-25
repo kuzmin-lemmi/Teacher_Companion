@@ -1,11 +1,20 @@
 import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { getNextSchoolDay, lessonsForDay, timeOf, type AppData, type Lesson } from './domain';
+import {
+  autoDayMode,
+  getNextSchoolDay,
+  lessonsForDay,
+  timeOf,
+  type AppData,
+  type DayMode,
+  type Lesson,
+} from './domain';
 import { lessonCount } from './calendar';
 import { useClock } from './hooks';
 type Props = {
   data: AppData;
-  mode: 'today' | 'next';
-  onMode: (mode: 'today' | 'next') => void;
+  /** `auto` — сегодня до конца последнего урока, потом следующий учебный день. */
+  mode: DayMode | 'auto';
+  onMode: (mode: DayMode) => void;
   onSettings: () => void;
   onClose: () => void;
   onLock: () => void;
@@ -66,7 +75,8 @@ export function Widget({
 }: Props) {
   const now = useClock();
   const next = getNextSchoolDay(data.lessons, now);
-  const date = mode === 'today' ? now : next;
+  const shown = mode === 'auto' ? autoDayMode(data, now) : mode;
+  const date = shown === 'today' ? now : next;
   const lessons = date ? lessonsForDay(data.lessons, date.getDay()) : [];
   const compact = data.settings.widgetSize === 'compact';
   const { locked } = data.settings;
@@ -81,7 +91,7 @@ export function Widget({
       ? 'Завтра'
       : capitalize(weekdayName.format(next));
   const subtitle =
-    mode === 'today'
+    shown === 'today'
       ? `Сегодня, ${dayMonth.format(now)}`
       : date
         ? `${isNextDay(now, date) ? 'Завтра, ' : ''}${dayMonth.format(date)}`
@@ -156,17 +166,17 @@ export function Widget({
       <div ref={list} className="widget-lessons">
         {!lessons.length ? (
           <div className="widget-empty">
-            <h2>{mode === 'today' ? 'Сегодня занятий нет' : 'Добавьте первые уроки'}</h2>
+            <h2>{shown === 'today' ? 'Сегодня занятий нет' : 'Добавьте первые уроки'}</h2>
             <p>
-              {mode === 'today'
+              {shown === 'today'
                 ? 'Можно посмотреть следующий учебный день.'
                 : 'Заполните неделю — расписание всегда будет под рукой.'}
             </p>
             <button
               className="secondary"
-              onClick={mode === 'today' ? () => onMode('next') : onSettings}
+              onClick={shown === 'today' ? () => onMode('next') : onSettings}
             >
-              {mode === 'today' ? 'Следующий учебный день' : 'Настроить расписание'}
+              {shown === 'today' ? 'Следующий учебный день' : 'Настроить расписание'}
             </button>
           </div>
         ) : (
@@ -185,7 +195,7 @@ export function Widget({
             const { lesson } = row;
             const time = timeOf(lesson, data.bells);
             const state =
-              mode !== 'today' || !time
+              shown !== 'today' || !time
                 ? ''
                 : clock >= time.end
                   ? 'past'
@@ -217,10 +227,10 @@ export function Widget({
       <div className="widget-bottom">
         {!compact && <span className="widget-meta">{meta}</span>}
         <div className="widget-switch" role="group" aria-label="Показываемый день">
-          <button aria-pressed={mode === 'today'} onClick={() => onMode('today')}>
+          <button aria-pressed={shown === 'today'} onClick={() => onMode('today')}>
             Сегодня
           </button>
-          <button aria-pressed={mode === 'next'} onClick={() => onMode('next')}>
+          <button aria-pressed={shown === 'next'} onClick={() => onMode('next')}>
             {nextLabel}
           </button>
         </div>

@@ -156,6 +156,27 @@ it('выделяет текущий урок и выносит общий пре
   expect(current.getAttribute('aria-current')).toBe('time');
   expect(screen.getByText('6А').closest('.widget-row')!.className).toContain('past');
 });
+it('сам выбирает сегодня или следующий день, ручной выбор действует до конца суток', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 8, 25, 10, 30));
+  const user = userEvent.setup();
+  const data = fixture();
+  render(<Shell storage={{ load: async () => data, save: async () => {} }} />);
+  await screen.findByText('Сегодня, 25 сентября');
+  expect(screen.getByRole('button', { name: 'Сегодня' }).getAttribute('aria-pressed')).toBe('true');
+  act(() => {
+    vi.setSystemTime(new Date(2026, 8, 25, 12));
+    window.dispatchEvent(new Event('focus'));
+  });
+  await screen.findByText('2 октября');
+  await user.click(screen.getByRole('button', { name: 'Сегодня' }));
+  await screen.findByText('Сегодня, 25 сентября');
+  act(() => {
+    vi.setSystemTime(new Date(2026, 9, 2, 12));
+    window.dispatchEvent(new Event('focus'));
+  });
+  await screen.findByText('9 октября');
+});
 it('проходит первый запуск и запоминает завершение', async () => {
   const user = userEvent.setup();
   let saved = emptyData();

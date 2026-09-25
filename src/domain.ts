@@ -64,6 +64,15 @@ export function getNextSchoolDay(lessons: Lesson[], today = new Date()): Date | 
   }
   return null;
 }
+export type DayMode = 'today' | 'next';
+/** Сегодня — пока не закончился последний урок с известным временем, затем следующий учебный день. */
+export function autoDayMode(data: Pick<AppData, 'lessons' | 'bells'>, now: Date): DayMode {
+  const clock = now.toTimeString().slice(0, 5);
+  const ends = lessonsForDay(data.lessons, now.getDay())
+    .map((l) => timeOf(l, data.bells)?.end)
+    .filter((end): end is string => !!end);
+  return ends.some((end) => clock < end) ? 'today' : 'next';
+}
 export function gaps(lessons: Lesson[]): number[] {
   const sorted = [...lessons].sort((a, b) => a.lessonNumber - b.lessonNumber);
   if (!sorted.length) return [];
