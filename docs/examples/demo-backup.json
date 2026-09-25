@@ -1,7 +1,7 @@
 {
   "application": "teacher-companion",
   "backupVersion": 1,
-  "createdAt": "2026-09-24T00:00:00.000Z",
+  "createdAt": "2026-09-25T00:00:00.000Z",
   "data": {
     "version": 1,
     "onboardingComplete": true,
@@ -9,91 +9,241 @@
       "launchOnStartup": false,
       "alwaysOnTop": false,
       "locked": false,
-      "widgetSize": "compact",
+      "widgetSize": "normal",
       "widgetCorner": "top-right",
       "opacity": 100,
       "theme": "dark",
       "closeBehavior": "tray"
     },
     "bells": [
-      { "lessonNumber": 1, "start": "08:30", "end": "09:15" },
-      { "lessonNumber": 2, "start": "09:25", "end": "10:10" },
-      { "lessonNumber": 3, "start": "10:20", "end": "11:05" },
-      { "lessonNumber": 4, "start": "11:25", "end": "12:10" },
-      { "lessonNumber": 5, "start": "12:20", "end": "13:05" }
+      {
+        "lessonNumber": 1,
+        "start": "08:30",
+        "end": "09:15"
+      },
+      {
+        "lessonNumber": 2,
+        "start": "09:25",
+        "end": "10:10"
+      },
+      {
+        "lessonNumber": 3,
+        "start": "10:30",
+        "end": "11:15"
+      },
+      {
+        "lessonNumber": 4,
+        "start": "11:35",
+        "end": "12:20"
+      },
+      {
+        "lessonNumber": 5,
+        "start": "12:30",
+        "end": "13:15"
+      },
+      {
+        "lessonNumber": 6,
+        "start": "13:25",
+        "end": "14:10"
+      },
+      {
+        "lessonNumber": 7,
+        "start": "14:20",
+        "end": "15:05"
+      }
     ],
     "lessons": [
       {
         "id": "mon-1",
         "weekday": 1,
         "lessonNumber": 1,
-        "className": "7А",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "5А",
+        "subject": "Математика",
+        "room": "214"
       },
       {
         "id": "mon-2",
         "weekday": 1,
         "lessonNumber": 2,
-        "className": "8Б",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "5Б",
+        "subject": "Математика",
+        "room": "214"
+      },
+      {
+        "id": "mon-3",
+        "weekday": 1,
+        "lessonNumber": 3,
+        "className": "7А",
+        "subject": "Алгебра",
+        "room": "214"
+      },
+      {
+        "id": "mon-5",
+        "weekday": 1,
+        "lessonNumber": 5,
+        "className": "8В",
+        "subject": "Геометрия",
+        "room": "214"
+      },
+      {
+        "id": "mon-6",
+        "weekday": 1,
+        "lessonNumber": 6,
+        "className": "7А",
+        "subject": "Геометрия",
+        "room": "214"
       },
       {
         "id": "tue-2",
         "weekday": 2,
         "lessonNumber": 2,
-        "className": "6Б",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "9Б",
+        "subject": "Алгебра",
+        "room": "214"
+      },
+      {
+        "id": "tue-3",
+        "weekday": 2,
+        "lessonNumber": 3,
+        "className": "9Б",
+        "subject": "Геометрия",
+        "room": "214"
+      },
+      {
+        "id": "tue-4",
+        "weekday": 2,
+        "lessonNumber": 4,
+        "className": "5А",
+        "subject": "Математика",
+        "room": "214"
+      },
+      {
+        "id": "tue-5",
+        "weekday": 2,
+        "lessonNumber": 5,
+        "className": "6В",
+        "subject": "Математика",
+        "room": "301"
       },
       {
         "id": "wed-1",
         "weekday": 3,
         "lessonNumber": 1,
-        "className": "9А",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "5Б",
+        "subject": "Математика",
+        "room": "214"
+      },
+      {
+        "id": "wed-2",
+        "weekday": 3,
+        "lessonNumber": 2,
+        "className": "7А",
+        "subject": "Алгебра",
+        "room": "214"
+      },
+      {
+        "id": "wed-3",
+        "weekday": 3,
+        "lessonNumber": 3,
+        "className": "8В",
+        "subject": "Алгебра",
+        "room": "214"
+      },
+      {
+        "id": "wed-5",
+        "weekday": 3,
+        "lessonNumber": 5,
+        "className": "11А",
+        "subject": "Алгебра",
+        "room": "214"
+      },
+      {
+        "id": "wed-6",
+        "weekday": 3,
+        "lessonNumber": 6,
+        "className": "11А",
+        "subject": "Геометрия",
+        "room": "214"
       },
       {
         "id": "thu-1",
         "weekday": 4,
         "lessonNumber": 1,
-        "className": "7В",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "6В",
+        "subject": "Математика",
+        "room": "214"
+      },
+      {
+        "id": "thu-2",
+        "weekday": 4,
+        "lessonNumber": 2,
+        "className": "5А",
+        "subject": "Математика",
+        "room": "214"
+      },
+      {
+        "id": "thu-3",
+        "weekday": 4,
+        "lessonNumber": 3,
+        "className": "9Б",
+        "subject": "Алгебра",
+        "room": "214"
+      },
+      {
+        "id": "thu-4",
+        "weekday": 4,
+        "lessonNumber": 4,
+        "className": "7А",
+        "subject": "Алгебра",
+        "room": "214"
+      },
+      {
+        "id": "thu-6",
+        "weekday": 4,
+        "lessonNumber": 6,
+        "className": "8В",
+        "subject": "Геометрия",
+        "room": "214"
       },
       {
         "id": "fri-1",
         "weekday": 5,
         "lessonNumber": 1,
-        "className": "6А",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "5Б",
+        "subject": "Математика",
+        "room": "214"
       },
       {
         "id": "fri-2",
         "weekday": 5,
         "lessonNumber": 2,
-        "className": "7Б",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "11А",
+        "subject": "Алгебра",
+        "room": "214"
       },
       {
-        "id": "fri-4",
+        "id": "fri-3",
         "weekday": 5,
-        "lessonNumber": 4,
-        "className": "5А",
-        "subject": "Информатика",
-        "room": "312"
+        "lessonNumber": 3,
+        "className": "11А",
+        "subject": "Алгебра",
+        "room": "214"
       },
       {
         "id": "fri-5",
         "weekday": 5,
         "lessonNumber": 5,
-        "className": "8В",
-        "subject": "Информатика",
-        "room": "312"
+        "className": "9Б",
+        "subject": "Геометрия",
+        "room": "214"
+      },
+      {
+        "id": "fri-6",
+        "weekday": 5,
+        "lessonNumber": 6,
+        "className": "6В",
+        "subject": "Математика",
+        "room": "214"
       }
     ]
   }

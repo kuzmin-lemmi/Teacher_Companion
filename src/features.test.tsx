@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -48,6 +49,10 @@ describe('резервные копии', () => {
         }),
       ),
     ).toThrow();
+  });
+  it('демонстрационная копия из документации восстанавливается', () => {
+    const raw = readFileSync('docs/examples/demo-backup.json', 'utf8');
+    expect(parseBackup(raw).lessons.length).toBeGreaterThan(20);
   });
   it('отклоняет превышение лимита', () =>
     expect(() => parseBackup('x'.repeat(1_000_001))).toThrow('слишком большой'));
