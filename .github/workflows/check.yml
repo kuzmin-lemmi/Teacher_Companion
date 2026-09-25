@@ -34,7 +34,7 @@ jobs:
       - name: cargo fmt --check
         shell: bash
         run: |
-          if ! out=$(cargo fmt --manifest-path src-tauri/Cargo.toml --check 2>&1); then
+          if ! out=$(cargo fmt --manifest-path src-tauri/Cargo.toml --check -- --color never 2>&1); then
             echo "$out"
             out="${out//'%'/'%25'}"
             out="${out//$'\r'/'%0D'}"
