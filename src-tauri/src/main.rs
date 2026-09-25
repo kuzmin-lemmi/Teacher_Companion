@@ -1,9 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager,
+};
 use tauri_plugin_sql::{Migration, MigrationKind};
-use tauri::{Emitter, Manager, menu::{Menu, MenuItem}, tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}};
 
 #[tauri::command]
-fn quit_app(app: tauri::AppHandle) { app.exit(0); }
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
 
 fn show_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -13,23 +19,39 @@ fn show_main(app: &tauri::AppHandle) {
     }
 }
 
+fn migrations() -> Vec<Migration> {
+    vec![Migration {
+        version: 1,
+        description: "initial_local_state",
+        sql: include_str!("../../src/schema.sql"),
+        kind: MigrationKind::Up,
+    }]
+}
+
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| { show_main(app); }))
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            show_main(app);
+        }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![quit_app])
-        .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:teacher-companion.db", vec![Migration {
-            version: 1,
-            description: "initial_local_state",
-            sql: include_str!("../../src/schema.sql"),
-            kind: MigrationKind::Up,
-        }]).build())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:teacher-companion.db", migrations())
+                .build(),
+        )
         .setup(|app| {
             let open = MenuItem::with_id(app, "open", "Открыть", true, None::<&str>)?;
             let today = MenuItem::with_id(app, "today", "Сегодня", true, None::<&str>)?;
-            let next = MenuItem::with_id(app, "next", "Следующий учебный день", true, None::<&str>)?;
+            let next = MenuItem::with_id(
+                app,
+                "next",
+                "Следующий учебный день",
+                true,
+                None::<&str>,
+            )?;
             let settings = MenuItem::with_id(app, "settings", "Настройки", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Завершить приложение", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&open, &today, &next, &settings, &quit])?;
@@ -42,12 +64,19 @@ fn main() {
                     let _ = app.emit("tray-action", event.id.as_ref());
                 })
                 .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
                         show_main(tray.app_handle());
                         let _ = tray.app_handle().emit("tray-action", "open");
                     }
                 });
-            if let Some(icon) = app.default_window_icon() { tray = tray.icon(icon.clone()); }
+            if let Some(icon) = app.default_window_icon() {
+                tray = tray.icon(icon.clone());
+            }
             tray.build(app)?;
             Ok(())
         })

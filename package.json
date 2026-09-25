@@ -11,7 +11,10 @@
     "format:check": "prettier --check .",
     "tauri": "tauri",
     "installer": "tauri build",
-    "portable": "tauri build --no-bundle"
+    "portable": "tauri build --no-bundle",
+    "version:check": "node scripts/version.mjs",
+    "version:sync": "node scripts/version.mjs --write",
+    "version": "node scripts/version.mjs --write && git add src-tauri/Cargo.toml src-tauri/Cargo.lock"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

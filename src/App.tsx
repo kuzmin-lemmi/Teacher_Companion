@@ -11,6 +11,7 @@ import {
   type Lesson,
 } from './domain';
 import { getStorage, type Storage } from './storage';
+import { appVersion } from './version';
 type Props = {
   storage?: Storage;
   initialTab?: 'schedule' | 'bells';
@@ -124,7 +125,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                 : 'Общее время занятий для всех учебных дней.'}
             </p>
           </div>
-          <span className="badge">Локально · v0.2</span>
+          <span className="badge">Локально · v{appVersion}</span>
         </header>
         {failure ? (
           <section role="alert" className="panel">

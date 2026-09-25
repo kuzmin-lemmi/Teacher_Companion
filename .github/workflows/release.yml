@@ -23,6 +23,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
+      - run: npm run version:check
       - run: npm test
       - run: npm run installer
       - name: Collect files
