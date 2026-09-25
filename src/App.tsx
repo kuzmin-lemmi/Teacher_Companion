@@ -260,6 +260,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                                   <button
                                     className="delete"
                                     aria-label={`Удалить урок ${lesson.lessonNumber}`}
+                                    title="Удалить урок. Пропущенный номер покажется как окно."
                                     onClick={() =>
                                       change({
                                         ...data,
@@ -335,6 +336,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                   </section>
                   <p className="hint">
                     Суббота и воскресенье — выходные. Порядок занятий определяется номером урока.
+                    Чтобы сделать окно, просто не добавляйте урок с этим номером.
                     {gaps(lessons).length ? ` Окна: ${gaps(lessons).join(', ')}.` : ''}
                   </p>
                 </>

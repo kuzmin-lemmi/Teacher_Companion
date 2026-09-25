@@ -102,7 +102,10 @@ export function validate(data: AppData): string[] {
     if (!Number.isInteger(lesson.weekday) || lesson.weekday < 1 || lesson.weekday > 5)
       errors.push('Занятия доступны только с понедельника по пятницу.');
     if (!validNumber(lesson.lessonNumber)) errors.push('Номер урока должен быть от 1 до 20.');
-    if (!lesson.className.trim()) errors.push('Укажите класс для каждого урока.');
+    if (!lesson.className.trim())
+      errors.push(
+        'Укажите класс для каждого урока. Если урока нет, удалите его кнопкой × — пропущенный номер станет окном.',
+      );
     if (lesson.customTime && !validTime(lesson.customTime.start, lesson.customTime.end))
       errors.push(`Урок ${lesson.lessonNumber}: проверьте индивидуальное время.`);
   }
