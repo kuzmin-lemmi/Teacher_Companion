@@ -6,6 +6,12 @@ use tauri::{
 };
 use tauri_plugin_sql::{Migration, MigrationKind};
 
+const MENU_OPEN: &str = "Открыть";
+const MENU_TODAY: &str = "Сегодня";
+const MENU_NEXT: &str = "Следующий учебный день";
+const MENU_SETTINGS: &str = "Настройки";
+const MENU_QUIT: &str = "Завершить приложение";
+
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
@@ -43,17 +49,11 @@ fn main() {
                 .build(),
         )
         .setup(|app| {
-            let open = MenuItem::with_id(app, "open", "Открыть", true, None::<&str>)?;
-            let today = MenuItem::with_id(app, "today", "Сегодня", true, None::<&str>)?;
-            let next = MenuItem::with_id(
-                app,
-                "next",
-                "Следующий учебный день",
-                true,
-                None::<&str>,
-            )?;
-            let settings = MenuItem::with_id(app, "settings", "Настройки", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Завершить приложение", true, None::<&str>)?;
+            let open = MenuItem::with_id(app, "open", MENU_OPEN, true, None::<&str>)?;
+            let today = MenuItem::with_id(app, "today", MENU_TODAY, true, None::<&str>)?;
+            let next = MenuItem::with_id(app, "next", MENU_NEXT, true, None::<&str>)?;
+            let settings = MenuItem::with_id(app, "settings", MENU_SETTINGS, true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", MENU_QUIT, true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&open, &today, &next, &settings, &quit])?;
             let mut tray = TrayIconBuilder::new()
                 .tooltip("Помощник учителя")
