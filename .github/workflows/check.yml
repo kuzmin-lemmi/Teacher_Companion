@@ -30,7 +30,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      # При ошибке diff попадает в аннотацию — его видно на странице проверки без открытия лога.
+      - name: cargo fmt --check
+        shell: bash
+        run: |
+          if ! out=$(cargo fmt --manifest-path src-tauri/Cargo.toml --check 2>&1); then
+            echo "$out"
+            out="${out//'%'/'%25'}"
+            out="${out//$'\r'/'%0D'}"
+            out="${out//$'\n'/'%0A'}"
+            echo "::error title=cargo fmt::$out"
+            exit 1
+          fi
       # generate_context! встраивает ../dist, поэтому фронтенд собирается до clippy.
       - run: npm ci
       - run: npm run build
