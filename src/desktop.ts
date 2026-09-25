@@ -52,7 +52,11 @@ export async function startDrag(locked: boolean) {
 export async function resetPosition() {
   localStorage.removeItem(positionKey);
 }
-export function configureWindow(next: Surface, settings: Settings): Promise<void> {
+export function configureWindow(
+  next: Surface,
+  settings: Settings,
+  contentHeight?: number,
+): Promise<void> {
   if (!isTauri()) return Promise.resolve();
   const operation = queue
     .catch(() => {})
@@ -70,9 +74,11 @@ export function configureWindow(next: Surface, settings: Settings): Promise<void
       try {
         const changed = surface !== next;
         await w.setMinSize(
-          new LogicalSize(next === 'widget' ? 280 : 680, next === 'widget' ? 220 : 500),
+          new LogicalSize(next === 'widget' ? 200 : 680, next === 'widget' ? 100 : 500),
         );
         await w.setDecorations(next !== 'widget');
+        // Без тени Windows не рисует рамку вокруг окна без заголовка.
+        await w.setShadow(next !== 'widget');
         await w.setResizable(next !== 'widget');
         await w.setSkipTaskbar(next === 'widget');
         await w.setAlwaysOnTop(next === 'widget' && settings.alwaysOnTop);
@@ -93,12 +99,12 @@ export function configureWindow(next: Surface, settings: Settings): Promise<void
                 saved.y >= m.workArea.position.y &&
                 saved.y < m.workArea.position.y + m.workArea.size.height,
             ) ?? ordered[0];
-          const width = settings.widgetSize === 'compact' ? 300 : 380;
-          const preferred = settings.widgetSize === 'compact' ? 400 : 560;
+          const width = settings.widgetSize === 'compact' ? 232 : 332;
+          const preferred = contentHeight || (settings.widgetSize === 'compact' ? 300 : 340);
           if (target) {
             const scale = target.scaleFactor;
             const height = Math.max(
-              220,
+              100,
               Math.min(preferred, target.workArea.size.height / scale - 32),
             );
             const size = { width: Math.round(width * scale), height: Math.round(height * scale) };

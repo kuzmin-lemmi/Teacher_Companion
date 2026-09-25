@@ -110,17 +110,46 @@ it('показывает время, окно и компактный режим
     onDrag: vi.fn(),
   };
   const view = render(<Widget {...props} />);
-  expect(screen.getByText('пятница')).toBeTruthy();
-  expect(screen.getByText('08:30')).toBeTruthy();
-  expect(screen.getByText('Окно · 1 урок')).toBeTruthy();
+  expect(screen.getByText('Пятница')).toBeTruthy();
+  expect(screen.getByText('Завтра, 25 сентября')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Завтра' })).toBeTruthy();
+  expect(screen.getByText('08:30–09:15')).toBeTruthy();
+  expect(screen.getByText('Математика')).toBeTruthy();
+  expect(screen.getByText('каб. 201')).toBeTruthy();
+  expect(screen.getByText('окно')).toBeTruthy();
   view.rerender(
     <Widget
       {...props}
       data={{ ...fixture(), settings: { ...fixture().settings, widgetSize: 'compact' } }}
     />,
   );
-  expect(screen.queryByText('08:30')).toBeNull();
+  expect(screen.getByText('08:30')).toBeTruthy();
+  expect(screen.queryByText('08:30–09:15')).toBeNull();
+  expect(screen.queryByText('Математика')).toBeNull();
   expect(screen.getByText('6А')).toBeTruthy();
+});
+it('выделяет текущий урок и выносит общий предмет в подвал', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 8, 25, 10, 30));
+  const data = fixture();
+  data.settings.widgetSize = 'normal';
+  data.lessons = data.lessons.map((l) => ({ ...l, subject: 'Информатика', room: '12' }));
+  render(
+    <Widget
+      data={data}
+      mode="today"
+      onMode={vi.fn()}
+      onSettings={vi.fn()}
+      onClose={vi.fn()}
+      onLock={vi.fn()}
+      onDrag={vi.fn()}
+    />,
+  );
+  expect(screen.getByText('Информатика · каб. 12')).toBeTruthy();
+  expect(screen.queryByText('каб. 201')).toBeNull();
+  const current = screen.getByText('7Б').closest('.widget-row')!;
+  expect(current.getAttribute('aria-current')).toBe('time');
+  expect(screen.getByText('6А').closest('.widget-row')!.className).toContain('past');
 });
 it('проходит первый запуск и запоминает завершение', async () => {
   const user = userEvent.setup();

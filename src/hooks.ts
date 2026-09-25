@@ -36,3 +36,18 @@ export function useTheme(theme: Settings['theme']) {
     return () => media?.removeEventListener('change', update);
   }, [theme]);
 }
+export function useClock(intervalMs = 30_000) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const refresh = () => setNow(new Date());
+    const timer = setInterval(refresh, intervalMs);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [intervalMs]);
+  return now;
+}

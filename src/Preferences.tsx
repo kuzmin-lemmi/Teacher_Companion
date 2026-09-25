@@ -73,8 +73,8 @@ export function Preferences({
                 value={draft.widgetSize}
                 onChange={(e) => update({ widgetSize: e.target.value as Settings['widgetSize'] })}
               >
-                <option value="normal">Обычный — время и предмет</option>
-                <option value="compact">Компактный — номера и классы</option>
+                <option value="normal">Обычный — время, предмет и кабинет</option>
+                <option value="compact">Компактный — класс и начало урока</option>
               </select>
             </label>
             <label>

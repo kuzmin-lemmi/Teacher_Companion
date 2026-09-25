@@ -16,8 +16,8 @@
         "title": "Помощник учителя",
         "width": 1180,
         "height": 800,
-        "minWidth": 280,
-        "minHeight": 220,
+        "minWidth": 200,
+        "minHeight": 100,
         "transparent": true,
         "center": true,
         "visible": false

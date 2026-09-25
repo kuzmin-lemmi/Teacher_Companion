@@ -32,6 +32,7 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
   const [mode, setMode] = useState<'today' | 'next'>('next');
   const [hidden, setHidden] = useState(false);
   const [preview, setPreview] = useState<Settings | null>(null);
+  const [widgetHeight, setWidgetHeight] = useState(0);
   const [revision, setRevision] = useState(0);
   const [confirmation, setConfirmation] = useState<{ message: string; action: () => void } | null>(
     null,
@@ -110,8 +111,10 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
   useEffect(() => {
     document.documentElement.dataset.surface = surface;
     if (!settings) return;
+    // Виджет показывается, когда известна его высота, — без скачка размера.
+    if (surface === 'widget' && isTauri() && !widgetHeight) return;
     let cancelled = false;
-    configureWindow(surface, settings).catch(() => {
+    configureWindow(surface, settings, widgetHeight).catch(() => {
       if (!cancelled)
         setNativeError(
           'Не удалось применить поведение окна. Настройки сохранены; попробуйте открыть виджет ещё раз.',
@@ -120,7 +123,12 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
     return () => {
       cancelled = true;
     };
-  }, [surface, settings, revision]);
+  }, [surface, settings, revision, widgetHeight]);
+  useEffect(() => {
+    if (surface !== 'widget' || widgetHeight) return;
+    const timer = setTimeout(() => setWidgetHeight((h) => h || 340), 1000);
+    return () => clearTimeout(timer);
+  }, [surface, widgetHeight]);
   function guard(action: () => void) {
     if (busy) return;
     if (dirty)
@@ -371,6 +379,7 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
                   settings: { ...data.settings, locked: !data.settings.locked },
                 }).catch((e) => setNativeError(e.message));
             }}
+            onMeasure={setWidgetHeight}
             onDrag={() =>
               void startDrag(data.settings.locked).catch(() =>
                 setNativeError('Не удалось переместить окно.'),

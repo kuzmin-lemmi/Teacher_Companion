@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 :root {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Inter Variable', 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv05', 'cv08';
+  -webkit-font-smoothing: antialiased;
   color: #e6e9f1;
   background: #101217;
   font-synthesis: none;
