@@ -284,3 +284,38 @@ it('ошибка загрузки позволяет восстановить в
   await waitFor(() => expect(restored).not.toBeNull());
   await screen.findByText('Ваши данные');
 });
+it('показывает всю неделю и скрывает её крестиком или Esc', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 8, 24, 12));
+  const data = fixture();
+  data.lessons.push({
+    id: 'mon',
+    weekday: 1,
+    lessonNumber: 2,
+    className: '9В',
+    subject: '',
+    room: '',
+  });
+  render(
+    <Widget
+      data={data}
+      mode="next"
+      onMode={vi.fn()}
+      onSettings={vi.fn()}
+      onClose={vi.fn()}
+      onLock={vi.fn()}
+      onDrag={vi.fn()}
+    />,
+  );
+  expect(screen.queryByText('9В')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Вся неделя' }));
+  expect(screen.getByRole('table')).toBeTruthy();
+  expect(screen.getByText('9В')).toBeTruthy();
+  expect(screen.getByText('7Б')).toBeTruthy();
+  expect(screen.getByRole('columnheader', { name: 'Чт' }).className).toContain('today');
+  fireEvent.click(screen.getByRole('button', { name: 'Закрыть неделю' }));
+  expect(screen.queryByRole('table')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Вся неделя' }));
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(screen.queryByRole('table')).toBeNull();
+});

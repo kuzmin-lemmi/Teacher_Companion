@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import {
   autoDayMode,
   getNextSchoolDay,
@@ -7,6 +14,7 @@ import {
   type AppData,
   type DayMode,
   type Lesson,
+  weekdays,
 } from './domain';
 import { lessonCount } from './calendar';
 import { useClock } from './hooks';
@@ -63,6 +71,78 @@ const gearIcon = icon(
   </>,
 );
 const closeIcon = icon(<path d="M4 4l8 8M12 4l-8 8" />);
+const weekIcon = icon(
+  <>
+    <rect x="2.25" y="3" width="11.5" height="10.75" rx="2" />
+    <path d="M2.25 6.5h11.5M5.5 1.75v2.5M10.5 1.75v2.5M6 9.5h.01M8 9.5h.01M10 9.5h.01M6 11.5h.01M8 11.5h.01" />
+  </>,
+);
+const shortDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
+function WeekTable({ data, today, compact }: { data: AppData; today: number; compact: boolean }) {
+  const last = Math.max(0, ...data.lessons.map((l) => l.lessonNumber));
+  if (!last)
+    return (
+      <div className="widget-empty">
+        <h2>Неделя пока пустая</h2>
+        <p>Добавьте уроки в настройках.</p>
+      </div>
+    );
+  const numbers = Array.from({ length: last }, (_, i) => i + 1);
+  const at = (day: number, n: number) =>
+    data.lessons.find((l) => l.weekday === day && l.lessonNumber === n);
+  return (
+    <table className="week-table">
+      <thead>
+        <tr>
+          <th scope="col">
+            <span className="visually-hidden">Урок</span>
+          </th>
+          {shortDays.map((d, i) => (
+            <th key={d} scope="col" className={today === i + 1 ? 'today' : ''} title={weekdays[i]}>
+              {d}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {numbers.map((n) => {
+          const bell = data.bells.find((b) => b.lessonNumber === n);
+          return (
+            <tr key={n}>
+              <th scope="row">
+                {n}
+                {!compact && bell && <small>{bell.start}</small>}
+              </th>
+              {shortDays.map((d, i) => {
+                const lesson = at(i + 1, n);
+                return (
+                  <td
+                    key={d}
+                    className={today === i + 1 ? 'today' : ''}
+                    title={
+                      lesson
+                        ? [
+                            weekdays[i],
+                            lesson.className,
+                            lesson.subject,
+                            lesson.room && `каб. ${lesson.room}`,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')
+                        : undefined
+                    }
+                  >
+                    {lesson ? lesson.className : <span className="week-empty">·</span>}
+                  </td>
+                );
+              })}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
 export function Widget({
   data,
   mode,
@@ -74,6 +154,7 @@ export function Widget({
   onMeasure,
 }: Props) {
   const now = useClock();
+  const [week, setWeek] = useState(false);
   const next = getNextSchoolDay(data.lessons, now);
   const shown = mode === 'auto' ? autoDayMode(data, now) : mode;
   const date = shown === 'today' ? now : next;
@@ -125,6 +206,14 @@ export function Widget({
       observer?.disconnect();
     };
   }, []);
+  useEffect(() => {
+    if (!week) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setWeek(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [week]);
   const timeText = (t: { start: string; end: string } | undefined) =>
     t ? (compact ? t.start : `${t.start}–${t.end}`) : '—';
   return (
@@ -141,30 +230,52 @@ export function Widget({
         }}
       >
         <div className="widget-title">
-          <h1>{date ? capitalize(weekdayName.format(date)) : 'Расписание'}</h1>
-          <p>{subtitle}</p>
+          <h1>{week ? 'Неделя' : date ? capitalize(weekdayName.format(date)) : 'Расписание'}</h1>
+          <p>{week ? `Пн–Пт · ${lessonCount(data.lessons.length)}` : subtitle}</p>
         </div>
-        <div className="widget-actions">
-          <button
-            aria-label={locked ? 'Открепить виджет' : 'Закрепить виджет'}
-            title={
-              locked ? 'Закреплён — нажмите, чтобы разрешить перемещение' : 'Закрепить на месте'
-            }
-            aria-pressed={locked}
-            onClick={onLock}
-          >
-            {pinIcon}
-          </button>
-          <button aria-label="Открыть настройки" title="Настройки" onClick={onSettings}>
-            {gearIcon}
-          </button>
-          <button aria-label="Закрыть виджет" title="Скрыть" onClick={onClose}>
-            {closeIcon}
-          </button>
-        </div>
+        {week ? (
+          <div className="widget-actions">
+            <button
+              aria-label="Закрыть неделю"
+              title="Закрыть (Esc)"
+              autoFocus
+              onClick={() => setWeek(false)}
+            >
+              {closeIcon}
+            </button>
+          </div>
+        ) : (
+          <div className="widget-actions">
+            <button
+              aria-label="Вся неделя"
+              title="Расписание на неделю"
+              onClick={() => setWeek(true)}
+            >
+              {weekIcon}
+            </button>
+            <button
+              aria-label={locked ? 'Открепить виджет' : 'Закрепить виджет'}
+              title={
+                locked ? 'Закреплён — нажмите, чтобы разрешить перемещение' : 'Закрепить на месте'
+              }
+              aria-pressed={locked}
+              onClick={onLock}
+            >
+              {pinIcon}
+            </button>
+            <button aria-label="Открыть настройки" title="Настройки" onClick={onSettings}>
+              {gearIcon}
+            </button>
+            <button aria-label="Закрыть виджет" title="Скрыть" onClick={onClose}>
+              {closeIcon}
+            </button>
+          </div>
+        )}
       </div>
       <div ref={list} className="widget-lessons">
-        {!lessons.length ? (
+        {week ? (
+          <WeekTable data={data} today={now.getDay()} compact={compact} />
+        ) : !lessons.length ? (
           <div className="widget-empty">
             <h2>{shown === 'today' ? 'Сегодня занятий нет' : 'Добавьте первые уроки'}</h2>
             <p>
@@ -224,17 +335,19 @@ export function Widget({
           })
         )}
       </div>
-      <div className="widget-bottom">
-        {!compact && <span className="widget-meta">{meta}</span>}
-        <div className="widget-switch" role="group" aria-label="Показываемый день">
-          <button aria-pressed={shown === 'today'} onClick={() => onMode('today')}>
-            Сегодня
-          </button>
-          <button aria-pressed={shown === 'next'} onClick={() => onMode('next')}>
-            {nextLabel}
-          </button>
+      {!week && (
+        <div className="widget-bottom">
+          {!compact && <span className="widget-meta">{meta}</span>}
+          <div className="widget-switch" role="group" aria-label="Показываемый день">
+            <button aria-pressed={shown === 'today'} onClick={() => onMode('today')}>
+              Сегодня
+            </button>
+            <button aria-pressed={shown === 'next'} onClick={() => onMode('next')}>
+              {nextLabel}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
