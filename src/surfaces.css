@@ -744,3 +744,84 @@ html[data-native='true'][data-surface='widget'] body {
     padding: 25px 16px;
   }
 }
+.snapshots {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.snapshots h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.snapshots ul {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.snapshots li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--card);
+}
+.snapshots li strong {
+  display: block;
+  font-size: 13px;
+}
+.snapshots li small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.snapshots li button {
+  padding: 7px 12px;
+  font-size: 12px;
+}
+.widget-actions button.has-update {
+  position: relative;
+  opacity: 1;
+}
+.widget-actions button.has-update::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--widget-rgb), 1);
+}
+.update-pill {
+  margin-left: auto;
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--accent) !important;
+  color: var(--accent);
+  background: var(--accent-soft) !important;
+  white-space: nowrap;
+}
+.updates {
+  margin-bottom: 18px;
+}
+.update-notes {
+  white-space: pre-line;
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.update-progress {
+  font-size: 13px;
+  color: var(--accent);
+}

@@ -6,6 +6,16 @@ import { Onboarding } from './Onboarding';
 import { Preferences, cornerLabels } from './Preferences';
 import { SettingsLayout, type SettingsPage } from './SettingsLayout';
 import { Widget } from './Widget';
+import { UpdatePanel, type UpdateState } from './UpdatePanel';
+import {
+  UPDATE_FIRST_CHECK,
+  UPDATE_INTERVAL,
+  dismissUpdate,
+  dismissedVersion,
+  findUpdate,
+  type AvailableUpdate,
+  type UpdateFinder,
+} from './updates';
 import { dateKey } from './calendar';
 import { emptyData, type AppData, type DayMode, type Settings } from './domain';
 import { getStorage, type Storage } from './storage';
@@ -21,7 +31,13 @@ import {
 } from './desktop';
 import { useTheme, useToday } from './hooks';
 type Page = 'widget' | SettingsPage;
-export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
+export function Shell({
+  storage: suppliedStorage,
+  updates = findUpdate,
+}: {
+  storage?: Storage;
+  updates?: UpdateFinder;
+}) {
   const [data, setData] = useState<AppData | null>(null);
   const [page, setPage] = useState<Page>('widget');
   const [loading, setLoading] = useState(true);
@@ -30,19 +46,31 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
   const [attempt, setAttempt] = useState(0);
   const [step, setStep] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Правки расписания с ошибками: сохранены черновиком, но ещё не применены.
+  const [draftPending, setDraftPending] = useState(false);
   const [busy, setBusy] = useState(false);
   // Ручной выбор дня действует до конца суток, затем виджет снова выбирает день сам.
   const [dayChoice, setDayChoice] = useState<{ mode: DayMode; day: string } | null>(null);
   const [hidden, setHidden] = useState(false);
   const [preview, setPreview] = useState<Settings | null>(null);
   const [widgetHeight, setWidgetHeight] = useState(0);
+  const [update, setUpdate] = useState<AvailableUpdate | null>(null);
+  const [updateState, setUpdateState] = useState<UpdateState>({ phase: 'idle' });
+  const [dismissed, setDismissed] = useState(dismissedVersion);
   const [revision, setRevision] = useState(0);
-  const [confirmation, setConfirmation] = useState<{ message: string; action: () => void } | null>(
-    null,
-  );
+  const [confirmation, setConfirmation] = useState<{
+    message: string;
+    title?: string;
+    confirmLabel?: string;
+    action: () => void;
+  } | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
   const saving = useRef(false);
+  const baseStorage = useCallback(
+    async () => suppliedStorage ?? (await getStorage()),
+    [suppliedStorage],
+  );
   const today = useToday();
   const mode = dayChoice?.day === dateKey(today) ? dayChoice.mode : 'auto';
   const chooseDay = (value: DayMode) => setDayChoice({ mode: value, day: dateKey(new Date()) });
@@ -92,6 +120,10 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
           setData(value);
           setError('');
           setStep((value.onboardingComplete ?? value.lessons.length > 0) ? null : 0);
+          // Страховочная копия при обновлении программы и раз в день.
+          void baseStorage()
+            .then((s) => s.autoSnapshot?.(value))
+            .catch(() => {});
         }
       } catch {
         if (!cancelled) {
@@ -107,10 +139,85 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
     return () => {
       cancelled = true;
     };
-  }, [suppliedStorage, attempt]);
+  }, [suppliedStorage, baseStorage, attempt]);
+  const checkUpdates = useCallback(
+    async (manual: boolean) => {
+      if (manual) setUpdateState({ phase: 'checking' });
+      try {
+        const found = await updates();
+        setUpdate(found);
+        if (manual) setUpdateState({ phase: found ? 'idle' : 'latest' });
+      } catch {
+        // Без интернета тихо ждём следующей проверки; сообщаем, только если просили вручную.
+        if (manual)
+          setUpdateState({
+            phase: 'error',
+            message: 'Не удалось проверить обновления. Проверьте подключение к интернету.',
+          });
+      }
+    },
+    [updates],
+  );
+  const autoCheck = data?.settings.checkUpdates ?? false;
+  useEffect(() => {
+    if (!autoCheck) return;
+    const first = setTimeout(() => void checkUpdates(false), UPDATE_FIRST_CHECK);
+    const repeat = setInterval(() => void checkUpdates(false), UPDATE_INTERVAL);
+    return () => {
+      clearTimeout(first);
+      clearInterval(repeat);
+    };
+  }, [autoCheck, checkUpdates]);
+  async function installUpdate() {
+    if (!update) return;
+    try {
+      const current = dataRef.current;
+      // Страховочная копия до установки: при любой проблеме её можно восстановить.
+      if (current) await (await baseStorage()).snapshot?.(current, 'update');
+      setUpdateState({ phase: 'downloading', progress: 0 });
+      await update.install((progress) =>
+        setUpdateState(
+          progress === 100 ? { phase: 'installing' } : { phase: 'downloading', progress },
+        ),
+      );
+    } catch {
+      setUpdateState({
+        phase: 'error',
+        message:
+          'Не удалось установить обновление. Программа продолжит работать в текущей версии — попробуйте позже.',
+      });
+    }
+  }
+  const showUpdateBadge = !!update && dismissed !== update.version;
+  const updatePanel = (
+    <UpdatePanel
+      update={update}
+      state={updateState}
+      autoCheck={autoCheck}
+      dismissed={!showUpdateBadge}
+      onCheck={() => void checkUpdates(true)}
+      onInstall={() => guard(() => void installUpdate())}
+      onDismiss={() => {
+        if (!update) return;
+        dismissUpdate(update.version);
+        setDismissed(update.version);
+      }}
+    />
+  );
   const editorStorage = useMemo<Storage>(
-    () => ({ load: async () => dataRef.current ?? emptyData(), save: persist }),
-    [persist],
+    () => ({
+      load: async () => dataRef.current ?? emptyData(),
+      save: persist,
+      loadDraft: async () => (await (await baseStorage()).loadDraft?.()) ?? null,
+      saveDraft: async (draft) => (await baseStorage()).saveDraft?.(draft),
+      listSnapshots: async () => (await (await baseStorage()).listSnapshots?.()) ?? [],
+      loadSnapshot: async (id) => {
+        const s = await baseStorage();
+        if (!s.loadSnapshot) throw new Error('Автоматические копии недоступны.');
+        return s.loadSnapshot(id);
+      },
+    }),
+    [persist, baseStorage],
   );
   const surface = page === 'widget' && step === null && !!data ? 'widget' : 'settings';
   const settings = data?.settings;
@@ -143,6 +250,17 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
         action: () => {
           setDirty(false);
           setPreview(null);
+          action();
+        },
+      });
+    else if (draftPending)
+      setConfirmation({
+        title: 'В расписании есть ошибки',
+        message:
+          'Правки сохранены черновиком и не пропадут, но в виджете появятся только после исправления ошибок. Выйти из редактора?',
+        confirmLabel: 'Выйти, черновик сохранён',
+        action: () => {
+          setDraftPending(false);
           action();
         },
       });
@@ -265,6 +383,9 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
     />
   ) : null;
   const restore = async (value: AppData) => {
+    // Перед заменой данных — копия текущего состояния, чтобы восстановление можно было отменить.
+    const current = dataRef.current;
+    if (current) await (await baseStorage()).snapshot?.(current, 'before-restore');
     await persist(value);
     setStep(null);
     setPage('backups');
@@ -282,7 +403,7 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
         <h1>Расписание недоступно</h1>
         <p role="alert">{error}</p>
         <button onClick={() => setAttempt((a) => a + 1)}>Повторить загрузку</button>
-        <Backups data={null} onRestore={restore} />
+        <Backups data={null} onRestore={restore} storage={editorStorage} />
       </div>
     );
   else if (hidden)
@@ -302,10 +423,10 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
         step={step}
         data={data}
         busy={busy}
-        dirty={dirty}
+        dirty={dirty || draftPending}
         editorStorage={editorStorage}
         preferences={commonPreferences}
-        onDirty={setDirty}
+        onDirty={setDraftPending}
         onStep={(next) => guard(() => setStep(next))}
         onFinish={() => void finish()}
       />
@@ -327,6 +448,7 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
               }).catch((e) => setNativeError(e.message));
           }}
           onMeasure={setWidgetHeight}
+          updateAvailable={showUpdateBadge}
           onDrag={() =>
             void startDrag(data.settings.locked).catch(() =>
               setNativeError('Не удалось переместить окно.'),
@@ -345,10 +467,12 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
         data={data}
         editorStorage={editorStorage}
         preferences={commonPreferences}
-        onDirty={setDirty}
+        onDirty={setDraftPending}
         onNavigate={navigate}
         onRestore={restore}
         onOpenWizard={() => guard(() => setStep(0))}
+        updatePanel={updatePanel}
+        updateVersion={showUpdateBadge ? update!.version : null}
       />
     );
   return (
@@ -365,6 +489,8 @@ export function Shell({ storage: suppliedStorage }: { storage?: Storage }) {
       {confirmation && (
         <ConfirmDialog
           message={confirmation.message}
+          title={confirmation.title}
+          confirmLabel={confirmation.confirmLabel}
           onCancel={() => setConfirmation(null)}
           onConfirm={() => {
             const action = confirmation.action;

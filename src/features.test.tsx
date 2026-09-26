@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { Shell } from './Shell';
 import { Widget } from './Widget';
 import { emptyData, type AppData } from './domain';
+import { browserStorage } from './storage';
 import { parseBackup, serializeBackup } from './backup';
 import { millisecondsUntilMidnight } from './calendar';
 import { safePosition } from './geometry';
@@ -318,4 +319,65 @@ it('показывает всю неделю и скрывает её крест
   fireEvent.click(screen.getByRole('button', { name: 'Вся неделя' }));
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('table')).toBeNull();
+});
+it('делает автоматическую копию при запуске и восстанавливает её из списка', async () => {
+  const items = new Map<string, string>();
+  const storage = browserStorage({
+    getItem: (k) => items.get(k) ?? null,
+    setItem: (k, v) => void items.set(k, v),
+    removeItem: (k) => void items.delete(k),
+  });
+  await storage.save(fixture());
+  const user = userEvent.setup();
+  render(<Shell storage={storage} />);
+  await screen.findByText('6А');
+  await waitFor(async () => expect(await storage.listSnapshots!()).toHaveLength(1));
+  await storage.save({ ...fixture(), lessons: [] });
+  await user.click(screen.getByRole('button', { name: 'Открыть настройки' }));
+  await user.click(await screen.findByRole('button', { name: 'Резервные копии' }));
+  await user.click(await screen.findByRole('button', { name: /Восстановить копию от/ }));
+  await user.click(await screen.findByText('Восстановить эту копию'));
+  await screen.findByText('Расписание восстановлено');
+  expect((await storage.load()).lessons).toHaveLength(2);
+  expect((await storage.listSnapshots!())[0].reason).toBe('before-restore');
+});
+it('показывает новую версию ненавязчиво и ставит её только по кнопке', async () => {
+  const items = new Map<string, string>();
+  const storage = browserStorage({
+    getItem: (k) => items.get(k) ?? null,
+    setItem: (k, v) => void items.set(k, v),
+    removeItem: (k) => void items.delete(k),
+  });
+  await storage.save(fixture());
+  const install = vi.fn(async (progress: (p: number | null) => void) => progress(100));
+  const updates = vi.fn(async () => ({ version: '9.9.9', notes: 'Новое', install }));
+  const user = userEvent.setup();
+  localStorage.clear();
+  render(<Shell storage={storage} updates={updates} />);
+  await user.click(await screen.findByRole('button', { name: 'Открыть настройки' }));
+  await user.click(await screen.findByRole('button', { name: 'О программе' }));
+  await user.click(screen.getByRole('button', { name: 'Проверить обновления' }));
+  await screen.findByText('Доступна версия 9.9.9');
+  expect(install).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'Не сейчас' }));
+  expect(screen.queryByRole('button', { name: 'Не сейчас' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Расписание и звонки' }));
+  expect(screen.queryByText(/Доступна версия/)).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'О программе' }));
+  await user.click(screen.getByRole('button', { name: 'Установить версию 9.9.9' }));
+  await waitFor(() => expect(install).toHaveBeenCalledOnce());
+  expect((await storage.listSnapshots!())[0].reason).toBe('update');
+});
+it('без новой версии сообщает, что установлена последняя', async () => {
+  const user = userEvent.setup();
+  render(
+    <Shell
+      storage={{ load: async () => fixture(), save: async () => {} }}
+      updates={async () => null}
+    />,
+  );
+  await user.click(await screen.findByRole('button', { name: 'Открыть настройки' }));
+  await user.click(await screen.findByRole('button', { name: 'О программе' }));
+  await user.click(screen.getByRole('button', { name: 'Проверить обновления' }));
+  await screen.findByText('У вас последняя версия.');
 });

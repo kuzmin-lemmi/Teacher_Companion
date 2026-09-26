@@ -26,12 +26,20 @@ fn show_main(app: &tauri::AppHandle) {
 }
 
 fn migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "initial_local_state",
-        sql: include_str!("../../src/schema.sql"),
-        kind: MigrationKind::Up,
-    }]
+    vec![
+        Migration {
+            version: 1,
+            description: "initial_local_state",
+            sql: include_str!("../../src/schema.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "drafts_and_snapshots",
+            sql: include_str!("../../src/schema-v2.sql"),
+            kind: MigrationKind::Up,
+        },
+    ]
 }
 
 fn main() {
@@ -42,6 +50,8 @@ fn main() {
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![quit_app])
         .plugin(
             tauri_plugin_sql::Builder::default()

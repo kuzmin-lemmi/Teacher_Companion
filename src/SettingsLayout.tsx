@@ -26,6 +26,8 @@ export function SettingsLayout({
   onNavigate,
   onRestore,
   onOpenWizard,
+  updatePanel,
+  updateVersion,
 }: {
   page: SettingsPage;
   data: AppData;
@@ -35,6 +37,9 @@ export function SettingsLayout({
   onNavigate: (page: SettingsPage | 'widget') => void;
   onRestore: (data: AppData) => Promise<void>;
   onOpenWizard: () => void;
+  updatePanel: ReactNode;
+  /** Новая версия, о которой стоит ненавязчиво напомнить. */
+  updateVersion: string | null;
 }) {
   return (
     <div className="settings-root">
@@ -51,6 +56,11 @@ export function SettingsLayout({
             </button>
           ))}
         </nav>
+        {updateVersion && page !== 'about' && (
+          <button className="update-pill" onClick={() => onNavigate('about')}>
+            Доступна версия {updateVersion}
+          </button>
+        )}
       </div>
       {page === 'schedule' ? (
         <ScheduleEditor storage={editorStorage} onDirty={onDirty} />
@@ -61,9 +71,12 @@ export function SettingsLayout({
           {page === 'preferences' ? (
             preferences
           ) : page === 'backups' ? (
-            <Backups data={data} onRestore={onRestore} />
+            <Backups data={data} onRestore={onRestore} storage={editorStorage} />
           ) : (
-            <About onOpenWizard={onOpenWizard} />
+            <>
+              {updatePanel}
+              <About onOpenWizard={onOpenWizard} />
+            </>
           )}
         </main>
       )}
@@ -78,7 +91,8 @@ function About({ onOpenWizard }: { onOpenWizard: () => void }) {
       <p>Версия {appVersion} · Помощник учителя</p>
       <p className="muted">
         Небольшое расписание для повседневной работы. Все данные хранятся локально. Приложение не
-        отправляет расписание на сервер и не требует аккаунта.
+        отправляет расписание на сервер и не требует аккаунта. В сеть оно обращается только для
+        проверки обновлений на GitHub — это можно выключить в настройках.
       </p>
       <p className="hint">
         {isTauri()

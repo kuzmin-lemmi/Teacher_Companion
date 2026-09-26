@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import {
   emptyData,
@@ -15,15 +15,20 @@ import { appVersion } from './version';
 type Props = {
   storage?: Storage;
   initialTab?: 'schedule' | 'bells';
+  /** true, пока есть правки с ошибками: они лежат в черновике и ещё не видны в виджете. */
   onDirty?: (dirty: boolean) => void;
 };
+const AUTOSAVE_DELAY = 400;
+const clock = (iso: string) =>
+  new Date(iso).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
 export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
   const [data, setData] = useState<AppData>(emptyData);
   const [saved, setSaved] = useState('');
   const [ready, setReady] = useState(false);
   const [failure, setFailure] = useState('');
   const [status, setStatus] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [sessionStart, setSessionStart] = useState('');
   const [tab, setTab] = useState<'schedule' | 'bells'>(initialTab);
   const [day, setDay] = useState(1);
   const [attempt, setAttempt] = useState(0);
@@ -31,10 +36,15 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const value = await (storage ?? (await getStorage())).load();
+        const store = storage ?? (await getStorage());
+        const value = await store.load();
+        const draft = await store.loadDraft?.().catch(() => null);
         if (!cancelled) {
-          setData(value);
+          const restored = draft && JSON.stringify(draft.data) !== JSON.stringify(value);
+          setData(restored ? draft.data : value);
           setSaved(JSON.stringify(value));
+          setSessionStart(JSON.stringify(value));
+          setStatus(restored ? `Восстановлен черновик от ${clock(draft.savedAt)}` : '');
           setReady(true);
           setFailure('');
         }
@@ -49,21 +59,65 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
       cancelled = true;
     };
   }, [storage, attempt]);
-  const dirty = JSON.stringify(data) !== saved;
+  const json = JSON.stringify(data);
+  const errors = validate(data);
+  const pending = json !== saved;
+  const draftPending = ready && pending && errors.length > 0;
   useEffect(() => {
-    onDirty?.(ready && dirty);
-  }, [ready, dirty, onDirty]);
+    onDirty?.(draftPending);
+  }, [draftPending, onDirty]);
   useEffect(() => () => onDirty?.(false), [onDirty]);
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (ready && dirty) {
-        e.preventDefault();
-        e.returnValue = '';
+  // Автосохранение: правильные данные сразу применяются, с ошибками — уходят в черновик.
+  const latest = useRef({ data, json, saved, ready });
+  latest.current = { data, json, saved, ready };
+  const queue = useRef(Promise.resolve());
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const flush = useRef(() => {});
+  flush.current = () => {
+    clearTimeout(timer.current);
+    timer.current = undefined;
+    const { data: value, json: text, saved: applied, ready: loaded } = latest.current;
+    if (!loaded || text === applied) return;
+    const valid = validate(value).length === 0;
+    queue.current = queue.current.then(async () => {
+      const store = storage ?? (await getStorage());
+      try {
+        if (valid) {
+          await store.save(value);
+          latest.current.saved = text;
+          setSaved(text);
+          await store.saveDraft?.(null);
+          setStatus('Сохранено автоматически');
+        } else {
+          await store.saveDraft?.(value);
+          setStatus(
+            'Черновик сохранён. Исправьте ошибки ниже — тогда изменения появятся в виджете.',
+          );
+        }
+        setFailed(false);
+      } catch {
+        // Если основная запись не удалась, правки всё равно остаются в черновике.
+        await store.saveDraft?.(value).catch(() => {});
+        setFailed(true);
+        setStatus('Не удалось сохранить. Правки остались в редакторе и в черновике.');
       }
-    };
+    });
+  };
+  useEffect(() => {
+    if (!ready || json === saved) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => flush.current(), AUTOSAVE_DELAY);
+  }, [json, saved, ready]);
+  useEffect(() => {
+    const handler = () => flush.current();
     window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty, ready]);
+    window.addEventListener('pagehide', handler);
+    return () => {
+      window.removeEventListener('beforeunload', handler);
+      window.removeEventListener('pagehide', handler);
+      flush.current();
+    };
+  }, []);
   function change(next: AppData) {
     setData(next);
     setStatus('');
@@ -71,20 +125,6 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
   function updateLesson(id: string, patch: Partial<Lesson>) {
     change({ ...data, lessons: data.lessons.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
   }
-  async function save() {
-    setBusy(true);
-    setStatus('');
-    try {
-      await (storage ?? (await getStorage())).save(data);
-      setSaved(JSON.stringify(data));
-      setStatus('Изменения сохранены');
-    } catch {
-      setStatus('Не удалось сохранить. Изменения остались в редакторе — попробуйте ещё раз.');
-    } finally {
-      setBusy(false);
-    }
-  }
-  const errors = validate(data);
   const lessons = lessonsForDay(data.lessons, day);
   return (
     <div className="app-shell">
@@ -137,7 +177,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
           <p role="status">Загрузка расписания…</p>
         ) : (
           <>
-            <fieldset disabled={busy} className="editor">
+            <fieldset className="editor">
               {tab === 'schedule' ? (
                 <>
                   <div className="days" role="group" aria-label="День недели">
@@ -437,7 +477,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
             </fieldset>
             {errors.length > 0 && (
               <div role="alert" className="errors">
-                <strong>Перед сохранением:</strong>
+                <strong>Исправьте, чтобы изменения появились в виджете:</strong>
                 <ul>
                   {errors.map((error) => (
                     <li key={error}>{error}</li>
@@ -447,24 +487,19 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
             )}
             <footer>
               <span role="status">
-                {status || (dirty ? 'Есть несохранённые изменения' : 'Все изменения сохранены')}
+                {status || (pending ? 'Сохранение…' : 'Все изменения сохраняются автоматически')}
               </span>
               <div>
+                {failed && <button onClick={() => flush.current()}>Повторить сохранение</button>}
                 <button
-                  disabled={!dirty || busy}
+                  disabled={json === sessionStart}
+                  title="Вернуть расписание, каким оно было при открытии редактора"
                   onClick={() => {
-                    setData(JSON.parse(saved));
+                    setData(JSON.parse(sessionStart));
                     setStatus('Изменения отменены');
                   }}
                 >
                   Отменить изменения
-                </button>
-                <button
-                  className="primary"
-                  disabled={!dirty || busy || errors.length > 0}
-                  onClick={save}
-                >
-                  {busy ? 'Сохранение…' : 'Сохранить изменения'}
                 </button>
               </div>
             </footer>

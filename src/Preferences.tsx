@@ -168,6 +168,26 @@ export function Preferences({
             выключите и снова включите эту настройку.
           </p>
         </section>
+        {!onboarding && (
+          <section className="panel">
+            <p className="eyebrow">ОБНОВЛЕНИЯ</p>
+            <label className="setting-toggle">
+              <div>
+                <strong>Проверять обновления</strong>
+                <small>
+                  Раз в несколько часов программа узнаёт на GitHub, вышла ли новая версия, и покажет
+                  это в разделе «О программе». Устанавливается только по вашему желанию. Расписание
+                  никуда не отправляется.
+                </small>
+              </div>
+              <input
+                type="checkbox"
+                checked={draft.checkUpdates}
+                onChange={(e) => update({ checkUpdates: e.target.checked })}
+              />
+            </label>
+          </section>
+        )}
       </fieldset>
       <footer>
         <span role="status">

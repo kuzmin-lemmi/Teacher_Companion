@@ -1,9 +1,13 @@
 export function ConfirmDialog({
   message,
+  title = 'Несохранённые изменения',
+  confirmLabel = 'Выйти без сохранения',
   onCancel,
   onConfirm,
 }: {
   message: string;
+  title?: string;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -30,14 +34,14 @@ export function ConfirmDialog({
           }
         }}
       >
-        <h2 id="confirm-title">Несохранённые изменения</h2>
+        <h2 id="confirm-title">{title}</h2>
         <p>{message}</p>
         <div>
           <button autoFocus onClick={onCancel}>
             Остаться
           </button>
           <button className="primary" onClick={onConfirm}>
-            Выйти без сохранения
+            {confirmLabel}
           </button>
         </div>
       </section>

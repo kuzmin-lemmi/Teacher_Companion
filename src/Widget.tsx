@@ -29,6 +29,8 @@ type Props = {
   onDrag: () => void;
   /** Естественная высота виджета в CSS-пикселях — по ней подгоняется окно. */
   onMeasure?: (height: number) => void;
+  /** Есть новая версия — маленькая точка на кнопке настроек, без всплывающих окон. */
+  updateAvailable?: boolean;
 };
 type Row = { kind: 'lesson'; lesson: Lesson } | { kind: 'gap'; number: number };
 const weekdayName = new Intl.DateTimeFormat('ru', { weekday: 'long' });
@@ -152,6 +154,7 @@ export function Widget({
   onLock,
   onDrag,
   onMeasure,
+  updateAvailable = false,
 }: Props) {
   const now = useClock();
   const [week, setWeek] = useState(false);
@@ -263,7 +266,12 @@ export function Widget({
             >
               {pinIcon}
             </button>
-            <button aria-label="Открыть настройки" title="Настройки" onClick={onSettings}>
+            <button
+              aria-label="Открыть настройки"
+              title={updateAvailable ? 'Настройки · доступна новая версия' : 'Настройки'}
+              className={updateAvailable ? 'has-update' : undefined}
+              onClick={onSettings}
+            >
               {gearIcon}
             </button>
             <button aria-label="Закрыть виджет" title="Скрыть" onClick={onClose}>

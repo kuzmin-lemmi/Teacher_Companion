@@ -1,19 +1,47 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { exportBackup, importDesktopBackup, parseBackup } from './backup';
 import { lessonCount } from './calendar';
 import type { AppData } from './domain';
+import type { SnapshotInfo, SnapshotReason, Storage } from './storage';
+const reasons: Record<SnapshotReason, string> = {
+  daily: 'ежедневная',
+  update: 'при обновлении программы',
+  'before-restore': 'перед восстановлением',
+};
+const when = (iso: string) =>
+  new Date(iso).toLocaleString('ru', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 export function Backups({
   data,
   onRestore,
+  storage,
 }: {
   data: AppData | null;
   onRestore: (data: AppData) => Promise<void>;
+  /** Источник автоматических копий. */
+  storage?: Pick<Storage, 'listSnapshots' | 'loadSnapshot'>;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [candidate, setCandidate] = useState<AppData | null>(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    storage
+      ?.listSnapshots?.()
+      .then((list) => !cancelled && setSnapshots(list))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [storage, refresh]);
   async function action(fn: () => Promise<void>) {
     setStatus('');
     setBusy(true);
@@ -102,6 +130,7 @@ export function Backups({
                     },
                   });
                   setCandidate(null);
+                  setRefresh((r) => r + 1);
                   setStatus('Расписание восстановлено');
                 })
               }
@@ -114,6 +143,41 @@ export function Backups({
       <p role="status" className="hint">
         {status}
       </p>
+      {storage?.listSnapshots && (
+        <div className="snapshots">
+          <h3>Автоматические копии</h3>
+          <p className="muted">
+            Программа сама сохраняет копию расписания при обновлении, раз в день и перед каждым
+            восстановлением. Хранятся последние 30.
+          </p>
+          {!snapshots.length ? (
+            <p className="hint">Копий пока нет — первая появится после заполнения расписания.</p>
+          ) : (
+            <ul>
+              {snapshots.map((s) => (
+                <li key={s.id}>
+                  <span>
+                    <strong>{when(s.createdAt)}</strong>
+                    <small>
+                      {reasons[s.reason] ?? s.reason} · {lessonCount(s.lessons)} · звонков:{' '}
+                      {s.bells} · версия {s.version}
+                    </small>
+                  </span>
+                  <button
+                    disabled={busy}
+                    aria-label={`Восстановить копию от ${when(s.createdAt)}`}
+                    onClick={() =>
+                      action(async () => setCandidate(await storage.loadSnapshot!(s.id)))
+                    }
+                  >
+                    Восстановить
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   );
 }

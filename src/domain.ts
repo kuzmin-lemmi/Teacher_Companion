@@ -20,6 +20,8 @@ export type Settings = {
   opacity: number;
   theme: 'system' | 'light' | 'dark';
   closeBehavior: 'tray' | 'exit';
+  /** Раз в несколько часов спрашивать GitHub, есть ли новая версия. */
+  checkUpdates: boolean;
 };
 export type AppData = {
   version: 1;
@@ -42,6 +44,7 @@ export const emptyData = (): AppData => ({
     opacity: 100,
     theme: 'dark',
     closeBehavior: 'tray',
+    checkUpdates: true,
   },
 });
 export function timeOf(lesson: Lesson, bells: LessonTime[]) {
@@ -151,6 +154,8 @@ export function decode(raw: string): AppData {
   const s = data.settings;
   // Копии до версии 0.2 не содержат угла виджета.
   if (s && typeof s === 'object' && s.widgetCorner === undefined) s.widgetCorner = 'top-right';
+  // Копии до версии 0.5 не содержат настройки обновлений.
+  if (s && typeof s === 'object' && s.checkUpdates === undefined) s.checkUpdates = true;
   if (
     data.lessons.length > 100 ||
     data.bells.length > 20 ||
@@ -158,7 +163,9 @@ export function decode(raw: string): AppData {
   )
     throw new Error('Некорректная структура расписания.');
   if (
-    ![s.launchOnStartup, s.alwaysOnTop, s.locked].every((v) => typeof v === 'boolean') ||
+    ![s.launchOnStartup, s.alwaysOnTop, s.locked, s.checkUpdates].every(
+      (v) => typeof v === 'boolean',
+    ) ||
     !['compact', 'normal'].includes(s.widgetSize) ||
     !widgetCorners.includes(s.widgetCorner) ||
     !['system', 'light', 'dark'].includes(s.theme) ||
