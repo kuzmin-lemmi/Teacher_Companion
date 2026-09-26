@@ -36,18 +36,25 @@ export function useTheme(theme: Settings['theme']) {
     return () => media?.removeEventListener('change', update);
   }, [theme]);
 }
-export function useClock(intervalMs = 30_000) {
+/** Тикает ровно на смене минуты — иначе отсчёт «ещё N мин» отставал бы от звонка. */
+export function useClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const refresh = () => setNow(new Date());
-    const timer = setInterval(refresh, intervalMs);
+    let timer: ReturnType<typeof setTimeout>;
+    function refresh() {
+      clearTimeout(timer);
+      const date = new Date();
+      setNow(date);
+      timer = setTimeout(refresh, 60_050 - (date.getTime() % 60_000));
+    }
+    refresh();
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
-      clearInterval(timer);
+      clearTimeout(timer);
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [intervalMs]);
+  }, []);
   return now;
 }

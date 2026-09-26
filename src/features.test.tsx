@@ -157,6 +157,33 @@ it('выделяет текущий урок и выносит общий пре
   expect(current.getAttribute('aria-current')).toBe('time');
   expect(screen.getByText('6А').closest('.widget-row')!.className).toContain('past');
 });
+it('показывает отсчёт до конца урока и до начала следующего', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 8, 25, 10, 42, 10));
+  const props = {
+    data: fixture(),
+    mode: 'today' as const,
+    onMode: vi.fn(),
+    onSettings: vi.fn(),
+    onClose: vi.fn(),
+    onLock: vi.fn(),
+    onDrag: vi.fn(),
+  };
+  render(<Widget {...props} />);
+  const row = screen.getByText('ещё 23 мин').closest('.widget-row') as HTMLElement;
+  expect(row.textContent).toContain('7Б');
+  expect(row.style.getPropertyValue('--progress')).toMatch(/^49\.\d+%$/);
+  // Тик ровно на смене минуты.
+  act(() => vi.advanceTimersByTime(50_100));
+  expect(screen.getByText('ещё 22 мин')).toBeTruthy();
+  act(() => {
+    vi.setSystemTime(new Date(2026, 8, 25, 10, 5));
+    window.dispatchEvent(new Event('focus'));
+  });
+  const next = screen.getByText('через 15 мин').closest('.widget-row')!;
+  expect(next.className).toContain('upcoming');
+  expect(next.textContent).toContain('7Б');
+});
 it('сам выбирает сегодня или следующий день, ручной выбор действует до конца суток', async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 8, 25, 10, 30));

@@ -76,6 +76,37 @@ export function autoDayMode(data: Pick<AppData, 'lessons' | 'bells'>, now: Date)
     .filter((end): end is string => !!end);
   return ends.some((end) => clock < end) ? 'today' : 'next';
 }
+/** За сколько минут до урока начинать отсчёт «через N мин» — иначе ночью висело бы «через 9 ч». */
+export const COUNTDOWN_AHEAD = 60;
+export type Countdown =
+  | { kind: 'lesson'; lessonId: string; minutes: number; progress: number }
+  | { kind: 'break'; lessonId: string; minutes: number };
+const minutesOf = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
+/**
+ * Идёт урок — сколько до звонка с него; перемена, окно или утро — сколько до ближайшего урока.
+ * Минуты округляются вверх: за 30 секунд до звонка это «1 мин», а не «0».
+ */
+export function countdown(lessons: Lesson[], bells: LessonTime[], now: Date): Countdown | null {
+  const at = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  for (const lesson of [...lessons].sort((a, b) => a.lessonNumber - b.lessonNumber)) {
+    const time = timeOf(lesson, bells);
+    if (!time) continue;
+    const start = minutesOf(time.start);
+    const end = minutesOf(time.end);
+    if (at < start) {
+      const minutes = Math.ceil(start - at);
+      return minutes <= COUNTDOWN_AHEAD ? { kind: 'break', lessonId: lesson.id, minutes } : null;
+    }
+    if (at < end)
+      return {
+        kind: 'lesson',
+        lessonId: lesson.id,
+        minutes: Math.ceil(end - at),
+        progress: (at - start) / (end - start),
+      };
+  }
+  return null;
+}
 export function gaps(lessons: Lesson[]): number[] {
   const sorted = [...lessons].sort((a, b) => a.lessonNumber - b.lessonNumber);
   if (!sorted.length) return [];

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   autoDayMode,
+  countdown,
   emptyData,
   getNextSchoolDay,
   gaps,
@@ -125,4 +126,39 @@ describe('валидация', () => {
     const wrong = { ...emptyData().settings, widgetCorner: 'center' };
     expect(() => decode(JSON.stringify({ ...emptyData(), settings: wrong }))).toThrow();
   });
+});
+describe('отсчёт времени', () => {
+  const lessons = [lesson(1, 1), lesson(1, 2), lesson(1, 4)];
+  const bells = [
+    { lessonNumber: 1, start: '08:00', end: '08:45' },
+    { lessonNumber: 2, start: '08:55', end: '09:40' },
+    { lessonNumber: 4, start: '10:45', end: '11:30' },
+  ];
+  const at = (h: number, m: number, s = 0) =>
+    countdown(lessons, bells, new Date(2026, 8, 28, h, m, s));
+  it('во время урока считает минуты до звонка', () =>
+    expect(at(8, 22)).toEqual({ kind: 'lesson', lessonId: '1-1', minutes: 23, progress: 22 / 45 }));
+  it('округляет вверх: последние секунды — это «1 мин»', () =>
+    expect(at(8, 44, 30)).toMatchObject({ kind: 'lesson', minutes: 1 }));
+  it('со звонком переключается на перемену', () =>
+    expect(at(8, 45)).toEqual({ kind: 'break', lessonId: '1-2', minutes: 10 }));
+  it('урок начался — отсчёт до его конца', () =>
+    expect(at(8, 55)).toMatchObject({ kind: 'lesson', lessonId: '1-2', minutes: 45 }));
+  it('в окне считает до следующего урока, но не раньше чем за час', () => {
+    expect(at(9, 40)).toBeNull();
+    expect(at(9, 45)).toEqual({ kind: 'break', lessonId: '1-4', minutes: 60 });
+  });
+  it('утром — до первого урока, ночью и после уроков — ничего', () => {
+    expect(at(7, 30)).toMatchObject({ kind: 'break', lessonId: '1-1', minutes: 30 });
+    expect(at(3, 0)).toBeNull();
+    expect(at(11, 30)).toBeNull();
+  });
+  it('учитывает индивидуальное время урока', () =>
+    expect(
+      countdown(
+        [{ ...lesson(1, 1), customTime: { start: '08:00', end: '08:30' } }],
+        bells,
+        new Date(2026, 8, 28, 8, 10),
+      ),
+    ).toMatchObject({ minutes: 20 }));
 });

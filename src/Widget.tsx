@@ -8,6 +8,7 @@ import {
 } from 'react';
 import {
   autoDayMode,
+  countdown,
   getNextSchoolDay,
   lessonsForDay,
   timeOf,
@@ -169,6 +170,7 @@ export function Widget({
   const showSubject = !compact && !subject && lessons.some((l) => l.subject.trim());
   const showRoom = !compact && !room && lessons.some((l) => l.room.trim());
   const clock = now.toTimeString().slice(0, 5);
+  const timer = shown === 'today' ? countdown(lessons, data.bells, now) : null;
   const nextLabel = !next
     ? 'Следующий'
     : isNextDay(now, next)
@@ -321,11 +323,17 @@ export function Widget({
                   : clock >= time.start
                     ? 'current'
                     : '';
+            const left = timer?.lessonId === lesson.id ? timer : null;
             return (
               <div
                 key={lesson.id}
-                className={`widget-row ${state}`}
+                className={`widget-row ${state} ${left?.kind === 'break' ? 'upcoming' : ''}`}
                 aria-current={state === 'current' ? 'time' : undefined}
+                style={
+                  left?.kind === 'lesson'
+                    ? ({ '--progress': `${left.progress * 100}%` } as CSSProperties)
+                    : undefined
+                }
               >
                 <span className="row-num">{lesson.lessonNumber}</span>
                 <strong className="row-class" title={lesson.className}>
@@ -334,7 +342,14 @@ export function Widget({
                 <span className="row-subject" title={showSubject ? lesson.subject : undefined}>
                   {showSubject ? lesson.subject : ''}
                 </span>
-                <span className="row-time">{timeText(time)}</span>
+                <span
+                  className={`row-time ${left ? 'row-countdown' : ''}`}
+                  title={left ? timeText(time) : undefined}
+                >
+                  {left
+                    ? `${left.kind === 'lesson' ? 'ещё' : 'через'} ${left.minutes} мин`
+                    : timeText(time)}
+                </span>
                 {showRoom && (
                   <span className="row-room">{lesson.room.trim() && `каб. ${lesson.room}`}</span>
                 )}
