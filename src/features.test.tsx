@@ -190,7 +190,7 @@ it('сам выбирает сегодня или следующий день, �
   const user = userEvent.setup();
   const data = fixture();
   render(<Shell storage={{ load: async () => data, save: async () => {} }} />);
-  await screen.findByText('Сегодня, 25 сентября');
+  await screen.findByText('25 сентября');
   expect(screen.getByRole('button', { name: 'Сегодня' }).getAttribute('aria-pressed')).toBe('true');
   act(() => {
     vi.setSystemTime(new Date(2026, 8, 25, 12));
@@ -198,7 +198,7 @@ it('сам выбирает сегодня или следующий день, �
   });
   await screen.findByText('2 октября');
   await user.click(screen.getByRole('button', { name: 'Сегодня' }));
-  await screen.findByText('Сегодня, 25 сентября');
+  await screen.findByText('25 сентября');
   act(() => {
     vi.setSystemTime(new Date(2026, 9, 2, 12));
     window.dispatchEvent(new Event('focus'));
@@ -395,4 +395,75 @@ it('без новой версии сообщает, что установлен
   await user.click(await screen.findByRole('button', { name: 'О программе' }));
   await user.click(screen.getByRole('button', { name: 'Проверить обновления' }));
   await screen.findByText('У вас последняя версия.');
+});
+describe('каникулы, сокращённые дни и заметки на виджете', () => {
+  const widget = (data: AppData, mode: 'auto' | 'today' | 'next' = 'auto') => (
+    <Widget
+      data={data}
+      mode={mode}
+      onMode={vi.fn()}
+      onSettings={vi.fn()}
+      onClose={vi.fn()}
+      onLock={vi.fn()}
+      onDrag={vi.fn()}
+    />
+  );
+  const autumn = { id: 'h', title: 'Осенние каникулы', start: '2026-10-26', end: '2026-11-06' };
+  it('в каникулы сегодня выходной, а сам виджет показывает день после каникул', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 30, 9));
+    const data = { ...fixture(), holidays: [autumn] };
+    const view = render(widget(data, 'today'));
+    expect(screen.getByText('Сегодня выходной')).toBeTruthy();
+    expect(screen.getByText('Осенние каникулы · до 6 ноября')).toBeTruthy();
+    view.unmount();
+    render(widget(data));
+    expect(screen.getByText('13 ноября')).toBeTruthy();
+    expect(screen.getByText('Осенние каникулы · до 6 ноября')).toBeTruthy();
+    expect(screen.getByText('7Б')).toBeTruthy();
+  });
+  it('в сокращённый день время и отсчёт — по сокращённым звонкам', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 25, 9, 50));
+    render(
+      widget({
+        ...fixture(),
+        shortDays: ['2026-09-25'],
+        shortBells: [
+          { lessonNumber: 1, start: '08:30', end: '09:00' },
+          { lessonNumber: 3, start: '09:40', end: '10:10' },
+        ],
+      }),
+    );
+    expect(screen.getByText('Сокращённые уроки')).toBeTruthy();
+    expect(screen.getByText('ещё 20 мин').closest('.widget-row')!.textContent).toContain('7Б');
+  });
+  it('заметку к уроку можно добавить прямо в виджете, она сохраняется', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 24, 12));
+    const user = userEvent.setup();
+    let saved = fixture();
+    render(
+      <Shell
+        storage={{
+          load: async () => saved,
+          save: async (d) => {
+            saved = d;
+          },
+        }}
+      />,
+    );
+    await user.click(await screen.findByText('7Б'));
+    await user.type(screen.getByLabelText('Заметка к уроку 3, 7Б'), 'контрольная{Enter}');
+    await screen.findByText('контрольная');
+    expect(saved.notes).toEqual([{ date: '2026-09-25', lessonNumber: 3, text: 'контрольная' }]);
+    await user.click(screen.getByText('контрольная'));
+    await user.type(screen.getByLabelText('Заметка к уроку 3, 7Б'), ' — 2 варианта{Escape}');
+    expect(screen.getByText('контрольная')).toBeTruthy();
+    await user.click(screen.getByText('контрольная'));
+    await user.clear(screen.getByLabelText('Заметка к уроку 3, 7Б'));
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(saved.notes).toEqual([]));
+    expect(screen.queryByText('контрольная')).toBeNull();
+  });
 });

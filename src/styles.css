@@ -424,3 +424,46 @@ footer button {
     font-size: 26px;
   }
 }
+.editor .panel + .panel {
+  margin-top: 20px;
+}
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+}
+.holiday-row label:first-child {
+  flex: 1;
+  width: auto;
+}
+.holiday-row label:not(:first-child) {
+  width: 150px;
+}
+.short-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+.short-days .bell-row label:first-child {
+  width: 150px;
+}
+.short-bells-title {
+  margin: 30px 0 14px;
+}
+.short-bells-title h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.shorten-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+}
+.shorten-tool label {
+  width: 120px;
+}
+.shorten-tool button {
+  font-size: 12px;
+}

@@ -3,22 +3,87 @@ import { isTauri } from '@tauri-apps/api/core';
 import {
   emptyData,
   gaps,
+  isoDate,
   lessonsForDay,
+  publicHolidays,
+  shortenBells,
   timeOf,
   validate,
   weekdays,
   type AppData,
   type Lesson,
+  type LessonTime,
 } from './domain';
 import { getStorage, type Storage } from './storage';
 import { appVersion } from './version';
 type Props = {
   storage?: Storage;
-  initialTab?: 'schedule' | 'bells';
+  initialTab?: Tab;
   /** true, пока есть правки с ошибками: они лежат в черновике и ещё не видны в виджете. */
   onDirty?: (dirty: boolean) => void;
 };
+type Tab = 'schedule' | 'bells' | 'calendar';
+const titles: Record<Tab, [string, string]> = {
+  schedule: ['Недельное расписание', 'Добавьте уроки — время подставится из расписания звонков.'],
+  bells: ['Расписание звонков', 'Общее время занятий для всех учебных дней.'],
+  calendar: [
+    'Каникулы и сокращённые дни',
+    'Дни без уроков и дни с укороченными уроками — виджет учтёт их сам.',
+  ],
+};
 const AUTOSAVE_DELAY = 400;
+/** Строки звонков: общие и сокращённые редактируются одинаково. */
+function BellRows({
+  bells,
+  onChange,
+  deleteLabel,
+}: {
+  bells: LessonTime[];
+  onChange: (bells: LessonTime[]) => void;
+  deleteLabel: string;
+}) {
+  const patch = (i: number, value: Partial<LessonTime>) =>
+    onChange(bells.map((b, j) => (j === i ? { ...b, ...value } : b)));
+  return bells.map((bell, i) => (
+    <div className="bell-row" key={i}>
+      <label>
+        № урока
+        <input
+          type="number"
+          min="1"
+          max="20"
+          value={bell.lessonNumber}
+          onChange={(e) => patch(i, { lessonNumber: Number(e.target.value) })}
+        />
+      </label>
+      <label>
+        Начало
+        <input
+          type="time"
+          value={bell.start}
+          onChange={(e) => patch(i, { start: e.target.value })}
+        />
+      </label>
+      <span>—</span>
+      <label>
+        Окончание
+        <input type="time" value={bell.end} onChange={(e) => patch(i, { end: e.target.value })} />
+      </label>
+      <button
+        className="delete"
+        aria-label={`${deleteLabel} ${bell.lessonNumber}`}
+        onClick={() => onChange(bells.filter((_, j) => i !== j))}
+      >
+        ×
+      </button>
+    </div>
+  ));
+}
+function nextBell(bells: LessonTime[]): LessonTime {
+  let n = 1;
+  while (bells.some((b) => b.lessonNumber === n)) n++;
+  return { lessonNumber: n, start: '', end: '' };
+}
 const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
 export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
@@ -29,7 +94,9 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
   const [status, setStatus] = useState('');
   const [failed, setFailed] = useState(false);
   const [sessionStart, setSessionStart] = useState('');
-  const [tab, setTab] = useState<'schedule' | 'bells'>(initialTab);
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [shortLesson, setShortLesson] = useState(30);
+  const [shortBreak, setShortBreak] = useState(10);
   const [day, setDay] = useState(1);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -143,6 +210,9 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
           <button className={tab === 'bells' ? 'active' : ''} onClick={() => setTab('bells')}>
             ◷ &nbsp; Звонки
           </button>
+          <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}>
+            ☼ &nbsp; Каникулы
+          </button>
         </nav>
         <div className="local-note">
           <span className="dot" />{' '}
@@ -158,12 +228,8 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
         <header>
           <div>
             <p className="eyebrow">TEACHER COMPANION</p>
-            <h1>{tab === 'schedule' ? 'Недельное расписание' : 'Расписание звонков'}</h1>
-            <p className="muted">
-              {tab === 'schedule'
-                ? 'Добавьте уроки — время подставится из расписания звонков.'
-                : 'Общее время занятий для всех учебных дней.'}
-            </p>
+            <h1>{titles[tab][0]}</h1>
+            <p className="muted">{titles[tab][1]}</p>
           </div>
           <span className="badge">Локально · v{appVersion}</span>
         </header>
@@ -381,6 +447,253 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                     {gaps(lessons).length ? ` Окна: ${gaps(lessons).join(', ')}.` : ''}
                   </p>
                 </>
+              ) : tab === 'calendar' ? (
+                <>
+                  <section className="panel">
+                    <div className="section-title">
+                      <div>
+                        <h2>Каникулы и праздники</h2>
+                        <p className="muted">
+                          В эти дни уроков нет: виджет сразу покажет следующий учебный день.
+                        </p>
+                      </div>
+                      <div className="section-actions">
+                        <button
+                          className="secondary"
+                          title="4 ноября, новогодние праздники, 23 февраля, 8 марта, 1 и 9 мая"
+                          onClick={() => {
+                            const known = new Set(data.holidays.map((h) => h.start));
+                            const added = publicHolidays(new Date())
+                              .filter((h) => !known.has(h.start))
+                              .map((h) => ({ ...h, id: crypto.randomUUID() }));
+                            change({ ...data, holidays: [...data.holidays, ...added] });
+                            setStatus(
+                              added.length
+                                ? `Добавлено праздников: ${added.length}`
+                                : 'Праздники этого учебного года уже в списке',
+                            );
+                          }}
+                        >
+                          + Праздники учебного года
+                        </button>
+                        <button
+                          className="secondary"
+                          disabled={data.holidays.length >= 100}
+                          onClick={() => {
+                            const today = isoDate(new Date());
+                            change({
+                              ...data,
+                              holidays: [
+                                ...data.holidays,
+                                { id: crypto.randomUUID(), title: '', start: today, end: today },
+                              ],
+                            });
+                          }}
+                        >
+                          + Добавить период
+                        </button>
+                      </div>
+                    </div>
+                    {!data.holidays.length && (
+                      <div className="empty">
+                        <h3>Каникул пока нет</h3>
+                        <p>
+                          Добавьте осенние, зимние и весенние каникулы — даты есть на сайте школы.
+                        </p>
+                      </div>
+                    )}
+                    {data.holidays.map((h) => {
+                      const patch = (value: Partial<typeof h>) =>
+                        change({
+                          ...data,
+                          holidays: data.holidays.map((x) =>
+                            x.id === h.id ? { ...x, ...value } : x,
+                          ),
+                        });
+                      return (
+                        <div className="bell-row holiday-row" key={h.id}>
+                          <label>
+                            Название
+                            <input
+                              placeholder="Например, осенние каникулы"
+                              maxLength={100}
+                              value={h.title}
+                              onChange={(e) => patch({ title: e.target.value })}
+                            />
+                          </label>
+                          <label>
+                            С
+                            <input
+                              type="date"
+                              value={h.start}
+                              onChange={(e) =>
+                                // Начало позже конца — сдвигаем и конец: чаще всего это один день.
+                                patch({
+                                  start: e.target.value,
+                                  ...(e.target.value > h.end ? { end: e.target.value } : {}),
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            По
+                            <input
+                              type="date"
+                              value={h.end}
+                              onChange={(e) => patch({ end: e.target.value })}
+                            />
+                          </label>
+                          <button
+                            className="delete"
+                            aria-label={`Удалить период ${h.title || h.start}`}
+                            onClick={() =>
+                              change({
+                                ...data,
+                                holidays: data.holidays.filter((x) => x.id !== h.id),
+                              })
+                            }
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <p className="hint">
+                      Для одного дня укажите одинаковые даты. Переносы выходных каждый год свои —
+                      добавьте их сами.
+                    </p>
+                  </section>
+                  <section className="panel">
+                    <div className="section-title">
+                      <div>
+                        <h2>Сокращённые дни</h2>
+                        <p className="muted">
+                          В эти даты время уроков берётся из сокращённых звонков — и отсчёт на
+                          виджете тоже.
+                        </p>
+                      </div>
+                      <button
+                        className="secondary"
+                        disabled={data.shortDays.length >= 200}
+                        onClick={() => {
+                          const date = new Date();
+                          while (data.shortDays.includes(isoDate(date)))
+                            date.setDate(date.getDate() + 1);
+                          change({ ...data, shortDays: [...data.shortDays, isoDate(date)] });
+                        }}
+                      >
+                        + Добавить дату
+                      </button>
+                    </div>
+                    {data.shortDays.length > 0 && (
+                      <div className="short-days">
+                        {data.shortDays.map((date, i) => (
+                          <div className="bell-row" key={i}>
+                            <label>
+                              Дата
+                              <input
+                                type="date"
+                                value={date}
+                                onChange={(e) =>
+                                  change({
+                                    ...data,
+                                    shortDays: data.shortDays.map((d, j) =>
+                                      j === i ? e.target.value : d,
+                                    ),
+                                  })
+                                }
+                              />
+                            </label>
+                            <button
+                              className="delete"
+                              aria-label={`Удалить сокращённый день ${date}`}
+                              onClick={() =>
+                                change({
+                                  ...data,
+                                  shortDays: data.shortDays.filter((_, j) => j !== i),
+                                })
+                              }
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="section-title short-bells-title">
+                      <div>
+                        <h3>Сокращённые звонки</h3>
+                        <p className="muted">
+                          Заменяют обычное и индивидуальное время уроков с теми же номерами.
+                        </p>
+                      </div>
+                      <button
+                        className="secondary"
+                        disabled={data.shortBells.length >= 20}
+                        onClick={() =>
+                          change({
+                            ...data,
+                            shortBells: [...data.shortBells, nextBell(data.shortBells)],
+                          })
+                        }
+                      >
+                        + Добавить звонок
+                      </button>
+                    </div>
+                    <div className="shorten-tool">
+                      <label>
+                        Уроки по, мин
+                        <input
+                          type="number"
+                          min="10"
+                          max="45"
+                          value={shortLesson}
+                          onChange={(e) => setShortLesson(Number(e.target.value))}
+                        />
+                      </label>
+                      <label>
+                        Перемены по, мин
+                        <input
+                          type="number"
+                          min="0"
+                          max="30"
+                          value={shortBreak}
+                          onChange={(e) => setShortBreak(Number(e.target.value))}
+                        />
+                      </label>
+                      <button
+                        disabled={
+                          !data.bells.length ||
+                          !(shortLesson >= 10 && shortLesson <= 45) ||
+                          !(shortBreak >= 0 && shortBreak <= 30)
+                        }
+                        title={
+                          data.bells.length
+                            ? 'Первый урок начнётся как обычно, дальше — уроки и перемены заданной длины'
+                            : 'Сначала заполните обычные звонки'
+                        }
+                        onClick={() =>
+                          change({
+                            ...data,
+                            shortBells: shortenBells(data.bells, shortLesson, shortBreak),
+                          })
+                        }
+                      >
+                        Рассчитать от обычных звонков
+                      </button>
+                    </div>
+                    <BellRows
+                      bells={data.shortBells}
+                      deleteLabel="Удалить сокращённый звонок"
+                      onChange={(shortBells) => change({ ...data, shortBells })}
+                    />
+                    {data.shortDays.length > 0 && !data.shortBells.length && (
+                      <p className="hint">
+                        Пока сокращённые звонки не заданы, в эти дни действует обычное время.
+                      </p>
+                    )}
+                  </section>
+                </>
               ) : (
                 <section className="panel">
                   <div className="section-title">
@@ -393,14 +706,9 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                     <button
                       className="secondary"
                       disabled={data.bells.length >= 20}
-                      onClick={() => {
-                        let n = 1;
-                        while (data.bells.some((b) => b.lessonNumber === n)) n++;
-                        change({
-                          ...data,
-                          bells: [...data.bells, { lessonNumber: n, start: '', end: '' }],
-                        });
-                      }}
+                      onClick={() =>
+                        change({ ...data, bells: [...data.bells, nextBell(data.bells)] })
+                      }
                     >
                       + Добавить звонок
                     </button>
@@ -411,67 +719,11 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                       <p>Можно сначала заполнить классы, а звонки настроить позже.</p>
                     </div>
                   )}
-                  {data.bells.map((bell, i) => (
-                    <div className="bell-row" key={i}>
-                      <label>
-                        № урока
-                        <input
-                          type="number"
-                          min="1"
-                          max="20"
-                          value={bell.lessonNumber}
-                          onChange={(e) =>
-                            change({
-                              ...data,
-                              bells: data.bells.map((b, j) =>
-                                j === i ? { ...b, lessonNumber: Number(e.target.value) } : b,
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                      <label>
-                        Начало
-                        <input
-                          type="time"
-                          value={bell.start}
-                          onChange={(e) =>
-                            change({
-                              ...data,
-                              bells: data.bells.map((b, j) =>
-                                j === i ? { ...b, start: e.target.value } : b,
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                      <span>—</span>
-                      <label>
-                        Окончание
-                        <input
-                          type="time"
-                          value={bell.end}
-                          onChange={(e) =>
-                            change({
-                              ...data,
-                              bells: data.bells.map((b, j) =>
-                                j === i ? { ...b, end: e.target.value } : b,
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                      <button
-                        className="delete"
-                        aria-label={`Удалить звонок ${bell.lessonNumber}`}
-                        onClick={() =>
-                          change({ ...data, bells: data.bells.filter((_, j) => i !== j) })
-                        }
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                  <BellRows
+                    bells={data.bells}
+                    deleteLabel="Удалить звонок"
+                    onChange={(bells) => change({ ...data, bells })}
+                  />
                 </section>
               )}
             </fieldset>

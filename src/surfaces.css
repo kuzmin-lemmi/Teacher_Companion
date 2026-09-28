@@ -427,6 +427,44 @@ html[data-native='true'][data-surface='widget'] body {
 .widget-row.upcoming .row-time {
   color: var(--accent);
 }
+/* Строка урока открывает заметку к нему. */
+.widget-row.editable {
+  cursor: pointer;
+}
+.widget-row.editable:hover:not(.current) {
+  background: var(--hover);
+}
+.row-note {
+  margin: -3px 0 3px;
+  padding: 0 8px 0 32px;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.row-note.past {
+  opacity: 0.45;
+}
+.schedule-widget .row-note-input {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 0 8px 4px 32px;
+  padding: 4px 7px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.widget-notice {
+  margin: 0;
+  padding: 2px 8px 5px;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .week-table {
   width: 100%;
   border-collapse: separate;

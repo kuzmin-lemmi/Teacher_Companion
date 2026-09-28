@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -7,13 +8,16 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  NOTE_MAX_LENGTH,
   autoDayMode,
   countdown,
+  dayOf,
+  dayOff,
   getNextSchoolDay,
-  lessonsForDay,
-  timeOf,
+  isoDate,
   type AppData,
   type DayMode,
+  type DayOff,
   type Lesson,
   weekdays,
 } from './domain';
@@ -34,10 +38,61 @@ type Props = {
   onMeasure?: (height: number) => void;
   /** Есть новая версия — маленькая точка на кнопке настроек, без всплывающих окон. */
   updateAvailable?: boolean;
+  /** Заметка к уроку на дату (`YYYY-MM-DD`); пустой текст убирает её. Без обработчика строки не редактируются. */
+  onNote?: (date: string, lessonNumber: number, text: string) => void;
 };
 type Row = { kind: 'lesson'; lesson: Lesson } | { kind: 'gap'; number: number };
 const weekdayName = new Intl.DateTimeFormat('ru', { weekday: 'long' });
 const dayMonth = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long' });
+const fromIso = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+/** «Осенние каникулы · до 8 ноября» или «День народного единства · 4 ноября». */
+function offLabel(off: DayOff) {
+  const title = off.title.trim() || 'Выходной';
+  return off.start === off.end
+    ? `${title} · ${dayMonth.format(fromIso(off.start))}`
+    : `${title} · до ${dayMonth.format(fromIso(off.end))}`;
+}
+function NoteEditor({
+  initial,
+  label,
+  onDone,
+}: {
+  initial: string;
+  label: string;
+  /** `null` — отмена без сохранения. */
+  onDone: (text: string | null) => void;
+}) {
+  const [text, setText] = useState(initial);
+  const done = useRef(false);
+  const finish = (value: string | null) => {
+    if (done.current) return;
+    done.current = true;
+    onDone(value);
+  };
+  return (
+    <input
+      className="row-note-input"
+      autoFocus
+      aria-label={label}
+      placeholder="Что не забыть?"
+      title="Enter — сохранить, Esc — отмена"
+      maxLength={NOTE_MAX_LENGTH}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') finish(text);
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          finish(null);
+        }
+      }}
+      onBlur={() => finish(text)}
+    />
+  );
+}
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const isNextDay = (a: Date, b: Date) =>
   new Date(a.getFullYear(), a.getMonth(), a.getDate() + 1).toDateString() === b.toDateString();
@@ -159,13 +214,25 @@ export function Widget({
   onDrag,
   onMeasure,
   updateAvailable = false,
+  onNote,
 }: Props) {
   const now = useClock();
   const [week, setWeek] = useState(false);
-  const next = getNextSchoolDay(data.lessons, now);
+  const [editing, setEditing] = useState<string | null>(null);
+  const next = getNextSchoolDay(data, now);
   const shown = mode === 'auto' ? autoDayMode(data, now) : mode;
   const date = shown === 'today' ? now : next;
-  const lessons = date ? lessonsForDay(data.lessons, date.getDay()) : [];
+  const day = date ? dayOf(data, date) : null;
+  const dateKey = date ? isoDate(date) : '';
+  const lessons = day?.lessons ?? [];
+  // Между сегодня и показанным днём — каникулы или праздник: подсказываем, почему день не завтра.
+  const tomorrow = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  const skipped =
+    shown === 'next' && next
+      ? (dayOff(data, now) ??
+        data.holidays.find((h) => h.end >= tomorrow && h.start < isoDate(next)))
+      : undefined;
+  const notice = day?.short ? 'Сокращённые уроки' : skipped ? offLabel(skipped) : '';
   const compact = data.settings.widgetSize === 'compact';
   const { locked } = data.settings;
   const subject = shared(lessons.map((l) => l.subject));
@@ -173,17 +240,19 @@ export function Widget({
   const showSubject = !compact && !subject && lessons.some((l) => l.subject.trim());
   const showRoom = !compact && !room && lessons.some((l) => l.room.trim());
   const clock = now.toTimeString().slice(0, 5);
-  const timer = shown === 'today' ? countdown(lessons, data.bells, now) : null;
+  const timer = shown === 'today' && day ? countdown(day, now) : null;
   const nextLabel = !next
     ? 'Следующий'
     : isNextDay(now, next)
       ? 'Завтра'
       : capitalize(weekdayName.format(next));
+  // В компактном виджете рядом четыре кнопки, а «Сегодня» / «Завтра» уже есть на переключателе внизу.
+  const prefix = (word: string) => (compact ? '' : `${word}, `);
   const subtitle =
     shown === 'today'
-      ? `Сегодня, ${dayMonth.format(now)}`
+      ? `${prefix('Сегодня')}${dayMonth.format(now)}`
       : date
-        ? `${isNextDay(now, date) ? 'Завтра, ' : ''}${dayMonth.format(date)}`
+        ? `${isNextDay(now, date) ? prefix('Завтра') : ''}${dayMonth.format(date)}`
         : 'Пока пусто';
   const meta = lessons.length
     ? [subject, room && `каб. ${room}`].filter(Boolean).join(' · ') || lessonCount(lessons.length)
@@ -305,68 +374,99 @@ export function Widget({
           </div>
         ) : !lessons.length ? (
           <div className="widget-empty">
-            <h2>Сегодня занятий нет</h2>
-            <p>Можно посмотреть следующий учебный день.</p>
+            <h2>{day?.off ? 'Сегодня выходной' : 'Сегодня занятий нет'}</h2>
+            <p>{day?.off ? offLabel(day.off) : 'Можно посмотреть следующий учебный день.'}</p>
             <button className="secondary" onClick={() => onMode('next')}>
               Следующий учебный день
             </button>
           </div>
         ) : (
-          rowsOf(lessons).map((row) => {
-            if (row.kind === 'gap') {
-              const bell = data.bells.find((b) => b.lessonNumber === row.number);
+          <>
+            {notice && <p className="widget-notice">{notice}</p>}
+            {rowsOf(lessons).map((row) => {
+              if (row.kind === 'gap') {
+                const bell = day!.bell(row.number);
+                return (
+                  <div key={`gap-${row.number}`} className="widget-row gap">
+                    <span className="row-num">{row.number}</span>
+                    <span className="row-gap">окно</span>
+                    {bell && <span className="row-time">{timeText(bell)}</span>}
+                    {showRoom && <span className="row-room" />}
+                  </div>
+                );
+              }
+              const { lesson } = row;
+              const time = day!.time(lesson);
+              const note = day!.note(lesson.lessonNumber);
+              const noteKey = `${dateKey}:${lesson.lessonNumber}`;
+              const writing = editing === noteKey;
+              const state =
+                shown !== 'today' || !time
+                  ? ''
+                  : clock >= time.end
+                    ? 'past'
+                    : clock >= time.start
+                      ? 'current'
+                      : '';
+              const left = timer?.lessonId === lesson.id ? timer : null;
+              const edit = onNote ? () => setEditing(noteKey) : undefined;
               return (
-                <div key={`gap-${row.number}`} className="widget-row gap">
-                  <span className="row-num">{row.number}</span>
-                  <span className="row-gap">окно</span>
-                  {bell && <span className="row-time">{timeText(bell)}</span>}
-                  {showRoom && <span className="row-room" />}
-                </div>
+                <Fragment key={lesson.id}>
+                  <div
+                    className={`widget-row ${state} ${left?.kind === 'break' ? 'upcoming' : ''} ${edit ? 'editable' : ''}`}
+                    aria-current={state === 'current' ? 'time' : undefined}
+                    title={
+                      edit ? (note ? 'Изменить заметку' : 'Добавить заметку к уроку') : undefined
+                    }
+                    onClick={edit}
+                    style={
+                      left?.kind === 'lesson'
+                        ? ({ '--progress': `${left.progress * 100}%` } as CSSProperties)
+                        : undefined
+                    }
+                  >
+                    <span className="row-num">{lesson.lessonNumber}</span>
+                    <strong className="row-class" title={lesson.className}>
+                      {lesson.className}
+                    </strong>
+                    <span className="row-subject" title={showSubject ? lesson.subject : undefined}>
+                      {showSubject ? lesson.subject : ''}
+                    </span>
+                    <span
+                      className={`row-time ${left ? 'row-countdown' : ''}`}
+                      title={left ? timeText(time) : undefined}
+                    >
+                      {left
+                        ? `${left.kind === 'lesson' ? 'ещё' : 'через'} ${left.minutes} мин`
+                        : timeText(time)}
+                    </span>
+                    {showRoom && (
+                      <span className="row-room">
+                        {lesson.room.trim() && `каб. ${lesson.room}`}
+                      </span>
+                    )}
+                  </div>
+                  {writing ? (
+                    <NoteEditor
+                      initial={note}
+                      label={`Заметка к уроку ${lesson.lessonNumber}, ${lesson.className}`}
+                      onDone={(text) => {
+                        setEditing(null);
+                        if (text !== null && text.trim() !== note)
+                          onNote?.(dateKey, lesson.lessonNumber, text);
+                      }}
+                    />
+                  ) : (
+                    note && (
+                      <p className={`row-note ${state}`} title={note} onClick={edit}>
+                        {note}
+                      </p>
+                    )
+                  )}
+                </Fragment>
               );
-            }
-            const { lesson } = row;
-            const time = timeOf(lesson, data.bells);
-            const state =
-              shown !== 'today' || !time
-                ? ''
-                : clock >= time.end
-                  ? 'past'
-                  : clock >= time.start
-                    ? 'current'
-                    : '';
-            const left = timer?.lessonId === lesson.id ? timer : null;
-            return (
-              <div
-                key={lesson.id}
-                className={`widget-row ${state} ${left?.kind === 'break' ? 'upcoming' : ''}`}
-                aria-current={state === 'current' ? 'time' : undefined}
-                style={
-                  left?.kind === 'lesson'
-                    ? ({ '--progress': `${left.progress * 100}%` } as CSSProperties)
-                    : undefined
-                }
-              >
-                <span className="row-num">{lesson.lessonNumber}</span>
-                <strong className="row-class" title={lesson.className}>
-                  {lesson.className}
-                </strong>
-                <span className="row-subject" title={showSubject ? lesson.subject : undefined}>
-                  {showSubject ? lesson.subject : ''}
-                </span>
-                <span
-                  className={`row-time ${left ? 'row-countdown' : ''}`}
-                  title={left ? timeText(time) : undefined}
-                >
-                  {left
-                    ? `${left.kind === 'lesson' ? 'ещё' : 'через'} ${left.minutes} мин`
-                    : timeText(time)}
-                </span>
-                {showRoom && (
-                  <span className="row-room">{lesson.room.trim() && `каб. ${lesson.room}`}</span>
-                )}
-              </div>
-            );
-          })
+            })}
+          </>
         )}
       </div>
       {!week && (

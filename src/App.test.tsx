@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, it, expect } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { emptyData, type AppData } from './domain';
@@ -110,4 +110,38 @@ it('редактирует звонки и индивидуальное врем
   await waitFor(() => expect(state()!.lessons[0].customTime?.start).toBe('08:35'));
   await user.click(screen.getByText('Отменить изменения'));
   await waitFor(() => expect(state()).toMatchObject({ lessons: [], bells: [] }));
+});
+it('редактирует каникулы, праздники и сокращённые дни', async () => {
+  const { storage, state } = memory();
+  await storage.save({
+    ...emptyData(),
+    bells: [
+      { lessonNumber: 1, start: '08:00', end: '08:45' },
+      { lessonNumber: 2, start: '08:55', end: '09:40' },
+    ],
+  });
+  const user = userEvent.setup();
+  render(<App storage={storage} />);
+  await screen.findByText('Здесь будет расписание');
+  await user.click(screen.getByRole('button', { name: /☼.*Каникулы/ }));
+  await user.click(screen.getByText('+ Добавить период'));
+  await user.type(screen.getByLabelText('Название'), 'Осенние каникулы');
+  fireEvent.change(screen.getByLabelText('По'), { target: { value: '2026-11-06' } });
+  fireEvent.change(screen.getByLabelText('С'), { target: { value: '2026-10-26' } });
+  await waitFor(() =>
+    expect(state()!.holidays).toMatchObject([
+      { title: 'Осенние каникулы', start: '2026-10-26', end: '2026-11-06' },
+    ]),
+  );
+  await user.click(screen.getByText('+ Праздники учебного года'));
+  await waitFor(() => expect(state()!.holidays).toHaveLength(7));
+  await user.click(screen.getByText('+ Добавить дату'));
+  await user.click(screen.getByText('Рассчитать от обычных звонков'));
+  await waitFor(() =>
+    expect(state()!.shortBells).toEqual([
+      { lessonNumber: 1, start: '08:00', end: '08:30' },
+      { lessonNumber: 2, start: '08:40', end: '09:10' },
+    ]),
+  );
+  expect(state()!.shortDays).toHaveLength(1);
 });

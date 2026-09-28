@@ -16,7 +16,7 @@ import {
   type UpdateFinder,
 } from './updates';
 import { dateKey } from './calendar';
-import { emptyData, type AppData, type DayMode, type Settings } from './domain';
+import { emptyData, setNote, type AppData, type DayMode, type Settings } from './domain';
 import { getStorage, type Storage } from './storage';
 import {
   configureWindow,
@@ -421,6 +421,13 @@ export function Shell({
           }}
           onMeasure={setWidgetHeight}
           updateAvailable={showUpdateBadge}
+          onNote={(date, lessonNumber, text) => {
+            if (!busy)
+              void persist({
+                ...data,
+                notes: setNote(data.notes, date, lessonNumber, text),
+              }).catch((e) => setNativeError(e.message));
+          }}
           onDrag={() =>
             void startDrag(data.settings.locked).catch(() =>
               setNativeError('Не удалось переместить окно.'),

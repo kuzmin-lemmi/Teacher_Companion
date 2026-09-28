@@ -1,5 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core';
-import { decode, emptyData, type AppData } from './domain';
+import { decode, emptyData, normalize, type AppData } from './domain';
 import { appVersion } from './version';
 export type SnapshotReason = 'daily' | 'update' | 'before-restore';
 export type SnapshotInfo = {
@@ -36,7 +36,7 @@ function parseDraft(raw: string, savedAt: string): Draft | null {
     const data = JSON.parse(raw) as AppData;
     if (data?.version !== 1 || !Array.isArray(data.lessons) || !Array.isArray(data.bells))
       return null;
-    return { data, savedAt };
+    return { data: normalize(data), savedAt };
   } catch {
     return null;
   }
