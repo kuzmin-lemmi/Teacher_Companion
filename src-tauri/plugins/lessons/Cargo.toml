@@ -1,0 +1,14 @@
+[package]
+name = "tauri-plugin-lessons"
+version = "0.1.0"
+edition = "2021"
+description = "Android: schedule notification, lesson reminders and home screen widgets"
+publish = false
+# По `links` сборка приложения находит Android-часть плагина.
+links = "tauri-plugin-lessons"
+
+[dependencies]
+tauri = "2"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

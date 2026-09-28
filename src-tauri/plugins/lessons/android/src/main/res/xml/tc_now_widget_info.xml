@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/tc_now_widget_description"
+    android:initialLayout="@layout/tc_widget_now"
+    android:minWidth="250dp"
+    android:minHeight="50dp"
+    android:minResizeWidth="160dp"
+    android:minResizeHeight="40dp"
+    android:previewLayout="@layout/tc_widget_now"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen|keyguard" />

@@ -1,7 +1,7 @@
 {
   "identifier": "mobile-capability",
-  "description": "QR code scanner for moving the schedule from the computer — phone only",
+  "description": "QR code scanner, schedule notification and home screen widgets — phone only",
   "platforms": ["android", "iOS"],
   "windows": ["main"],
-  "permissions": ["barcode-scanner:default"]
+  "permissions": ["barcode-scanner:default", "lessons:default"]
 }

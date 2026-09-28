@@ -212,7 +212,7 @@ function Stepper({
     </div>
   );
 }
-function TimeField({
+export function TimeField({
   label,
   value,
   onChange,
@@ -244,7 +244,7 @@ function DateField({
     </label>
   );
 }
-function Switch({
+export function Switch({
   label,
   hint,
   checked,

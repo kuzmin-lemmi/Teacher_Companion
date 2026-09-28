@@ -1,0 +1,5 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Расписание в шторке, напоминания и виджеты."
+permissions = ["allow-sync", "allow-status", "allow-notifications", "allow-battery", "allow-pin"]

@@ -96,9 +96,12 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
-    // Сканер QR-кода — перенос расписания с компьютера на телефон.
+    // Сканер QR-кода — перенос расписания с компьютера на телефон;
+    // расписание в шторке, напоминания и виджеты на рабочем столе.
     #[cfg(mobile)]
-    let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+    let builder = builder
+        .plugin(tauri_plugin_barcode_scanner::init())
+        .plugin(tauri_plugin_lessons::init());
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

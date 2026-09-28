@@ -33,6 +33,7 @@ import {
 } from './desktop';
 import { useTheme, useToday } from './hooks';
 import { useBackButton } from './back';
+import { syncPhone } from './phone';
 /** `menu` — список разделов настроек на телефоне. */
 type Page = 'widget' | 'menu' | SettingsPage;
 export function Shell({
@@ -221,6 +222,16 @@ export function Shell({
     }),
     [persist, baseStorage],
   );
+  // Телефон: план уроков для шторки, напоминаний и виджетов — после каждого изменения
+  // и при возвращении в приложение (мог смениться день).
+  useEffect(() => {
+    if (!data || !isMobile()) return;
+    const sync = () => void syncPhone(data).catch(() => {});
+    sync();
+    const onVisible = () => document.visibilityState === 'visible' && sync();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [data]);
   const surface = page === 'widget' && !!data ? 'widget' : 'settings';
   const settings = data?.settings;
   useEffect(() => {

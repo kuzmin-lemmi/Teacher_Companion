@@ -573,6 +573,56 @@
     font-size: 14px;
   }
 
+  /* Уведомления и виджеты */
+  & .m-card {
+    padding: 4px 16px;
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    background: var(--panel);
+  }
+  & .m-card .m-switch {
+    margin: 0;
+    padding: 10px 0;
+  }
+  & .m-card .m-field {
+    margin: 4px 0 14px;
+  }
+  & .m-segmented {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    background: var(--panel);
+  }
+  & .m-segmented button {
+    min-width: 0;
+    height: 44px;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  & .m-segmented button[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  & .m-row-action {
+    flex: none;
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  & .m-alert .m-primary {
+    width: 100%;
+  }
+
   /* Нижняя панель */
   &.sheet-open body {
     overflow: hidden;

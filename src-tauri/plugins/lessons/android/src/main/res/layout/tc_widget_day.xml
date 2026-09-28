@@ -1,0 +1,651 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- «Уроки на день»: до конца уроков — сегодня, потом — следующий учебный день.
+     Строки заданы заранее (RemoteViews не создаёт виджеты на ходу), лишние скрываются. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tc_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/tc_widget_bg"
+    android:orientation="vertical"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp">
+
+        <TextView
+            android:id="@+id/tc_day_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:text="Уроки на день"
+            android:textColor="@color/tc_text"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/tc_day_meta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tc_day_notice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="2dp"
+        android:paddingHorizontal="8dp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:textColor="@color/tc_accent"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tc_day_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:paddingHorizontal="8dp"
+        android:text="Откройте приложение, чтобы показать расписание"
+        android:textColor="@color/tc_muted"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:id="@+id/tc_r0"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r0_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r0_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r0_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r0_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r1"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r1_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r1_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r1_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r1_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r2"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r2_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r2_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r2_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r2_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r3"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r3_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r3_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r3_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r3_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r4"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r4_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r4_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r4_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r4_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r5"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r5_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r5_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r5_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r5_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r6"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r6_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r6_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r6_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r6_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r7"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r7_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r7_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r7_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r7_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r8"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r8_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r8_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r8_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r8_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r9"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r9_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r9_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r9_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r9_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r10"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r10_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r10_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r10_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r10_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tc_r11"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:background="@drawable/tc_row_plain"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tc_r11_num"
+            android:layout_width="22dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r11_class"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="110dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="@color/tc_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tc_r11_detail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tc_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tc_r11_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/tc_text"
+            android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>

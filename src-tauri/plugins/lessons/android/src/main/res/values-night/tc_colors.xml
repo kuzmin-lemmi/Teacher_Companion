@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="tc_widget_bg">#F2191D25</color>
+    <color name="tc_text">#E6E9F1</color>
+    <color name="tc_muted">#A4AFBE</color>
+    <color name="tc_accent">#B4D9C2</color>
+    <color name="tc_accent_soft">#29B4D9C2</color>
+    <color name="tc_line">#14FFFFFF</color>
+</resources>

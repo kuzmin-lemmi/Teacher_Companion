@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tc_now_widget">Сейчас и далее</string>
+    <string name="tc_now_widget_description">Текущий или следующий урок с отсчётом до звонка</string>
+    <string name="tc_day_widget">Уроки на день</string>
+    <string name="tc_day_widget_description">Все уроки сегодня, после уроков — на следующий учебный день</string>
+    <string name="tc_channel_schedule">Расписание в шторке</string>
+    <string name="tc_channel_schedule_description">Текущий или следующий урок с отсчётом до звонка</string>
+    <string name="tc_channel_reminders">Напоминания перед уроком</string>
+    <string name="tc_channel_reminders_description">«Через 5 минут — 7Б»</string>
+    <string name="tc_channel_morning">Утренняя сводка</string>
+    <string name="tc_channel_morning_description">Сколько уроков сегодня и когда первый</string>
+</resources>
