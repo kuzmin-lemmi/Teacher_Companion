@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  generateBells,
+  nextBell,
   autoDayMode,
   countdown,
   dayOf,
@@ -311,4 +313,25 @@ describe('совместимость', () => {
         }),
       ),
     ).toThrow('заметки'));
+});
+describe('звонки с нуля', () => {
+  it('строит уроки и перемены от первого звонка', () => {
+    expect(generateBells('08:00', 3, 45, 10)).toEqual([
+      { lessonNumber: 1, start: '08:00', end: '08:45' },
+      { lessonNumber: 2, start: '08:55', end: '09:40' },
+      { lessonNumber: 3, start: '09:50', end: '10:35' },
+    ]);
+  });
+  it('не переходит за полночь', () => {
+    expect(generateBells('22:30', 5, 45, 10)).toHaveLength(1);
+  });
+  it('следующий звонок повторяет длину урока и перемены', () => {
+    const bells = [
+      { lessonNumber: 1, start: '08:00', end: '08:40' },
+      { lessonNumber: 2, start: '08:55', end: '09:35' },
+    ];
+    expect(nextBell(bells)).toEqual({ lessonNumber: 3, start: '09:50', end: '10:30' });
+    expect(nextBell([bells[0]])).toEqual({ lessonNumber: 2, start: '08:50', end: '09:30' });
+    expect(nextBell([])).toEqual({ lessonNumber: 1, start: '', end: '' });
+  });
 });

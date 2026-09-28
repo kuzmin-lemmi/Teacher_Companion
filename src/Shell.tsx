@@ -3,6 +3,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { Backups } from './Backups';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Preferences, cornerLabels } from './Preferences';
+import { MobileSettings } from './MobileSettings';
 import { SettingsLayout, type SettingsPage } from './SettingsLayout';
 import { Widget } from './Widget';
 import { UpdatePanel, type UpdateState } from './UpdatePanel';
@@ -32,7 +33,8 @@ import {
 } from './desktop';
 import { useTheme, useToday } from './hooks';
 import { useBackButton } from './back';
-type Page = 'widget' | SettingsPage;
+/** `menu` — список разделов настроек на телефоне. */
+type Page = 'widget' | 'menu' | SettingsPage;
 export function Shell({
   storage: suppliedStorage,
   updates = findUpdate,
@@ -243,7 +245,8 @@ export function Shell({
     return () => clearTimeout(timer);
   }, [surface, widgetHeight]);
   // Android «Назад»: из настроек — к расписанию, из окна подтверждения — отмена.
-  useBackButton(page !== 'widget', () => navigate('widget'));
+  // На телефоне «Назад» внутри настроек обрабатывает MobileSettings: сначала к списку разделов.
+  useBackButton(page !== 'widget' && !isMobile(), () => navigate('widget'));
   useBackButton(!!confirmation, () => setConfirmation(null));
   function guard(action: () => void) {
     if (busy) return;
@@ -415,7 +418,7 @@ export function Shell({
           data={data}
           mode={mode}
           onMode={chooseDay}
-          onSettings={() => navigate('schedule')}
+          onSettings={() => navigate(isMobile() ? 'menu' : 'schedule')}
           onBackups={() => navigate('backups')}
           layout={isMobile() ? 'screen' : 'widget'}
           // На телефоне виджет — это весь экран: закрывать и закреплять нечего.
@@ -451,7 +454,19 @@ export function Shell({
         )}
       </div>
     );
-  else
+  else if (isMobile())
+    content = (
+      <MobileSettings
+        initial={page === 'schedule' ? 'lessons' : page}
+        data={data}
+        editorStorage={editorStorage}
+        onDirty={setDraftPending}
+        onRestore={restore}
+        onSaveSettings={(settings) => persist({ ...data, settings })}
+        onExit={() => navigate('widget')}
+      />
+    );
+  else if (page !== 'menu')
     content = (
       <SettingsLayout
         page={page}

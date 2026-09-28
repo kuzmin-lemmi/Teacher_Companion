@@ -13,6 +13,12 @@
   --hover: #ffffff0d;
   --switch-active: #2c323d;
   --accent-soft: #b4d9c21f;
+  --danger: #f0a5a5;
+  --inset-top: env(safe-area-inset-top, 0px);
+  --inset-right: env(safe-area-inset-right, 0px);
+  --inset-bottom: env(safe-area-inset-bottom, 0px);
+  --inset-left: env(safe-area-inset-left, 0px);
+  --inset-keyboard: 0px;
 }
 :root[data-theme='light'] {
   color-scheme: light;
@@ -30,6 +36,7 @@
   --hover: #1f33290d;
   --switch-active: #fff;
   --accent-soft: #2e604914;
+  --danger: #b3261e;
 }
 :root,
 body {
@@ -789,7 +796,7 @@ html[data-native='true'][data-surface='widget'] body {
   font-size: 15px;
 }
 .screen .widget-top {
-  padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 12px;
+  padding: calc(var(--inset-top) + 18px) 20px 12px;
   cursor: default;
 }
 .screen .widget-title h1 {
@@ -880,7 +887,7 @@ html[data-native='true'][data-surface='widget'] body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-  padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
+  padding: 8px 10px calc(var(--inset-bottom) + 8px);
   border-top: 1px solid var(--line-soft);
   background: var(--bg);
 }

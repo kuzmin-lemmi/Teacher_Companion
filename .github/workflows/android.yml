@@ -53,6 +53,7 @@ jobs:
         run: |
           bash scripts/ci-run.sh npm run tauri -- android init --ci
           bash scripts/ci-run.sh npm run tauri -- icon src-tauri/icons/app-icon.svg
+          bash scripts/ci-run.sh node scripts/android-patch.mjs
       # aarch64 — почти все телефоны последних лет, armv7 — старые и недорогие.
       - name: Build APK
         run: bash scripts/ci-run.sh npm run tauri -- android build --apk --ci --target aarch64 --target armv7

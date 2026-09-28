@@ -168,8 +168,8 @@ export const COUNTDOWN_AHEAD = 60;
 export type Countdown =
   | { kind: 'lesson'; lessonId: string; minutes: number; progress: number }
   | { kind: 'break'; lessonId: string; minutes: number };
-const minutesOf = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
-const hhmm = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+export const minutesOf = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
+export const hhmm = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 /**
  * Идёт урок — сколько до звонка с него; перемена, окно или утро — сколько до ближайшего урока.
  * Минуты округляются вверх: за 30 секунд до звонка это «1 мин», а не «0».
@@ -212,6 +212,35 @@ export function shortenBells(bells: LessonTime[], lesson: number, rest: number):
     start += lesson + rest;
   }
   return result;
+}
+/** Звонки с нуля: первый урок в `first`, дальше уроки и перемены заданной длины. */
+export function generateBells(first: string, count: number, lesson: number, rest: number) {
+  const result: LessonTime[] = [];
+  let start = minutesOf(first);
+  for (let n = 1; n <= count && start + lesson < 24 * 60; n++) {
+    result.push({ lessonNumber: n, start: hhmm(start), end: hhmm(start + lesson) });
+    start += lesson + rest;
+  }
+  return result;
+}
+/**
+ * Следующий звонок после последнего: та же длина урока и перемены, что у предыдущих
+ * (по умолчанию 45 и 10 минут). Пустое время — если день уже закончился.
+ */
+export function nextBell(bells: LessonTime[]): LessonTime {
+  const ordered = [...bells]
+    .filter((b) => /^\d\d:\d\d$/.test(b.start) && /^\d\d:\d\d$/.test(b.end))
+    .sort((a, b) => a.lessonNumber - b.lessonNumber);
+  let lessonNumber = 1;
+  while (bells.some((b) => b.lessonNumber === lessonNumber)) lessonNumber++;
+  const last = ordered.at(-1);
+  if (!last) return { lessonNumber, start: '', end: '' };
+  const prev = ordered.at(-2);
+  const length = minutesOf(last.end) - minutesOf(last.start) || 45;
+  const rest = prev ? minutesOf(last.start) - minutesOf(prev.end) : 10;
+  const start = minutesOf(last.end) + Math.max(0, rest);
+  if (start + length >= 24 * 60) return { lessonNumber, start: '', end: '' };
+  return { lessonNumber, start: hhmm(start), end: hhmm(start + length) };
 }
 /**
  * Государственные праздники учебного года, выпадающие на учебное время.
