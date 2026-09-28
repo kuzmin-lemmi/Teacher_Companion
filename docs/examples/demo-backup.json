@@ -4,7 +4,6 @@
   "createdAt": "2026-09-25T00:00:00.000Z",
   "data": {
     "version": 1,
-    "onboardingComplete": true,
     "settings": {
       "launchOnStartup": false,
       "alwaysOnTop": false,
