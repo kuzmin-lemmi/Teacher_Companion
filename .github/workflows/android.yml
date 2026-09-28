@@ -24,13 +24,22 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
-      - name: Install NDK
-        run: sdkmanager --install "ndk;$NDK_VERSION"
+      # Android SDK и NDK уже есть на серверах GitHub; ставим NDK, только если его нет.
+      - name: Android SDK and NDK
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          ndk="${ANDROID_NDK_LATEST_HOME:-}"
+          if [ -z "$ndk" ] || [ ! -d "$ndk" ]; then
+            bash scripts/ci-run.sh "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+            ndk="$sdk/ndk/$NDK_VERSION"
+          fi
+          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ndk" >> "$GITHUB_ENV"
+          echo "SDK: $sdk"; echo "NDK: $ndk"; ls "$sdk/build-tools" || true
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi
@@ -42,14 +51,11 @@ jobs:
       - run: npm test
       - name: Generate Android project
         run: |
-          export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
-          npm run tauri -- android init --ci
-          npm run tauri -- icon src-tauri/icons/app-icon.svg
+          bash scripts/ci-run.sh npm run tauri -- android init --ci
+          bash scripts/ci-run.sh npm run tauri -- icon src-tauri/icons/app-icon.svg
       # aarch64 — почти все телефоны последних лет, armv7 — старые и недорогие.
       - name: Build APK
-        run: |
-          export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
-          npm run tauri -- android build --apk --ci --target aarch64 --target armv7
+        run: bash scripts/ci-run.sh npm run tauri -- android build --apk --ci --target aarch64 --target armv7
       - name: Find APK
         run: |
           apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release*.apk' | head -1)
