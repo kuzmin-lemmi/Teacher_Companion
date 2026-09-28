@@ -4,8 +4,10 @@ import { Shell } from './Shell';
 import './fonts.css';
 import './styles.css';
 import './surfaces.css';
-import { isTauri } from '@tauri-apps/api/core';
-document.documentElement.dataset.native = String(isTauri());
+import { isDesktop, isMobile } from './desktop';
+// Прозрачное окно-виджет — только в приложении на компьютере.
+document.documentElement.dataset.native = String(isDesktop());
+document.documentElement.dataset.mobile = String(isMobile());
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Shell />

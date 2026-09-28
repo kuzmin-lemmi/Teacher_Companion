@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
+import { isMobile } from './desktop';
 import { App as ScheduleEditor } from './App';
 import { Backups } from './Backups';
 import type { AppData } from './domain';
@@ -72,7 +73,17 @@ export function SettingsLayout({
             <Backups data={data} onRestore={onRestore} storage={editorStorage} />
           ) : (
             <>
-              {updatePanel}
+              {isMobile() ? (
+                <section className="panel">
+                  <p className="eyebrow">ОБНОВЛЕНИЯ</p>
+                  <p className="muted">
+                    Это пробная версия для Android. Новую версию скачайте по той же ссылке, что и
+                    первую, и установите поверх — расписание и заметки сохранятся.
+                  </p>
+                </section>
+              ) : (
+                updatePanel
+              )}
               <About />
             </>
           )}
@@ -93,11 +104,13 @@ function About() {
         проверки обновлений на GitHub — это можно выключить в настройках.
       </p>
       <p className="hint">
-        {isTauri()
-          ? 'Windows-приложение · SQLite'
-          : 'Браузерный предпросмотр · данные этого браузера'}
+        {!isTauri()
+          ? 'Браузерный предпросмотр · данные этого браузера'
+          : isMobile()
+            ? 'Android-приложение · SQLite'
+            : 'Windows-приложение · SQLite'}
       </p>
-      <p>Устанавливается в профиль пользователя, права администратора не нужны.</p>
+      {!isMobile() && <p>Устанавливается в профиль пользователя, права администратора не нужны.</p>}
     </section>
   );
 }

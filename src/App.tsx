@@ -15,6 +15,7 @@ import {
   type LessonTime,
 } from './domain';
 import { getStorage, type Storage } from './storage';
+import { isMobile } from './desktop';
 import { appVersion } from './version';
 type Props = {
   storage?: Storage;
@@ -216,7 +217,9 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
         </nav>
         <div className="local-note">
           <span className="dot" />{' '}
-          {isTauri() ? 'Данные на этом компьютере' : 'Предпросмотр в браузере'}
+          {isTauri()
+            ? `Данные на этом ${isMobile() ? 'телефоне' : 'компьютере'}`
+            : 'Предпросмотр в браузере'}
           <small>
             {isTauri()
               ? 'Работает без интернета'

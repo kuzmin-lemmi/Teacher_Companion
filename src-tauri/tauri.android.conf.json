@@ -1,0 +1,11 @@
+{
+  "identifier": "ru.teachercompanion.app",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Помощник учителя"
+      }
+    ]
+  }
+}

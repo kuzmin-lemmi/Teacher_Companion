@@ -20,6 +20,8 @@ import { emptyData, setNote, type AppData, type DayMode, type Settings } from '.
 import { getStorage, type Storage } from './storage';
 import {
   configureWindow,
+  isDesktop,
+  isMobile,
   exitApp,
   hideWindow,
   resetPosition,
@@ -222,7 +224,7 @@ export function Shell({
     document.documentElement.dataset.surface = surface;
     if (!settings) return;
     // Виджет показывается, когда известна его высота, — без скачка размера.
-    if (surface === 'widget' && isTauri() && !widgetHeight) return;
+    if (surface === 'widget' && isDesktop() && !widgetHeight) return;
     let cancelled = false;
     configureWindow(surface, settings, widgetHeight).catch(() => {
       if (!cancelled)
@@ -274,12 +276,12 @@ export function Shell({
     if (forceExit || dataRef.current?.settings.closeBehavior === 'exit')
       guard(() => {
         void exitApp().catch(() => setNativeError('Не удалось завершить приложение.'));
-        if (!isTauri()) setHidden(true);
+        if (!isDesktop()) setHidden(true);
       });
     else {
       try {
         await hideWindow();
-        if (!isTauri()) setHidden(true);
+        if (!isDesktop()) setHidden(true);
       } catch {
         setNativeError('Не удалось скрыть окно.');
       }
@@ -404,21 +406,26 @@ export function Shell({
     );
   else if (page === 'widget')
     content = (
-      <div className={`widget-stage ${isTauri() ? 'native' : 'browser'}`}>
+      <div className={`widget-stage ${isDesktop() ? 'native' : 'browser'}`}>
         <Widget
           data={data}
           mode={mode}
           onMode={chooseDay}
           onSettings={() => navigate('schedule')}
           onBackups={() => navigate('backups')}
-          onClose={() => void close()}
-          onLock={() => {
-            if (!busy)
-              void persist({
-                ...data,
-                settings: { ...data.settings, locked: !data.settings.locked },
-              }).catch((e) => setNativeError(e.message));
-          }}
+          // На телефоне виджет — это весь экран: закрывать и закреплять нечего.
+          onClose={isMobile() ? undefined : () => void close()}
+          onLock={
+            isMobile()
+              ? undefined
+              : () => {
+                  if (!busy)
+                    void persist({
+                      ...data,
+                      settings: { ...data.settings, locked: !data.settings.locked },
+                    }).catch((e) => setNativeError(e.message));
+                }
+          }
           onMeasure={setWidgetHeight}
           updateAvailable={showUpdateBadge}
           onNote={(date, lessonNumber, text) => {

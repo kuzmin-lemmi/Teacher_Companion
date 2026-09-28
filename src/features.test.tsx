@@ -467,3 +467,11 @@ describe('каникулы, сокращённые дни и заметки на
     expect(screen.queryByText('контрольная')).toBeNull();
   });
 });
+it('без обработчиков (на телефоне) виджет не показывает «закрепить» и «скрыть»', () => {
+  render(
+    <Widget data={fixture()} mode="today" onMode={vi.fn()} onSettings={vi.fn()} onDrag={vi.fn()} />,
+  );
+  expect(screen.queryByRole('button', { name: 'Закрепить виджет' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Закрыть виджет' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Открыть настройки' })).toBeTruthy();
+});

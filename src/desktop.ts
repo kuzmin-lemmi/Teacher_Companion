@@ -2,6 +2,10 @@ import { isTauri, invoke } from '@tauri-apps/api/core';
 import type { Settings } from './domain';
 import { safePosition, type Point } from './geometry';
 export type Surface = 'widget' | 'settings';
+/** Телефон — и приложение на Android, и браузер телефона. Окна-виджета, трея и автозапуска там нет. */
+export const isMobile = () => /Android|iPhone|iPad/i.test(navigator.userAgent);
+/** Приложение на компьютере: окно-виджет, трей, автозапуск, обновления через установщик. */
+export const isDesktop = () => isTauri() && !isMobile();
 let surface: Surface = 'settings';
 let switching = false;
 let lastPlaced: Point | null = null;
@@ -19,12 +23,12 @@ function writePosition(p: Point) {
   localStorage.setItem(positionKey, JSON.stringify({ x: p.x, y: p.y }));
 }
 export async function syncAutostart(enabled: boolean) {
-  if (!isTauri()) return;
+  if (!isDesktop()) return;
   const api = await import('@tauri-apps/plugin-autostart');
   if ((await api.isEnabled()) !== enabled) await (enabled ? api.enable() : api.disable());
 }
 export async function showWindow() {
-  if (isTauri()) {
+  if (isDesktop()) {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     const w = getCurrentWindow();
     await w.unminimize();
@@ -33,18 +37,18 @@ export async function showWindow() {
   }
 }
 export async function hideWindow() {
-  if (isTauri()) {
+  if (isDesktop()) {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     await getCurrentWindow().hide();
   }
 }
 export async function exitApp() {
-  if (isTauri()) {
+  if (isDesktop()) {
     await invoke('quit_app');
   }
 }
 export async function startDrag(locked: boolean) {
-  if (!locked && isTauri()) {
+  if (!locked && isDesktop()) {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     await getCurrentWindow().startDragging();
   }
@@ -57,7 +61,7 @@ export function configureWindow(
   settings: Settings,
   contentHeight?: number,
 ): Promise<void> {
-  if (!isTauri()) return Promise.resolve();
+  if (!isDesktop()) return Promise.resolve();
   const operation = queue
     .catch(() => {})
     .then(async () => {
@@ -145,7 +149,7 @@ export async function subscribeDesktop(actions: {
   movedError: () => void;
   displayChanged: () => void;
 }) {
-  if (!isTauri()) return () => {};
+  if (!isDesktop()) return () => {};
   const { getCurrentWindow } = await import('@tauri-apps/api/window');
   const { listen } = await import('@tauri-apps/api/event');
   const w = getCurrentWindow();

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Исходник значков для Android (tauri icon). Буква «У» нарисована линиями, без шрифтов. -->
+  <defs>
+    <clipPath id="letter"><rect x="0" y="262" width="1024" height="600"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="#b4d9c2"/>
+  <g clip-path="url(#letter)" fill="none" stroke="#183224" stroke-width="112">
+    <path d="M 282 180 L 522 648"/>
+    <path d="M 742 180 L 474 742 Q 444 800 384 800 L 318 800" stroke-linejoin="round"/>
+  </g>
+</svg>

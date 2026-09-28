@@ -1,0 +1,103 @@
+name: Android (пробная версия)
+# Собирает APK и выкладывает его на страницу пре-релиза android-preview.
+# Это не «последний релиз»: Windows-обновления и ссылка «Скачать для Windows» его не видят.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, android]
+    paths-ignore: ['**.md', 'docs/**']
+permissions:
+  contents: write
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: 27.0.11902837
+      # Без ключа APK собирается, но не подписывается и не публикуется — только проверка сборки.
+      HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Install NDK
+        run: sdkmanager --install "ndk;$NDK_VERSION"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: android
+      - run: npm ci
+      - run: npm test
+      - name: Generate Android project
+        run: |
+          export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+          npm run tauri -- android init --ci
+          npm run tauri -- icon src-tauri/icons/app-icon.svg
+      # aarch64 — почти все телефоны последних лет, armv7 — старые и недорогие.
+      - name: Build APK
+        run: |
+          export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+          npm run tauri -- android build --apk --ci --target aarch64 --target armv7
+      - name: Find APK
+        run: |
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release*.apk' | head -1)
+          test -n "$apk" || { find src-tauri/gen/android/app/build/outputs -name '*.apk'; exit 1; }
+          echo "APK=$apk" >> "$GITHUB_ENV"
+          ls -l "$apk"
+      - name: Upload unsigned APK
+        if: env.HAS_KEY != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-unsigned
+          path: ${{ env.APK }}
+      - name: Sign APK
+        if: env.HAS_KEY == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          tools="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          key="$RUNNER_TEMP/release.p12"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$key"
+          "$tools/zipalign" -p -f 4 "$APK" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$key" --ks-type PKCS12 --ks-key-alias teacher-companion \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --out TeacherCompanion-Android.apk "$RUNNER_TEMP/aligned.apk"
+          rm -f "$key"
+          "$tools/apksigner" verify --print-certs TeacherCompanion-Android.apk
+      - name: Publish to android-preview
+        if: env.HAS_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=android-preview
+          version=$(node -p "require('./package.json').version")
+          cat > notes.md <<EOF
+          Пробная версия **Помощника учителя для Android** — для проверки на своём телефоне.
+
+          **Установка:** откройте эту страницу на телефоне, нажмите **TeacherCompanion-Android.apk** в разделе Assets и установите. Телефон попросит разрешить установку из браузера — это нормально для приложений не из магазина.
+
+          **Обновление:** скачайте файл по той же ссылке и установите поверх — расписание и заметки сохранятся.
+
+          Версия $version · сборка ${GITHUB_SHA::7} · $(date -u +'%d.%m.%Y %H:%M') UTC
+          EOF
+          git tag -f "$tag"
+          git push -f origin "refs/tags/$tag"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --prerelease --notes-file notes.md
+          else
+            gh release create "$tag" --prerelease --title "Android — пробная версия" --notes-file notes.md
+          fi
+          gh release upload "$tag" TeacherCompanion-Android.apk --clobber

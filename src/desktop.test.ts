@@ -27,7 +27,16 @@ vi.mock('@tauri-apps/api/window', () => ({
     setFocus: mock.focus,
   }),
 }));
-import { exitApp, hideWindow, showWindow, startDrag, syncAutostart } from './desktop';
+import {
+  configureWindow,
+  exitApp,
+  hideWindow,
+  isDesktop,
+  showWindow,
+  startDrag,
+  syncAutostart,
+} from './desktop';
+import { emptyData } from './domain';
 beforeEach(() => {
   vi.clearAllMocks();
   mock.isEnabled.mockResolvedValue(false);
@@ -61,4 +70,26 @@ it('различает скрытие, показ и полное заверше
   expect(mock.focus).toHaveBeenCalledOnce();
   await exitApp();
   expect(mock.invoke).toHaveBeenCalledWith('quit_app');
+});
+it('на Android окно, трей и автозапуск не трогает', async () => {
+  const agent = vi
+    .spyOn(navigator, 'userAgent', 'get')
+    .mockReturnValue(
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/128 Mobile',
+    );
+  try {
+    expect(isDesktop()).toBe(false);
+    await syncAutostart(true);
+    await startDrag(false);
+    await hideWindow();
+    await showWindow();
+    await configureWindow('widget', emptyData().settings, 300);
+    expect(mock.isEnabled).not.toHaveBeenCalled();
+    expect(mock.enable).not.toHaveBeenCalled();
+    expect(mock.drag).not.toHaveBeenCalled();
+    expect(mock.hide).not.toHaveBeenCalled();
+    expect(mock.show).not.toHaveBeenCalled();
+  } finally {
+    agent.mockRestore();
+  }
 });

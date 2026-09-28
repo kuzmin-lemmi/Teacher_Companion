@@ -3,16 +3,24 @@ name = "teacher-companion"
 version = "0.7.0"
 edition = "2021"
 
+# Библиотека нужна Android: приложение на телефоне загружает её как .so.
+[lib]
+name = "teacher_companion_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
-tauri-plugin-autostart = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+serde_json = "1.0.151"
+
+# Только для компьютера: на телефоне нет трея, автозапуска и обновлений через установщик.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2.12.0"
 tauri-plugin-process = "2.3.1"
-serde_json = "1.0.151"

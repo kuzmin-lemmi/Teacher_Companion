@@ -1,4 +1,4 @@
-import { isTauri } from '@tauri-apps/api/core';
+import { isDesktop } from './desktop';
 /** Доступная новая версия. Установка — только по явному нажатию учителя. */
 export type AvailableUpdate = {
   version: string;
@@ -6,9 +6,9 @@ export type AvailableUpdate = {
   install(onProgress: (percent: number | null) => void): Promise<void>;
 };
 export type UpdateFinder = () => Promise<AvailableUpdate | null>;
-/** Спрашивает GitHub о новой версии. В браузерном предпросмотре обновлений нет. */
+/** Спрашивает GitHub о новой версии. В браузере и на телефоне обновлений через установщик нет. */
 export const findUpdate: UpdateFinder = async () => {
-  if (!isTauri()) return null;
+  if (!isDesktop()) return null;
   const { check } = await import('@tauri-apps/plugin-updater');
   const update = await check();
   if (!update) return null;

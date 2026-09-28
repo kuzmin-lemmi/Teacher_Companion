@@ -31,8 +31,9 @@ type Props = {
   onSettings: () => void;
   /** Пустая неделя: сразу перейти к восстановлению копии, например на втором компьютере. */
   onBackups?: () => void;
-  onClose: () => void;
-  onLock: () => void;
+  /** Без обработчиков (на телефоне) кнопки «закрепить» и «скрыть» не показываются. */
+  onClose?: () => void;
+  onLock?: () => void;
   onDrag: () => void;
   /** Естественная высота виджета в CSS-пикселях — по ней подгоняется окно. */
   onMeasure?: (height: number) => void;
@@ -330,16 +331,18 @@ export function Widget({
             >
               {weekIcon}
             </button>
-            <button
-              aria-label={locked ? 'Открепить виджет' : 'Закрепить виджет'}
-              title={
-                locked ? 'Закреплён — нажмите, чтобы разрешить перемещение' : 'Закрепить на месте'
-              }
-              aria-pressed={locked}
-              onClick={onLock}
-            >
-              {pinIcon}
-            </button>
+            {onLock && (
+              <button
+                aria-label={locked ? 'Открепить виджет' : 'Закрепить виджет'}
+                title={
+                  locked ? 'Закреплён — нажмите, чтобы разрешить перемещение' : 'Закрепить на месте'
+                }
+                aria-pressed={locked}
+                onClick={onLock}
+              >
+                {pinIcon}
+              </button>
+            )}
             <button
               aria-label="Открыть настройки"
               title={updateAvailable ? 'Настройки · доступна новая версия' : 'Настройки'}
@@ -348,9 +351,11 @@ export function Widget({
             >
               {gearIcon}
             </button>
-            <button aria-label="Закрыть виджет" title="Скрыть" onClick={onClose}>
-              {closeIcon}
-            </button>
+            {onClose && (
+              <button aria-label="Закрыть виджет" title="Скрыть" onClick={onClose}>
+                {closeIcon}
+              </button>
+            )}
           </div>
         )}
       </div>
