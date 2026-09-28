@@ -123,7 +123,6 @@ export function Backups({
                 action(async () => {
                   await onRestore({
                     ...candidate,
-                    onboardingComplete: true,
                     settings: {
                       ...candidate.settings,
                       launchOnStartup: data?.settings.launchOnStartup ?? false,

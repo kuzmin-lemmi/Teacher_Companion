@@ -506,6 +506,12 @@ html[data-native='true'][data-surface='widget'] body {
   padding: 6px 12px;
   font-size: 12px;
 }
+.widget-empty-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
 .widget-bottom {
   display: flex;
   align-items: center;
@@ -560,101 +566,6 @@ html[data-native='true'][data-surface='widget'] body {
   color: var(--muted);
   margin-top: 26px;
   text-align: center;
-}
-.onboarding {
-  max-width: 1200px;
-  padding: 35px 32px;
-  margin: auto;
-}
-.onboarding-header {
-  align-items: center;
-  justify-content: start;
-}
-.onboarding-header h1 {
-  font-size: 24px;
-}
-.onboarding-header .eyebrow {
-  margin: 0 0 6px;
-}
-.onboarding-header .badge {
-  margin-left: auto;
-}
-.steps {
-  display: flex;
-  list-style: none;
-  padding: 0;
-  margin: 30px 0;
-  gap: 15px;
-  justify-content: space-between;
-}
-.steps li {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  color: var(--muted);
-  font-size: 12px;
-}
-.steps li span {
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-}
-.steps [aria-current='step'] {
-  color: var(--text);
-}
-.steps [aria-current='step'] span {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-color: var(--accent);
-}
-.welcome {
-  padding: 52px;
-}
-.welcome h2 {
-  font-size: clamp(30px, 4vw, 46px);
-  line-height: 1.25;
-  letter-spacing: -1px;
-  margin: 25px 0;
-}
-.welcome > p:not(.eyebrow) {
-  font-size: 15px;
-  line-height: 1.9;
-  max-width: 650px;
-  color: var(--muted);
-}
-.welcome-features {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  margin-top: 40px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.onboarding-footer {
-  justify-content: space-between;
-}
-.onboarding-footer span {
-  font-size: 12px;
-  color: var(--muted);
-}
-.embedded-editor .app-shell {
-  min-height: 0;
-}
-.embedded-editor aside {
-  display: none;
-}
-.embedded-editor main {
-  padding: 0;
-  width: 100%;
-}
-.embedded-editor header {
-  margin-bottom: 20px;
-}
-.embedded-editor header h1 {
-  font-size: 25px;
 }
 .loading-screen,
 .recovery-screen,
@@ -734,29 +645,8 @@ html[data-native='true'][data-surface='widget'] body {
   .settings-toolbar nav {
     margin: 0;
   }
-  .onboarding {
-    padding: 22px 16px;
-  }
-  .steps {
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .steps li {
-    font-size: 10px;
-  }
-  .welcome {
-    padding: 25px;
-  }
   .preference-grid {
     grid-template-columns: 1fr;
-  }
-  .onboarding-footer {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .onboarding-footer span {
-    order: 3;
-    width: 100%;
   }
   .settings-content {
     padding: 25px 16px;

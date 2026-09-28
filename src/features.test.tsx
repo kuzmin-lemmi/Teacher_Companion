@@ -205,31 +205,19 @@ it('сам выбирает сегодня или следующий день, �
   });
   await screen.findByText('9 октября');
 });
-it('проходит первый запуск и запоминает завершение', async () => {
+it('первый запуск сразу открывает виджет: настроить расписание или загрузить копию', async () => {
   const user = userEvent.setup();
-  let saved = emptyData();
-  const storage = {
-    load: async () => saved,
-    save: async (d: AppData) => {
-      saved = d;
-    },
-  };
+  const storage = { load: async () => emptyData(), save: async () => {} };
   const app = render(<Shell storage={storage} />);
-  await screen.findByText('Настроим ваш рабочий день');
-  await user.click(screen.getByText('Продолжить'));
-  await screen.findByText('Добавьте время первого урока');
-  await user.click(screen.getByText('Продолжить'));
-  await screen.findByText('Здесь будет расписание');
-  await user.click(screen.getByText('Продолжить'));
-  await screen.findByText('Сделайте виджет своим');
-  await user.click(screen.getByText('Продолжить'));
-  await user.click(screen.getByText('Открыть виджет'));
   await screen.findByLabelText('Виджет расписания');
-  expect(saved.onboardingComplete).toBe(true);
+  await screen.findByText('Добавьте первые уроки');
+  await user.click(screen.getByText('Загрузить резервную копию'));
+  await screen.findByText('Ваши данные');
   app.unmount();
   render(<Shell storage={storage} />);
   await screen.findByLabelText('Виджет расписания');
-  expect(screen.queryByText('Настроим ваш рабочий день')).toBeNull();
+  await user.click(screen.getByText('Настроить расписание'));
+  await screen.findByText('Здесь будет расписание');
 });
 it('сохраняет настройки и защищает черновик при выходе', async () => {
   const user = userEvent.setup();

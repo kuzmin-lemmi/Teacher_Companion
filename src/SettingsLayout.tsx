@@ -25,7 +25,6 @@ export function SettingsLayout({
   onDirty,
   onNavigate,
   onRestore,
-  onOpenWizard,
   updatePanel,
   updateVersion,
 }: {
@@ -36,7 +35,6 @@ export function SettingsLayout({
   onDirty: (dirty: boolean) => void;
   onNavigate: (page: SettingsPage | 'widget') => void;
   onRestore: (data: AppData) => Promise<void>;
-  onOpenWizard: () => void;
   updatePanel: ReactNode;
   /** Новая версия, о которой стоит ненавязчиво напомнить. */
   updateVersion: string | null;
@@ -75,7 +73,7 @@ export function SettingsLayout({
           ) : (
             <>
               {updatePanel}
-              <About onOpenWizard={onOpenWizard} />
+              <About />
             </>
           )}
         </main>
@@ -83,7 +81,7 @@ export function SettingsLayout({
     </div>
   );
 }
-function About({ onOpenWizard }: { onOpenWizard: () => void }) {
+function About() {
   return (
     <section className="panel about">
       <span className="brand-icon">У</span>
@@ -100,7 +98,6 @@ function About({ onOpenWizard }: { onOpenWizard: () => void }) {
           : 'Браузерный предпросмотр · данные этого браузера'}
       </p>
       <p>Устанавливается в профиль пользователя, права администратора не нужны.</p>
-      <button onClick={onOpenWizard}>Открыть мастер настройки</button>
     </section>
   );
 }

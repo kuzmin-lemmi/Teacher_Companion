@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { isTauri } from '@tauri-apps/api/core';
 import { Backups } from './Backups';
 import { ConfirmDialog } from './ConfirmDialog';
-import { Onboarding } from './Onboarding';
 import { Preferences, cornerLabels } from './Preferences';
 import { SettingsLayout, type SettingsPage } from './SettingsLayout';
 import { Widget } from './Widget';
@@ -44,7 +43,6 @@ export function Shell({
   const [error, setError] = useState('');
   const [nativeError, setNativeError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [step, setStep] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   // Правки расписания с ошибками: сохранены черновиком, но ещё не применены.
   const [draftPending, setDraftPending] = useState(false);
@@ -119,7 +117,6 @@ export function Shell({
           dataRef.current = value;
           setData(value);
           setError('');
-          setStep((value.onboardingComplete ?? value.lessons.length > 0) ? null : 0);
           // Страховочная копия при обновлении программы и раз в день.
           void baseStorage()
             .then((s) => s.autoSnapshot?.(value))
@@ -219,7 +216,7 @@ export function Shell({
     }),
     [persist, baseStorage],
   );
-  const surface = page === 'widget' && step === null && !!data ? 'widget' : 'settings';
+  const surface = page === 'widget' && !!data ? 'widget' : 'settings';
   const settings = data?.settings;
   useEffect(() => {
     document.documentElement.dataset.surface = surface;
@@ -348,16 +345,6 @@ export function Shell({
     window.addEventListener('beforeunload', fn);
     return () => window.removeEventListener('beforeunload', fn);
   }, [dirty, busy]);
-  async function finish() {
-    if (!data) return;
-    try {
-      await persist({ ...data, onboardingComplete: true });
-      setStep(null);
-      setPage('widget');
-    } catch (e) {
-      setNativeError((e as Error).message);
-    }
-  }
   const saveSettings = async (value: Settings) => {
     if (!data) return;
     if (value.widgetCorner !== data.settings.widgetCorner) await resetPosition();
@@ -379,7 +366,6 @@ export function Shell({
           })
           .catch(() => setNativeError('Не удалось сбросить позицию.'));
       }}
-      onboarding={step !== null}
     />
   ) : null;
   const restore = async (value: AppData) => {
@@ -387,7 +373,6 @@ export function Shell({
     const current = dataRef.current;
     if (current) await (await baseStorage()).snapshot?.(current, 'before-restore');
     await persist(value);
-    setStep(null);
     setPage('backups');
   };
   let content: ReactNode;
@@ -417,20 +402,6 @@ export function Shell({
         </button>
       </div>
     );
-  else if (step !== null)
-    content = (
-      <Onboarding
-        step={step}
-        data={data}
-        busy={busy}
-        dirty={dirty || draftPending}
-        editorStorage={editorStorage}
-        preferences={commonPreferences}
-        onDirty={setDraftPending}
-        onStep={(next) => guard(() => setStep(next))}
-        onFinish={() => void finish()}
-      />
-    );
   else if (page === 'widget')
     content = (
       <div className={`widget-stage ${isTauri() ? 'native' : 'browser'}`}>
@@ -439,6 +410,7 @@ export function Shell({
           mode={mode}
           onMode={chooseDay}
           onSettings={() => navigate('schedule')}
+          onBackups={() => navigate('backups')}
           onClose={() => void close()}
           onLock={() => {
             if (!busy)
@@ -470,7 +442,6 @@ export function Shell({
         onDirty={setDraftPending}
         onNavigate={navigate}
         onRestore={restore}
-        onOpenWizard={() => guard(() => setStep(0))}
         updatePanel={updatePanel}
         updateVersion={showUpdateBadge ? update!.version : null}
       />

@@ -28,11 +28,11 @@ export type AppData = {
   lessons: Lesson[];
   bells: LessonTime[];
   settings: Settings;
+  /** Устарело: мастера первого запуска больше нет. Поле остаётся, чтобы читались старые копии. */
   onboardingComplete?: boolean;
 };
 export const emptyData = (): AppData => ({
   version: 1,
-  onboardingComplete: false,
   lessons: [],
   bells: [],
   settings: {

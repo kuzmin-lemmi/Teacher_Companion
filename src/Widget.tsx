@@ -25,6 +25,8 @@ type Props = {
   mode: DayMode | 'auto';
   onMode: (mode: DayMode) => void;
   onSettings: () => void;
+  /** Пустая неделя: сразу перейти к восстановлению копии, например на втором компьютере. */
+  onBackups?: () => void;
   onClose: () => void;
   onLock: () => void;
   onDrag: () => void;
@@ -151,6 +153,7 @@ export function Widget({
   mode,
   onMode,
   onSettings,
+  onBackups,
   onClose,
   onLock,
   onDrag,
@@ -285,19 +288,27 @@ export function Widget({
       <div ref={list} className="widget-lessons">
         {week ? (
           <WeekTable data={data} today={now.getDay()} compact={compact} />
+        ) : !data.lessons.length ? (
+          <div className="widget-empty">
+            <h2>Добавьте первые уроки</h2>
+            <p>Заполните неделю или загрузите резервную копию с другого компьютера.</p>
+            <div className="widget-empty-actions">
+              <button className="primary" onClick={onSettings}>
+                Настроить расписание
+              </button>
+              {onBackups && (
+                <button className="secondary" onClick={onBackups}>
+                  Загрузить резервную копию
+                </button>
+              )}
+            </div>
+          </div>
         ) : !lessons.length ? (
           <div className="widget-empty">
-            <h2>{shown === 'today' ? 'Сегодня занятий нет' : 'Добавьте первые уроки'}</h2>
-            <p>
-              {shown === 'today'
-                ? 'Можно посмотреть следующий учебный день.'
-                : 'Заполните неделю — расписание всегда будет под рукой.'}
-            </p>
-            <button
-              className="secondary"
-              onClick={shown === 'today' ? () => onMode('next') : onSettings}
-            >
-              {shown === 'today' ? 'Следующий учебный день' : 'Настроить расписание'}
+            <h2>Сегодня занятий нет</h2>
+            <p>Можно посмотреть следующий учебный день.</p>
+            <button className="secondary" onClick={() => onMode('next')}>
+              Следующий учебный день
             </button>
           </div>
         ) : (

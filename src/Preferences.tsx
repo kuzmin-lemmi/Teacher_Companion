@@ -13,14 +13,12 @@ export function Preferences({
   onDirty,
   onResetPosition,
   onPreview,
-  onboarding = false,
 }: {
   settings: Settings;
   onSave: (settings: Settings) => Promise<void>;
   onDirty: (dirty: boolean) => void;
   onResetPosition: () => void;
   onPreview: (settings: Settings | null) => void;
-  onboarding?: boolean;
 }) {
   const [draft, setDraft] = useState(settings);
   const [busy, setBusy] = useState(false);
@@ -103,49 +101,47 @@ export function Preferences({
             />
           </label>
         </section>
-        {!onboarding && (
-          <section className="panel">
-            <p className="eyebrow">ПОВЕДЕНИЕ ОКНА</p>
-            <h2>Всегда рядом</h2>
-            <label className="setting-toggle">
-              <div>
-                <strong>Поверх других окон</strong>
-                <small>Расписание остаётся видимым во время работы.</small>
-              </div>
-              <input
-                type="checkbox"
-                checked={draft.alwaysOnTop}
-                onChange={(e) => update({ alwaysOnTop: e.target.checked })}
-              />
-            </label>
-            <label className="setting-toggle">
-              <div>
-                <strong>Закрепить виджет</strong>
-                <small>Защитить окно от случайного перемещения.</small>
-              </div>
-              <input
-                type="checkbox"
-                checked={draft.locked}
-                onChange={(e) => update({ locked: e.target.checked })}
-              />
-            </label>
-            <label>
-              При закрытии окна
-              <select
-                value={draft.closeBehavior}
-                onChange={(e) =>
-                  update({ closeBehavior: e.target.value as Settings['closeBehavior'] })
-                }
-              >
-                <option value="tray">Свернуть в системный трей</option>
-                <option value="exit">Завершить приложение</option>
-              </select>
-            </label>
-            <button className="text-button" onClick={onResetPosition}>
-              Вернуть виджет в угол: {cornerLabels[settings.widgetCorner].toLowerCase()}
-            </button>
-          </section>
-        )}
+        <section className="panel">
+          <p className="eyebrow">ПОВЕДЕНИЕ ОКНА</p>
+          <h2>Всегда рядом</h2>
+          <label className="setting-toggle">
+            <div>
+              <strong>Поверх других окон</strong>
+              <small>Расписание остаётся видимым во время работы.</small>
+            </div>
+            <input
+              type="checkbox"
+              checked={draft.alwaysOnTop}
+              onChange={(e) => update({ alwaysOnTop: e.target.checked })}
+            />
+          </label>
+          <label className="setting-toggle">
+            <div>
+              <strong>Закрепить виджет</strong>
+              <small>Защитить окно от случайного перемещения.</small>
+            </div>
+            <input
+              type="checkbox"
+              checked={draft.locked}
+              onChange={(e) => update({ locked: e.target.checked })}
+            />
+          </label>
+          <label>
+            При закрытии окна
+            <select
+              value={draft.closeBehavior}
+              onChange={(e) =>
+                update({ closeBehavior: e.target.value as Settings['closeBehavior'] })
+              }
+            >
+              <option value="tray">Свернуть в системный трей</option>
+              <option value="exit">Завершить приложение</option>
+            </select>
+          </label>
+          <button className="text-button" onClick={onResetPosition}>
+            Вернуть виджет в угол: {cornerLabels[settings.widgetCorner].toLowerCase()}
+          </button>
+        </section>
         <section className="panel">
           <p className="eyebrow">АВТОЗАПУСК</p>
           <label className="setting-toggle">
@@ -168,26 +164,24 @@ export function Preferences({
             выключите и снова включите эту настройку.
           </p>
         </section>
-        {!onboarding && (
-          <section className="panel">
-            <p className="eyebrow">ОБНОВЛЕНИЯ</p>
-            <label className="setting-toggle">
-              <div>
-                <strong>Проверять обновления</strong>
-                <small>
-                  Раз в несколько часов программа узнаёт на GitHub, вышла ли новая версия, и покажет
-                  это в разделе «О программе». Устанавливается только по вашему желанию. Расписание
-                  никуда не отправляется.
-                </small>
-              </div>
-              <input
-                type="checkbox"
-                checked={draft.checkUpdates}
-                onChange={(e) => update({ checkUpdates: e.target.checked })}
-              />
-            </label>
-          </section>
-        )}
+        <section className="panel">
+          <p className="eyebrow">ОБНОВЛЕНИЯ</p>
+          <label className="setting-toggle">
+            <div>
+              <strong>Проверять обновления</strong>
+              <small>
+                Раз в несколько часов программа узнаёт на GitHub, вышла ли новая версия, и покажет
+                это в разделе «О программе». Устанавливается только по вашему желанию. Расписание
+                никуда не отправляется.
+              </small>
+            </div>
+            <input
+              type="checkbox"
+              checked={draft.checkUpdates}
+              onChange={(e) => update({ checkUpdates: e.target.checked })}
+            />
+          </label>
+        </section>
       </fieldset>
       <footer>
         <span role="status">
