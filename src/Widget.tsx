@@ -443,6 +443,18 @@ export function Widget({
                       edit ? (note ? 'Изменить заметку' : 'Добавить заметку к уроку') : undefined
                     }
                     onClick={edit}
+                    // С клавиатуры — как кнопка: Tab до урока, Enter или пробел открывают заметку.
+                    role={edit ? 'button' : undefined}
+                    tabIndex={edit ? 0 : undefined}
+                    onKeyDown={
+                      edit
+                        ? (e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return;
+                            e.preventDefault();
+                            edit();
+                          }
+                        : undefined
+                    }
                     style={
                       left?.kind === 'lesson'
                         ? ({ '--progress': `${left.progress * 100}%` } as CSSProperties)

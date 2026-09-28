@@ -17,7 +17,14 @@ import {
   type UpdateFinder,
 } from './updates';
 import { dateKey } from './calendar';
-import { emptyData, setNote, type AppData, type DayMode, type Settings } from './domain';
+import {
+  emptyData,
+  setNote,
+  withSchedule,
+  type AppData,
+  type DayMode,
+  type Settings,
+} from './domain';
 import { getStorage, type Storage } from './storage';
 import {
   configureWindow,
@@ -70,7 +77,8 @@ export function Shell({
   } | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
-  const saving = useRef(false);
+  // Сохранения идут по очереди: быстрые нажатия подряд не теряются и не мешают друг другу.
+  const saves = useRef({ queue: Promise.resolve(), pending: 0 });
   const baseStorage = useCallback(
     async () => suppliedStorage ?? (await getStorage()),
     [suppliedStorage],
@@ -79,37 +87,49 @@ export function Shell({
   const mode = dayChoice?.day === dateKey(today) ? dayChoice.mode : 'auto';
   const chooseDay = (value: DayMode) => setDayChoice({ mode: value, day: dateKey(new Date()) });
   useTheme(preview?.theme ?? data?.settings.theme ?? 'dark');
+  /**
+   * Сохраняет документ целиком или изменение последних сохранённых данных (`(current) => next`):
+   * изменение, дождавшееся своей очереди, не затрёт сделанное перед ним.
+   */
   const persist = useCallback(
-    async (next: AppData) => {
-      if (saving.current) throw new Error('Сохранение уже выполняется.');
-      saving.current = true;
+    (change: AppData | ((current: AppData) => AppData)) => {
+      const saved = saves.current;
+      saved.pending++;
       setBusy(true);
-      const previous = dataRef.current;
-      try {
-        await syncAutostart(next.settings.launchOnStartup);
+      const run = saved.queue.then(async () => {
+        const previous = dataRef.current;
         try {
-          await (suppliedStorage ?? (await getStorage())).save(next);
-        } catch (e) {
+          const next = typeof change === 'function' ? change(previous ?? emptyData()) : change;
+          // Автозапуск трогаем, только когда меняют его самого: иначе сбой автозапуска
+          // не дал бы сохранить ни расписание, ни заметку.
+          const autostart = next.settings.launchOnStartup !== previous?.settings.launchOnStartup;
+          if (autostart) await syncAutostart(next.settings.launchOnStartup);
           try {
-            await syncAutostart(previous?.settings.launchOnStartup ?? false);
-          } catch {
-            setNativeError(
-              'Не удалось восстановить автозапуск после ошибки сохранения. Проверьте настройку в Windows.',
-            );
+            await (suppliedStorage ?? (await getStorage())).save(next);
+          } catch (e) {
+            if (autostart)
+              try {
+                await syncAutostart(previous?.settings.launchOnStartup ?? false);
+              } catch {
+                setNativeError(
+                  'Не удалось восстановить автозапуск после ошибки сохранения. Проверьте настройку в Windows.',
+                );
+              }
+            throw e;
           }
-          throw e;
+          dataRef.current = next;
+          setData(next);
+          setError('');
+        } catch {
+          throw new Error(
+            'Не удалось сохранить данные или применить автозапуск. Изменения остались на экране.',
+          );
+        } finally {
+          if (!--saved.pending) setBusy(false);
         }
-        dataRef.current = next;
-        setData(next);
-        setError('');
-      } catch {
-        throw new Error(
-          'Не удалось сохранить данные или применить автозапуск. Изменения остались на экране.',
-        );
-      } finally {
-        saving.current = false;
-        setBusy(false);
-      }
+      });
+      saved.queue = run.catch(() => {});
+      return run;
     },
     [suppliedStorage],
   );
@@ -210,7 +230,8 @@ export function Shell({
   const editorStorage = useMemo<Storage>(
     () => ({
       load: async () => dataRef.current ?? emptyData(),
-      save: persist,
+      // Редактор правит только расписание: заметки и настройки — последние сохранённые.
+      save: (next) => persist((current) => withSchedule(current, next)),
       loadDraft: async () => (await (await baseStorage()).loadDraft?.()) ?? null,
       saveDraft: async (draft) => (await baseStorage()).saveDraft?.(draft),
       listSnapshots: async () => (await (await baseStorage()).listSnapshots?.()) ?? [],
@@ -368,7 +389,7 @@ export function Shell({
   const saveSettings = async (value: Settings) => {
     if (!data) return;
     if (value.widgetCorner !== data.settings.widgetCorner) await resetPosition();
-    await persist({ ...data, settings: value });
+    await persist((current) => ({ ...current, settings: value }));
   };
   const commonPreferences = data ? (
     <Preferences
@@ -389,9 +410,13 @@ export function Shell({
     />
   ) : null;
   const restore = async (value: AppData) => {
+    const storage = await baseStorage();
     // Перед заменой данных — копия текущего состояния, чтобы восстановление можно было отменить.
     const current = dataRef.current;
-    if (current) await (await baseStorage()).snapshot?.(current, 'before-restore');
+    if (current) await storage.snapshot?.(current, 'before-restore');
+    // Черновик — правки прежнего расписания: при следующем открытии редактора
+    // он вернул бы их поверх восстановленной копии.
+    await storage.saveDraft?.(null);
     await persist(value);
     setPage('backups');
   };
@@ -437,23 +462,20 @@ export function Shell({
           onLock={
             isMobile()
               ? undefined
-              : () => {
-                  if (!busy)
-                    void persist({
-                      ...data,
-                      settings: { ...data.settings, locked: !data.settings.locked },
-                    }).catch((e) => setNativeError(e.message));
-                }
+              : () =>
+                  void persist((current) => ({
+                    ...current,
+                    settings: { ...current.settings, locked: !current.settings.locked },
+                  })).catch((e) => setNativeError(e.message))
           }
           onMeasure={setWidgetHeight}
           updateAvailable={showUpdateBadge}
-          onNote={(date, lessonNumber, text) => {
-            if (!busy)
-              void persist({
-                ...data,
-                notes: setNote(data.notes, date, lessonNumber, text),
-              }).catch((e) => setNativeError(e.message));
-          }}
+          onNote={(date, lessonNumber, text) =>
+            void persist((current) => ({
+              ...current,
+              notes: setNote(current.notes, date, lessonNumber, text),
+            })).catch((e) => setNativeError(e.message))
+          }
           onDrag={() =>
             void startDrag(data.settings.locked).catch(() =>
               setNativeError('Не удалось переместить окно.'),
@@ -473,7 +495,9 @@ export function Shell({
         editorStorage={editorStorage}
         onDirty={setDraftPending}
         onRestore={restore}
-        onSaveSettings={(settings) => persist({ ...data, settings })}
+        onSaveSettings={(patch) =>
+          persist((current) => ({ ...current, settings: { ...current.settings, ...patch } }))
+        }
         onExit={() => navigate('widget')}
       />
     );

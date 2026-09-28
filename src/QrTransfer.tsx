@@ -114,7 +114,7 @@ export function ScanTransferCode({
       if (permission !== 'granted') permission = await scanner.requestPermissions();
       if (permission !== 'granted') {
         setError(
-          'Нет доступа к камере. Разрешите его: Настройки телефона → Приложения → Teacher Companion → Разрешения.',
+          'Нет доступа к камере. Разрешите его: Настройки телефона → Приложения → Помощник учителя → Разрешения.',
         );
         return;
       }

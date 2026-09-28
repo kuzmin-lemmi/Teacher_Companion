@@ -334,4 +334,18 @@ describe('звонки с нуля', () => {
     expect(nextBell([bells[0]])).toEqual({ lessonNumber: 2, start: '08:50', end: '09:30' });
     expect(nextBell([])).toEqual({ lessonNumber: 1, start: '', end: '' });
   });
+  it('следующий звонок идёт за последним номером, даже если в середине пропуск', () => {
+    const bells = [
+      { lessonNumber: 1, start: '08:30', end: '09:15' },
+      { lessonNumber: 2, start: '09:25', end: '10:10' },
+      { lessonNumber: 3, start: '10:20', end: '11:05' },
+      { lessonNumber: 5, start: '12:10', end: '12:55' },
+    ];
+    const added = nextBell(bells);
+    expect(added.lessonNumber).toBe(6);
+    expect(validate({ ...emptyData(), bells: [...bells, added] })).toEqual([]);
+    // Дальше 20-го — первый свободный номер без времени.
+    const full = Array.from({ length: 19 }, (_, i) => ({ ...bells[0], lessonNumber: i + 2 }));
+    expect(nextBell(full)).toEqual({ lessonNumber: 1, start: '', end: '' });
+  });
 });

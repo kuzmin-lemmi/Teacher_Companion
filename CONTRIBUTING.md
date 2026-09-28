@@ -11,4 +11,6 @@ UI — на русском. Не добавляйте сетевые завис�
 
 Версия меняется только командой `npm version X.Y.Z`: она обновит `package.json`, `Cargo.toml` и `Cargo.lock`. `tauri.conf.json` и интерфейс берут версию из `package.json`. Для релиза добавьте `docs/releases/vX.Y.Z.md` и отправьте тег.
 
+Пакеты `@tauri-apps/*` закреплены (`~`) на тех же минорных версиях, что и крейты в `src-tauri/Cargo.lock`: `@tauri-apps/api` — как `tauri`, `@tauri-apps/plugin-fs` — как `tauri-plugin-fs` и так далее. При расхождении Tauri CLI отказывается собирать приложение, поэтому обновляйте JS-пакет и крейт вместе, в одном коммите.
+
 Основной формат поставки — установщик NSIS (`npm run installer`), дополнительно — переносной `.exe` (`npm run portable`). Для нативной сборки нужны Rust stable MSVC и Visual Studio C++ Build Tools. Не отмечайте нативные функции проверенными только на основании тестов с подменённым API.

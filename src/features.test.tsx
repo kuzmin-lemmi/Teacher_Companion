@@ -57,6 +57,10 @@ describe('резервные копии', () => {
   });
   it('отклоняет превышение лимита', () =>
     expect(() => parseBackup('x'.repeat(1_000_001))).toThrow('слишком большой'));
+  it('понятно отказывает, если в копии нет расписания', () =>
+    expect(() =>
+      parseBackup(JSON.stringify({ application: 'teacher-companion', backupVersion: 1 })),
+    ).toThrow('в ней нет расписания'));
 });
 describe('координаты', () => {
   const areas = [
@@ -356,6 +360,60 @@ it('делает автоматическую копию при запуске �
   expect((await storage.load()).lessons).toHaveLength(2);
   expect((await storage.listSnapshots!())[0].reason).toBe('before-restore');
 });
+describe('черновик редактора', () => {
+  function memory() {
+    const items = new Map<string, string>();
+    return browserStorage({
+      getItem: (k) => items.get(k) ?? null,
+      setItem: (k, v) => void items.set(k, v),
+      removeItem: (k) => void items.delete(k),
+    });
+  }
+  /** Урок без класса — правка с ошибкой: она остаётся черновиком, выходим из редактора. */
+  async function leaveDraft(user: ReturnType<typeof userEvent.setup>, exit: string) {
+    await user.click(await screen.findByRole('button', { name: 'Открыть настройки' }));
+    await user.click(await screen.findByText('+ Добавить урок'));
+    await screen.findByText(/Черновик сохранён/);
+    await user.click(screen.getByText(exit));
+    await user.click(await screen.findByText('Выйти, черновик сохранён'));
+  }
+  it('не затирает заметку, добавленную в виджете после него', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 24, 12));
+    const storage = memory();
+    await storage.save(fixture());
+    const user = userEvent.setup();
+    render(<Shell storage={storage} />);
+    await leaveDraft(user, '← К виджету');
+    await user.click(await screen.findByText('7Б'));
+    await user.type(screen.getByLabelText('Заметка к уроку 3, 7Б'), 'контрольная{Enter}');
+    await waitFor(async () => expect((await storage.load()).notes).toHaveLength(1));
+    // Снова редактор: черновик вернулся, исправляем ошибку — правка сохраняется.
+    await user.click(screen.getByRole('button', { name: 'Открыть настройки' }));
+    await screen.findByText(/Восстановлен черновик/);
+    await user.type(screen.getByLabelText('Класс *'), '9В');
+    await screen.findByText('Сохранено автоматически');
+    const saved = await storage.load();
+    expect(saved.lessons.map((l) => l.className)).toEqual(['6А', '7Б', '9В']);
+    expect(saved.notes).toEqual([{ date: '2026-09-25', lessonNumber: 3, text: 'контрольная' }]);
+  });
+  it('восстановление копии сбрасывает черновик', async () => {
+    const storage = memory();
+    await storage.save(fixture());
+    const user = userEvent.setup();
+    render(<Shell storage={storage} />);
+    await leaveDraft(user, 'Резервные копии');
+    const file = new File([''], 'backup.json');
+    Object.defineProperty(file, 'text', { value: async () => serializeBackup(fixture()) });
+    fireEvent.change(screen.getByLabelText('Файл резервной копии'), { target: { files: [file] } });
+    await user.click(await screen.findByText('Восстановить эту копию'));
+    await screen.findByText('Расписание восстановлено');
+    expect(await storage.loadDraft!()).toBeNull();
+    await user.click(screen.getByText('Расписание и звонки'));
+    await screen.findByText('Недельное расписание');
+    expect(screen.queryByText(/Восстановлен черновик/)).toBeNull();
+  });
+});
 it('показывает новую версию ненавязчиво и ставит её только по кнопке', async () => {
   const items = new Map<string, string>();
   const storage = browserStorage({
@@ -465,6 +523,24 @@ describe('каникулы, сокращённые дни и заметки на
     await user.keyboard('{Enter}');
     await waitFor(() => expect(saved.notes).toEqual([]));
     expect(screen.queryByText('контрольная')).toBeNull();
+  });
+  it('заметку можно открыть и с клавиатуры', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 24, 12));
+    const user = userEvent.setup();
+    render(
+      <Widget
+        data={fixture()}
+        mode="auto"
+        onMode={vi.fn()}
+        onSettings={vi.fn()}
+        onDrag={vi.fn()}
+        onNote={vi.fn()}
+      />,
+    );
+    screen.getByRole('button', { name: /7Б/ }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByLabelText('Заметка к уроку 3, 7Б')).toBeTruthy();
   });
 });
 it('без обработчиков (на телефоне) виджет не показывает «закрепить» и «скрыть»', () => {

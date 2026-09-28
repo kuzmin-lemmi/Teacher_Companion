@@ -66,3 +66,16 @@ class MainActivity : TauriActivity() {
 `,
 );
 console.log(`Обновлён ${file}`);
+
+// Названия берутся из productName: «Teacher Companion» под значком обрезается до «Teacher Co…».
+// Под значком — короткое русское, в настройках Android и в уведомлениях — полное.
+const strings = 'src-tauri/gen/android/app/src/main/res/values/strings.xml';
+const labels = { app_name: 'Помощник учителя', main_activity_title: 'Помощник' };
+let xml = readFileSync(strings, 'utf8');
+for (const [name, label] of Object.entries(labels)) {
+  const pattern = new RegExp(`(<string name="${name}">)[^<]*(</string>)`);
+  if (!pattern.test(xml)) throw new Error(`В ${strings} нет строки ${name}`);
+  xml = xml.replace(pattern, `$1${label}$2`);
+}
+writeFileSync(strings, xml);
+console.log(`Обновлён ${strings}`);

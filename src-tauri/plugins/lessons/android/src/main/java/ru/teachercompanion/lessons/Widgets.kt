@@ -62,6 +62,12 @@ object Widgets {
             views.setTextViewText(R.id.tc_now_detail, "Откройте приложение, чтобы показать расписание")
             return views
         }
+        if (plan.daysLeft(now) < 0) {
+            // Без плана «Сегодня уроков нет» было бы неправдой: телефон просто не знает.
+            views.setTextViewText(R.id.tc_now_title, "Расписание закончилось")
+            views.setTextViewText(R.id.tc_now_detail, Words.REFRESH)
+            return views
+        }
         when (val moment = Moment.of(plan, now)) {
             is Moment.During -> {
                 val l = moment.lesson
@@ -83,12 +89,12 @@ object Widgets {
             }
             is Moment.After -> {
                 views.setTextViewText(R.id.tc_now_title, "Уроки закончились")
-                views.setTextViewText(R.id.tc_now_detail, Words.nextDay(moment.next, now))
+                views.setTextViewText(R.id.tc_now_detail, Words.nextDay(plan, moment.next, now))
             }
             is Moment.NoLessons -> {
                 val off = moment.day?.off?.takeIf { it.isNotBlank() }
                 views.setTextViewText(R.id.tc_now_title, off ?: "Сегодня уроков нет")
-                views.setTextViewText(R.id.tc_now_detail, Words.nextDay(moment.next, now))
+                views.setTextViewText(R.id.tc_now_detail, Words.nextDay(plan, moment.next, now))
             }
         }
         return views
@@ -101,6 +107,11 @@ object Widgets {
         val views = RemoteViews(context.packageName, R.layout.tc_widget_day)
         Scheduler.openApp(context, 2)?.let { views.setOnClickPendingIntent(R.id.tc_root, it) }
         if (plan == null) return views
+        if (plan.daysLeft(now) < 0) {
+            views.setTextViewText(R.id.tc_day_title, "Расписание закончилось")
+            views.setTextViewText(R.id.tc_day_empty, Words.REFRESH)
+            return views
+        }
         val moment = Moment.of(plan, now)
         val today = plan.day(now)
         // До конца уроков — сегодня, потом — следующий учебный день, как в приложении.
@@ -111,7 +122,10 @@ object Widgets {
         }
         if (day == null) {
             views.setTextViewText(R.id.tc_day_title, "Уроки на день")
-            views.setTextViewText(R.id.tc_day_empty, "Следующих уроков пока нет")
+            views.setTextViewText(
+                R.id.tc_day_empty,
+                if (plan.endsSoon(now)) Words.REFRESH else "Следующих уроков пока нет",
+            )
             return views
         }
         val isToday = day === today

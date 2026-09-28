@@ -3,6 +3,7 @@ package ru.teachercompanion.lessons
 import android.content.Context
 import org.json.JSONObject
 import java.util.Calendar
+import java.util.Locale
 
 /**
  * План уроков, который присылает приложение (src/phone.ts): готовые дни на несколько недель
@@ -48,6 +49,9 @@ class Prefs(
 )
 
 class Plan(val days: List<Day>, val prefs: Prefs) {
+    /** Последний день плана: дальше телефон расписания не знает, пока не откроют приложение. */
+    val until: String = days.lastOrNull()?.date ?: ""
+
     fun day(at: Long): Day? {
         val key = dateKey(at)
         return days.firstOrNull { it.date == key }
@@ -59,9 +63,21 @@ class Plan(val days: List<Day>, val prefs: Prefs) {
         return days.firstOrNull { it.date > key && it.lessons.isNotEmpty() }
     }
 
+    /** Сколько дней плана осталось после сегодняшнего: 0 — сегодня последний, < 0 — кончился. */
+    fun daysLeft(at: Long): Int {
+        val last = midnight(until) ?: return -1
+        return Math.round((last - midnight(dateKey(at))!!) / 86_400_000.0).toInt()
+    }
+
+    /** План скоро кончится или уже кончился — пора открыть приложение, оно пришлёт новый. */
+    fun endsSoon(at: Long): Boolean = daysLeft(at) <= WARN_DAYS
+
     companion object {
+        /** За сколько дней до конца плана просить открыть приложение. */
+        const val WARN_DAYS = 7
         private const val PREFS = "teacher_companion_lessons"
         private const val KEY = "plan"
+        private const val NOTICE = "plan_notice"
 
         fun save(context: Context, json: String) {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, json)
@@ -91,6 +107,15 @@ class Plan(val days: List<Day>, val prefs: Prefs) {
                 if (name.startsWith("shown:") && name.length >= 16 && name.substring(6, 16) < today)
                     editor.remove(name)
             editor.putBoolean("shown:$key", true).apply()
+        }
+
+        /** Какое напоминание о конце плана уже показано: `<последний день>:soon` или `:ended`. */
+        fun noticed(context: Context): String? =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(NOTICE, null)
+
+        fun markNoticed(context: Context, key: String) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(NOTICE, key)
+                .apply()
         }
 
         fun parse(raw: String): Plan {
@@ -152,7 +177,9 @@ class Plan(val days: List<Day>, val prefs: Prefs) {
         fun dateKey(at: Long): String {
             val c = Calendar.getInstance()
             c.timeInMillis = at
+            // Цифры всегда латинские: при некоторых языках телефона ключ не совпал бы с планом.
             return String.format(
+                Locale.ROOT,
                 "%04d-%02d-%02d",
                 c.get(Calendar.YEAR),
                 c.get(Calendar.MONTH) + 1,
@@ -241,8 +268,22 @@ object Words {
             "${c.get(Calendar.DAY_OF_MONTH)} ${months[c.get(Calendar.MONTH)]}"
     }
 
+    /** «8 ноября» для `YYYY-MM-DD` */
+    fun dayMonth(date: String): String {
+        val c = Calendar.getInstance()
+        c.timeInMillis = Plan.midnight(date) ?: return date
+        return "${c.get(Calendar.DAY_OF_MONTH)} ${months[c.get(Calendar.MONTH)]}"
+    }
+
+    /** Виджет, когда план кончился или дальше в нём нет уроков: нажатие откроет приложение. */
+    const val REFRESH = "Нажмите, чтобы обновить расписание"
+
     /** «Завтра 6 уроков с 08:30» */
-    fun nextDay(day: Day?, now: Long): String =
-        if (day == null) "Следующих уроков пока нет"
-        else "${whenDay(day, now)} ${lessons(day.lessons.size)} с ${day.lessons.first().startText}"
+    fun nextDay(plan: Plan, day: Day?, now: Long): String = when {
+        day != null ->
+            "${whenDay(day, now)} ${lessons(day.lessons.size)} с ${day.lessons.first().startText}"
+        // Дальше плана телефон не видит: уроки там могут быть, их просто ещё не прислали.
+        plan.endsSoon(now) -> REFRESH
+        else -> "Следующих уроков пока нет"
+    }
 }

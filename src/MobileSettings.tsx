@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useBackButton } from './back';
 import { Backups } from './Backups';
 import { lessonCount } from './calendar';
-import type { AppData, Settings } from './domain';
+import { isoDate, type AppData, type Settings } from './domain';
 import {
   BellsPage,
   CalendarPage,
@@ -47,7 +47,8 @@ const themes: [Settings['theme'], string][] = [
 function summary(data: AppData) {
   const perDay = [1, 2, 3, 4, 5].map((d) => data.lessons.filter((l) => l.weekday === d).length);
   const bells = [...data.bells].sort((a, b) => a.lessonNumber - b.lessonNumber);
-  const upcoming = data.holidays.filter((h) => h.end >= new Date().toISOString().slice(0, 10));
+  const today = isoDate(new Date());
+  const upcoming = data.holidays.filter((h) => h.end >= today);
   return {
     lessons: data.lessons.length
       ? ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'].map((d, i) => `${d} ${perDay[i]}`).join(' · ')
@@ -136,12 +137,13 @@ function PreferencesPage({
   onSave,
 }: {
   settings: Settings;
-  onSave: (settings: Settings) => Promise<void>;
+  /** Изменение накладывается на последние сохранённые настройки: быстрые нажатия подряд не теряются. */
+  onSave: (patch: Partial<Settings>) => Promise<void>;
 }) {
   const [error, setError] = useState('');
   const save = (patch: Partial<Settings>) => {
     setError('');
-    onSave({ ...settings, ...patch }).catch((e) =>
+    onSave(patch).catch((e) =>
       setError(e instanceof Error ? e.message : 'Не удалось сохранить настройки.'),
     );
   };
@@ -353,7 +355,7 @@ export function MobileSettings({
   editorStorage: Storage;
   onDirty: (dirty: boolean) => void;
   onRestore: (data: AppData) => Promise<void>;
-  onSaveSettings: (settings: Settings) => Promise<void>;
+  onSaveSettings: (patch: Partial<Settings>) => Promise<void>;
   onExit: () => void;
 }) {
   const [page, setPage] = useState<MobilePage>(initial);

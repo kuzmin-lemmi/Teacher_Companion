@@ -1,5 +1,6 @@
 import { isTauri } from '@tauri-apps/api/core';
-import { decode, type AppData } from './domain';
+import { decode, isoDate, type AppData } from './domain';
+import { isMobile } from './desktop';
 export function serializeBackup(data: AppData) {
   return JSON.stringify(
     {
@@ -23,11 +24,13 @@ export function parseBackup(raw: string): AppData {
   }
   if (value?.application !== 'teacher-companion' || value.backupVersion !== 1)
     throw new Error('Это не поддерживаемая резервная копия Помощника учителя.');
+  if (!value.data || typeof value.data !== 'object')
+    throw new Error('Резервная копия повреждена: в ней нет расписания.');
   return decode(JSON.stringify(value.data));
 }
 export async function exportBackup(data: AppData): Promise<boolean> {
   const content = serializeBackup(data);
-  const filename = `teacher-companion-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = `teacher-companion-${isoDate(new Date())}.json`;
   if (isTauri()) {
     const { save } = await import('@tauri-apps/plugin-dialog');
     const path = await save({
@@ -47,12 +50,15 @@ export async function exportBackup(data: AppData): Promise<boolean> {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return true;
 }
+/** Приложение на компьютере и на Android: файл выбирается системным диалогом. */
 export async function importDesktopBackup(): Promise<AppData | null> {
   const { open } = await import('@tauri-apps/plugin-dialog');
   const path = await open({
     multiple: false,
     directory: false,
-    filters: [{ name: 'Резервная копия', extensions: ['json'] }],
+    // Android понимает фильтр только как MIME-тип application/json, а многие файловые менеджеры
+    // отдают .json с другим типом — копию было бы не выбрать. Формат всё равно проверяет parseBackup.
+    filters: isMobile() ? undefined : [{ name: 'Резервная копия', extensions: ['json'] }],
   });
   if (!path) return null;
   const { stat, readTextFile } = await import('@tauri-apps/plugin-fs');

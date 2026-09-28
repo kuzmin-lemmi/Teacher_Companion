@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import { isMobile } from './desktop';
 import { App as ScheduleEditor } from './App';
 import { Backups } from './Backups';
 import type { AppData } from './domain';
@@ -18,6 +17,7 @@ const titles: Record<Exclude<SettingsPage, 'schedule'>, string> = {
   backups: 'Ваши данные',
   about: 'О программе',
 };
+/** Настройки на компьютере и в браузерном предпросмотре; на телефоне — MobileSettings. */
 export function SettingsLayout({
   page,
   data,
@@ -43,9 +43,7 @@ export function SettingsLayout({
   return (
     <div className="settings-root">
       <div className="settings-toolbar">
-        <button onClick={() => onNavigate('widget')}>
-          {isMobile() ? '← Расписание' : '← К виджету'}
-        </button>
+        <button onClick={() => onNavigate('widget')}>← К виджету</button>
         <nav aria-label="Разделы приложения">
           {sections.map(([id, label]) => (
             <button
@@ -75,17 +73,7 @@ export function SettingsLayout({
             <Backups data={data} onRestore={onRestore} storage={editorStorage} />
           ) : (
             <>
-              {isMobile() ? (
-                <section className="panel">
-                  <p className="eyebrow">ОБНОВЛЕНИЯ</p>
-                  <p className="muted">
-                    Это пробная версия для Android. Новую версию скачайте по той же ссылке, что и
-                    первую, и установите поверх — расписание и заметки сохранятся.
-                  </p>
-                </section>
-              ) : (
-                updatePanel
-              )}
+              {updatePanel}
               <About />
             </>
           )}
@@ -106,13 +94,11 @@ function About() {
         проверки обновлений на GitHub — это можно выключить в настройках.
       </p>
       <p className="hint">
-        {!isTauri()
-          ? 'Браузерный предпросмотр · данные этого браузера'
-          : isMobile()
-            ? 'Android-приложение · SQLite'
-            : 'Windows-приложение · SQLite'}
+        {isTauri()
+          ? 'Windows-приложение · SQLite'
+          : 'Браузерный предпросмотр · данные этого браузера'}
       </p>
-      {!isMobile() && <p>Устанавливается в профиль пользователя, права администратора не нужны.</p>}
+      <p>Устанавливается в профиль пользователя, права администратора не нужны.</p>
     </section>
   );
 }

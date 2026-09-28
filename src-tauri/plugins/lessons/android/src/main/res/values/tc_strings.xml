@@ -10,4 +10,6 @@
     <string name="tc_channel_reminders_description">«Через 5 минут — 7Б»</string>
     <string name="tc_channel_morning">Утренняя сводка</string>
     <string name="tc_channel_morning_description">Сколько уроков сегодня и когда первый</string>
+    <string name="tc_channel_plan">Обновление расписания</string>
+    <string name="tc_channel_plan_description">Расписание на телефоне заканчивается — пора открыть приложение</string>
 </resources>

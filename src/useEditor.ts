@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { emptyData, validate, type AppData } from './domain';
+import { emptyData, validate, withSchedule, type AppData } from './domain';
 import { getStorage, type Storage } from './storage';
 const AUTOSAVE_DELAY = 400;
 const clock = (iso: string) =>
@@ -18,6 +18,9 @@ export function useEditor(storage?: Storage, onDirty?: (dirty: boolean) => void)
   const [failed, setFailed] = useState(false);
   const [sessionStart, setSessionStart] = useState('');
   const [attempt, setAttempt] = useState(0);
+  // В хранилище лежит черновик: если правки вернули как было, его надо убрать —
+  // иначе он снова появится при следующем открытии редактора.
+  const drafted = useRef(false);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -26,8 +29,12 @@ export function useEditor(storage?: Storage, onDirty?: (dirty: boolean) => void)
         const value = await store.load();
         const draft = await store.loadDraft?.().catch(() => null);
         if (!cancelled) {
-          const restored = draft && JSON.stringify(draft.data) !== JSON.stringify(value);
-          setData(restored ? draft.data : value);
+          // Из черновика — только правки расписания: заметки и настройки могли измениться
+          // уже после него (в виджете, в настройках), их берём из сохранённых данных.
+          const edited = draft ? withSchedule(value, draft.data) : value;
+          const restored = draft && JSON.stringify(edited) !== JSON.stringify(value);
+          drafted.current = !!draft;
+          setData(edited);
           setSaved(JSON.stringify(value));
           setSessionStart(JSON.stringify(value));
           setStatus(restored ? `Восстановлен черновик от ${clock(draft.savedAt)}` : '');
@@ -62,7 +69,20 @@ export function useEditor(storage?: Storage, onDirty?: (dirty: boolean) => void)
     clearTimeout(timer.current);
     timer.current = undefined;
     const { data: value, json: text, saved: applied, ready: loaded } = latest.current;
-    if (!loaded || text === applied) return;
+    if (!loaded) return;
+    if (text === applied) {
+      // Правки вернули как было — сохранять нечего, черновик больше не нужен.
+      if (drafted.current)
+        queue.current = queue.current.then(async () => {
+          try {
+            await (storage ?? (await getStorage())).saveDraft?.(null);
+            drafted.current = false;
+          } catch {
+            // Уберём при следующей правке.
+          }
+        });
+      return;
+    }
     const valid = validate(value).length === 0;
     queue.current = queue.current.then(async () => {
       const store = storage ?? (await getStorage());
@@ -72,9 +92,11 @@ export function useEditor(storage?: Storage, onDirty?: (dirty: boolean) => void)
           latest.current.saved = text;
           setSaved(text);
           await store.saveDraft?.(null);
+          drafted.current = false;
           setStatus('Сохранено автоматически');
         } else {
           await store.saveDraft?.(value);
+          drafted.current = true;
           setStatus(
             'Черновик сохранён. Исправьте ошибки ниже — тогда изменения появятся в виджете.',
           );
@@ -83,13 +105,14 @@ export function useEditor(storage?: Storage, onDirty?: (dirty: boolean) => void)
       } catch {
         // Если основная запись не удалась, правки всё равно остаются в черновике.
         await store.saveDraft?.(value).catch(() => {});
+        drafted.current = true;
         setFailed(true);
         setStatus('Не удалось сохранить. Правки остались в редакторе и в черновике.');
       }
     });
   };
   useEffect(() => {
-    if (!ready || json === saved) return;
+    if (!ready || (json === saved && !drafted.current)) return;
     clearTimeout(timer.current);
     timer.current = setTimeout(() => flush.current(), AUTOSAVE_DELAY);
   }, [json, saved, ready]);

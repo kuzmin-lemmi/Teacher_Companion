@@ -4,6 +4,7 @@ import {
   gaps,
   isoDate,
   lessonsForDay,
+  nextBell,
   publicHolidays,
   shortenBells,
   timeOf,
@@ -13,7 +14,6 @@ import {
 } from './domain';
 import type { Storage } from './storage';
 import { useEditor } from './useEditor';
-import { isMobile } from './desktop';
 import { appVersion } from './version';
 type Props = {
   storage?: Storage;
@@ -77,11 +77,6 @@ function BellRows({
     </div>
   ));
 }
-function nextBell(bells: LessonTime[]): LessonTime {
-  let n = 1;
-  while (bells.some((b) => b.lessonNumber === n)) n++;
-  return { lessonNumber: n, start: '', end: '' };
-}
 export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
   const editor = useEditor(storage, onDirty);
   const { data, change, ready, failure, status, setStatus, errors, pending, failed } = editor;
@@ -116,9 +111,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
         </nav>
         <div className="local-note">
           <span className="dot" />{' '}
-          {isTauri()
-            ? `Данные на этом ${isMobile() ? 'телефоне' : 'компьютере'}`
-            : 'Предпросмотр в браузере'}
+          {isTauri() ? 'Данные на этом компьютере' : 'Предпросмотр в браузере'}
           <small>
             {isTauri()
               ? 'Работает без интернета'

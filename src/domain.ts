@@ -78,6 +78,13 @@ export function normalize(data: AppData): AppData {
   data.notes ??= [];
   return data;
 }
+/** То, что правит редактор расписания. Заметки и настройки меняются в других местах. */
+export type Schedule = Pick<AppData, 'lessons' | 'bells' | 'holidays' | 'shortDays' | 'shortBells'>;
+/** Документ `data` с расписанием из `schedule`: заметки и настройки остаются из `data`. */
+export function withSchedule(data: AppData, schedule: Schedule): AppData {
+  const { lessons, bells, holidays, shortDays, shortBells } = schedule;
+  return { ...data, lessons, bells, holidays, shortDays, shortBells };
+}
 const pad = (n: number) => String(n).padStart(2, '0');
 /** Дата `YYYY-MM-DD` по местному времени. */
 export const isoDate = (date: Date) =>
@@ -224,15 +231,22 @@ export function generateBells(first: string, count: number, lesson: number, rest
   return result;
 }
 /**
- * Следующий звонок после последнего: та же длина урока и перемены, что у предыдущих
- * (по умолчанию 45 и 10 минут). Пустое время — если день уже закончился.
+ * Следующий звонок после последнего: номер за последним и та же длина урока и перемены,
+ * что у предыдущих (по умолчанию 45 и 10 минут). Пустое время — если день уже закончился.
  */
 export function nextBell(bells: LessonTime[]): LessonTime {
   const ordered = [...bells]
     .filter((b) => /^\d\d:\d\d$/.test(b.start) && /^\d\d:\d\d$/.test(b.end))
     .sort((a, b) => a.lessonNumber - b.lessonNumber);
-  let lessonNumber = 1;
-  while (bells.some((b) => b.lessonNumber === lessonNumber)) lessonNumber++;
+  // При звонках 1, 2, 3, 5 новый — 6-й: 4-й со временем после 5-го сразу был бы ошибкой.
+  let lessonNumber =
+    Math.max(0, ...bells.map((b) => b.lessonNumber).filter((n) => Number.isInteger(n))) + 1;
+  if (lessonNumber > 20) {
+    // Дальше 20-го нельзя — первый свободный номер, время для него задают вручную.
+    lessonNumber = 1;
+    while (bells.some((b) => b.lessonNumber === lessonNumber)) lessonNumber++;
+    return { lessonNumber, start: '', end: '' };
+  }
   const last = ordered.at(-1);
   if (!last) return { lessonNumber, start: '', end: '' };
   const prev = ordered.at(-2);

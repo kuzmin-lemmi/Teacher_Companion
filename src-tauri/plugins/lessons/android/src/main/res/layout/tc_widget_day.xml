@@ -7,15 +7,18 @@
     android:layout_height="match_parent"
     android:background="@drawable/tc_widget_bg"
     android:orientation="vertical"
-    android:paddingHorizontal="10dp"
-    android:paddingVertical="12dp">
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp">
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
 
         <TextView
             android:id="@+id/tc_day_title"
@@ -44,7 +47,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="2dp"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:singleLine="true"
         android:ellipsize="end"
         android:textColor="@color/tc_accent"
@@ -56,7 +60,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:text="Откройте приложение, чтобы показать расписание"
         android:textColor="@color/tc_muted"
         android:textSize="14sp" />
@@ -68,7 +73,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -117,7 +123,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -166,7 +173,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -215,7 +223,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -264,7 +273,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -313,7 +323,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -362,7 +373,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -411,7 +423,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -460,7 +473,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -509,7 +523,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -558,7 +573,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView
@@ -607,7 +623,8 @@
         android:background="@drawable/tc_row_plain"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:visibility="gone">
 
         <TextView

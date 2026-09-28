@@ -65,6 +65,42 @@ it('правки с ошибкой хранятся черновиком и во
   expect(state()!.lessons[0]).toMatchObject({ className: '5А', room: '12' });
   expect(await storage.loadDraft!()).toBeNull();
 });
+it('черновик возвращает только правки расписания: заметки и настройки после него не пропадают', async () => {
+  const { storage, state } = memory();
+  const notes = [{ date: '2026-09-25', lessonNumber: 1, text: 'контрольная' }];
+  // Черновик сохранён раньше, чем в виджете появилась заметка и сменилась тема.
+  await storage.saveDraft!({
+    ...emptyData(),
+    lessons: [{ id: 'x', weekday: 1, lessonNumber: 1, className: '', subject: '', room: '12' }],
+  });
+  await storage.save({
+    ...emptyData(),
+    notes,
+    settings: { ...emptyData().settings, theme: 'light' },
+  });
+  const user = userEvent.setup();
+  render(<App storage={storage} />);
+  await screen.findByText(/Восстановлен черновик/);
+  await user.type(screen.getByLabelText('Класс *'), '5А');
+  await screen.findByText('Сохранено автоматически');
+  expect(state()!.lessons[0]).toMatchObject({ className: '5А', room: '12' });
+  expect(state()!.notes).toEqual(notes);
+  expect(state()!.settings.theme).toBe('light');
+});
+it('«Отменить изменения» убирает и черновик — после перезапуска он не возвращается', async () => {
+  const { storage } = memory();
+  const user = userEvent.setup();
+  const app = render(<App storage={storage} />);
+  await screen.findByText('Здесь будет расписание');
+  await user.click(screen.getByText('+ Добавить урок'));
+  await screen.findByText(/Черновик сохранён/);
+  await user.click(screen.getByText('Отменить изменения'));
+  await waitFor(async () => expect(await storage.loadDraft!()).toBeNull());
+  app.unmount();
+  render(<App storage={storage} />);
+  await screen.findByText('Здесь будет расписание');
+  expect(screen.queryByText(/Восстановлен черновик/)).toBeNull();
+});
 it('при ошибке записи оставляет правки в черновике и позволяет повторить', async () => {
   let fail = true;
   let saved: AppData | null = null;
@@ -100,6 +136,11 @@ it('редактирует звонки и индивидуальное врем
   await user.type(screen.getByLabelText('Начало'), '08:30');
   await user.type(screen.getByLabelText('Окончание'), '09:15');
   await waitFor(() => expect(state()?.bells[0]?.end).toBe('09:15'));
+  // Следующий звонок продолжает ритм, а не появляется с пустым временем.
+  await user.click(screen.getByText('+ Добавить звонок'));
+  await waitFor(() =>
+    expect(state()?.bells[1]).toEqual({ lessonNumber: 2, start: '09:25', end: '10:10' }),
+  );
   await user.click(screen.getByRole('button', { name: /▦.*Расписание/ }));
   await user.click(screen.getByText('+ Добавить урок'));
   await user.type(screen.getByLabelText('Класс *'), '5А');

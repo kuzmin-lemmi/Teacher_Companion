@@ -22,8 +22,10 @@ object Scheduler {
     private const val CHANNEL_SCHEDULE = "schedule"
     private const val CHANNEL_REMINDERS = "reminders"
     private const val CHANNEL_MORNING = "morning"
+    private const val CHANNEL_PLAN = "plan"
     private const val ID_ONGOING = 1
     private const val ID_MORNING = 2
+    private const val ID_PLAN = 3
     private const val ID_REMINDER = 100
 
     /** Расписание в шторке появляется за час до первого урока. */
@@ -45,6 +47,7 @@ object Scheduler {
         ongoing(app, plan, now)
         reminder(app, plan, now)
         morning(app, plan, now)
+        expiry(app, plan, now)
         Widgets.updateAll(app, plan, now)
         schedule(app, next(plan, now))
     }
@@ -71,7 +74,13 @@ object Scheduler {
             NotificationManager.IMPORTANCE_DEFAULT,
         )
         morning.description = context.getString(R.string.tc_channel_morning_description)
-        manager.createNotificationChannels(listOf(schedule, reminders, morning))
+        val plan = NotificationChannel(
+            CHANNEL_PLAN,
+            context.getString(R.string.tc_channel_plan),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        plan.description = context.getString(R.string.tc_channel_plan_description)
+        manager.createNotificationChannels(listOf(schedule, reminders, morning, plan))
     }
 
     fun openApp(context: Context, request: Int): PendingIntent? {
@@ -204,6 +213,41 @@ object Scheduler {
         notify(context, ID_MORNING, builder)
     }
 
+    /**
+     * План кончается — один раз попросить открыть приложение, оно пришлёт новый: за неделю
+     * до конца и ещё раз, когда план кончился. Иначе шторка и напоминания пропали бы молча.
+     */
+    private fun expiry(context: Context, plan: Plan, now: Long) {
+        if (!plan.endsSoon(now)) {
+            NotificationManagerCompat.from(context).cancel(ID_PLAN)
+            return
+        }
+        if (now < noticeAt(plan, now)) return
+        val ended = plan.daysLeft(now) < 0
+        val key = "${plan.until}:${if (ended) "ended" else "soon"}"
+        if (Plan.noticed(context) == key) return
+        Plan.markNoticed(context, key)
+        val title: String
+        val text: String
+        if (ended) {
+            title = "Расписание на телефоне закончилось"
+            text = "Откройте «Помощник учителя», чтобы снова работали напоминания и виджеты."
+        } else {
+            title = "Расписание на телефоне — до ${Words.dayMonth(plan.until)}"
+            text = "Откройте «Помощник учителя», чтобы напоминания и виджеты работали дальше."
+        }
+        val builder = base(context, CHANNEL_PLAN)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+        notify(context, ID_PLAN, builder)
+    }
+
+    /** О конце плана напоминаем утром, в час утренней сводки, — не ночью. */
+    private fun noticeAt(plan: Plan, now: Long): Long =
+        Plan.midnight(Plan.dateKey(now))!! + plan.prefs.morningAt * 60_000L
+
     /** Ближайший момент после `now`, когда что-то на экране должно измениться. */
     private fun next(plan: Plan, now: Long): Long {
         val times = ArrayList<Long>()
@@ -224,6 +268,11 @@ object Scheduler {
         // Во время урока полоска прогресса в шторке обновляется раз в 5 минут.
         val moment = Moment.of(plan, now)
         if (moment is Moment.During && plan.prefs.ongoing) times.add(now + 5 * 60_000L)
+        // Напоминание о конце плана — сегодня утром или, если утро прошло, завтра.
+        if (plan.endsSoon(now)) {
+            times.add(noticeAt(plan, now))
+            times.add(noticeAt(plan, Plan.nextMidnight(now)))
+        }
         return times.filter { it > now + 500 }.minOrNull() ?: Plan.nextMidnight(now)
     }
 
