@@ -467,3 +467,31 @@ footer button {
 .shorten-tool button {
   font-size: 12px;
 }
+/* Узкий экран телефона: поля строк звонков, каникул и дат переносятся. */
+@media (max-width: 560px) {
+  .bell-row {
+    flex-wrap: wrap;
+    gap: 10px 12px;
+  }
+  .bell-row > span {
+    display: none;
+  }
+  .bell-row label,
+  .bell-row label:first-child,
+  .holiday-row label:not(:first-child),
+  .short-days .bell-row label:first-child {
+    flex: 1 1 110px;
+    width: auto;
+    min-width: 0;
+  }
+  .holiday-row label:first-child {
+    flex-basis: 100%;
+  }
+  .section-title {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .section-actions {
+    justify-content: start;
+  }
+}

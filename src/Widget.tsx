@@ -22,6 +22,7 @@ import {
   weekdays,
 } from './domain';
 import { lessonCount } from './calendar';
+import { useBackButton } from './back';
 import { useClock } from './hooks';
 type Props = {
   data: AppData;
@@ -41,6 +42,8 @@ type Props = {
   updateAvailable?: boolean;
   /** Заметка к уроку на дату (`YYYY-MM-DD`); пустой текст убирает её. Без обработчика строки не редактируются. */
   onNote?: (date: string, lessonNumber: number, text: string) => void;
+  /** `screen` — телефон: весь экран, крупные строки, нижняя панель вместо кнопок в шапке. */
+  layout?: 'widget' | 'screen';
 };
 type Row = { kind: 'lesson'; lesson: Lesson } | { kind: 'gap'; number: number };
 const weekdayName = new Intl.DateTimeFormat('ru', { weekday: 'long' });
@@ -68,6 +71,12 @@ function NoteEditor({
 }) {
   const [text, setText] = useState(initial);
   const done = useRef(false);
+  const input = useRef<HTMLInputElement>(null);
+  // На телефоне клавиатура выезжает не сразу — после неё возвращаем поле в поле зрения.
+  useEffect(() => {
+    const timer = setTimeout(() => input.current?.scrollIntoView?.({ block: 'center' }), 350);
+    return () => clearTimeout(timer);
+  }, []);
   const finish = (value: string | null) => {
     if (done.current) return;
     done.current = true;
@@ -75,8 +84,10 @@ function NoteEditor({
   };
   return (
     <input
+      ref={input}
       className="row-note-input"
       autoFocus
+      enterKeyHint="done"
       aria-label={label}
       placeholder="Что не забыть?"
       title="Enter — сохранить, Esc — отмена"
@@ -216,9 +227,12 @@ export function Widget({
   onMeasure,
   updateAvailable = false,
   onNote,
+  layout = 'widget',
 }: Props) {
   const now = useClock();
   const [week, setWeek] = useState(false);
+  const screen = layout === 'screen';
+  useBackButton(week, () => setWeek(false));
   const [editing, setEditing] = useState<string | null>(null);
   const next = getNextSchoolDay(data, now);
   const shown = mode === 'auto' ? autoDayMode(data, now) : mode;
@@ -248,7 +262,7 @@ export function Widget({
       ? 'Завтра'
       : capitalize(weekdayName.format(next));
   // В компактном виджете рядом четыре кнопки, а «Сегодня» / «Завтра» уже есть на переключателе внизу.
-  const prefix = (word: string) => (compact ? '' : `${word}, `);
+  const prefix = (word: string) => (compact && !screen ? '' : `${word}, `);
   const subtitle =
     shown === 'today'
       ? `${prefix('Сегодня')}${dayMonth.format(now)}`
@@ -297,21 +311,22 @@ export function Widget({
   return (
     <section
       ref={root}
-      className={`schedule-widget ${compact ? 'compact' : ''}`}
+      className={`schedule-widget ${compact ? 'compact' : ''} ${screen ? 'screen' : ''}`}
       style={{ '--widget-alpha': data.settings.opacity / 100 } as CSSProperties}
       aria-label="Виджет расписания"
     >
       <div
         className={`widget-top ${locked ? 'locked' : ''}`}
         onPointerDown={(e) => {
-          if (e.button === 0 && !(e.target as HTMLElement).closest('button')) onDrag();
+          if (!screen && e.button === 0 && !(e.target as HTMLElement).closest('button')) onDrag();
         }}
       >
         <div className="widget-title">
           <h1>{week ? 'Неделя' : date ? capitalize(weekdayName.format(date)) : 'Расписание'}</h1>
           <p>{week ? `Пн–Пт · ${lessonCount(data.lessons.length)}` : subtitle}</p>
+          {screen && !week && meta && <p className="screen-meta">{meta}</p>}
         </div>
-        {week ? (
+        {screen ? null : week ? (
           <div className="widget-actions">
             <button
               aria-label="Закрыть неделю"
@@ -365,14 +380,18 @@ export function Widget({
         ) : !data.lessons.length ? (
           <div className="widget-empty">
             <h2>Добавьте первые уроки</h2>
-            <p>Заполните неделю или загрузите резервную копию с другого компьютера.</p>
+            <p>
+              {screen
+                ? 'Заполните неделю или перенесите расписание с компьютера по QR-коду.'
+                : 'Заполните неделю или загрузите резервную копию с другого компьютера.'}
+            </p>
             <div className="widget-empty-actions">
               <button className="primary" onClick={onSettings}>
                 Настроить расписание
               </button>
               {onBackups && (
                 <button className="secondary" onClick={onBackups}>
-                  Загрузить резервную копию
+                  {screen ? 'Перенести с компьютера' : 'Загрузить резервную копию'}
                 </button>
               )}
             </div>
@@ -474,18 +493,45 @@ export function Widget({
           </>
         )}
       </div>
-      {!week && (
-        <div className="widget-bottom">
-          {!compact && <span className="widget-meta">{meta}</span>}
-          <div className="widget-switch" role="group" aria-label="Показываемый день">
-            <button aria-pressed={shown === 'today'} onClick={() => onMode('today')}>
-              Сегодня
-            </button>
-            <button aria-pressed={shown === 'next'} onClick={() => onMode('next')}>
-              {nextLabel}
-            </button>
+      {screen ? (
+        <nav className="screen-nav" aria-label="Разделы">
+          <button
+            aria-pressed={!week && shown === 'today'}
+            onClick={() => {
+              setWeek(false);
+              onMode('today');
+            }}
+          >
+            Сегодня
+          </button>
+          <button
+            aria-pressed={!week && shown === 'next'}
+            onClick={() => {
+              setWeek(false);
+              onMode('next');
+            }}
+          >
+            {nextLabel}
+          </button>
+          <button aria-pressed={week} onClick={() => setWeek(true)}>
+            Неделя
+          </button>
+          <button onClick={onSettings}>Настройки</button>
+        </nav>
+      ) : (
+        !week && (
+          <div className="widget-bottom">
+            {!compact && <span className="widget-meta">{meta}</span>}
+            <div className="widget-switch" role="group" aria-label="Показываемый день">
+              <button aria-pressed={shown === 'today'} onClick={() => onMode('today')}>
+                Сегодня
+              </button>
+              <button aria-pressed={shown === 'next'} onClick={() => onMode('next')}>
+                {nextLabel}
+              </button>
+            </div>
           </div>
-        </div>
+        )
       )}
     </section>
   );

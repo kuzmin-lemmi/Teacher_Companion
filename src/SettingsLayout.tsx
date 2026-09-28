@@ -43,7 +43,9 @@ export function SettingsLayout({
   return (
     <div className="settings-root">
       <div className="settings-toolbar">
-        <button onClick={() => onNavigate('widget')}>← К виджету</button>
+        <button onClick={() => onNavigate('widget')}>
+          {isMobile() ? '← Расписание' : '← К виджету'}
+        </button>
         <nav aria-label="Разделы приложения">
           {sections.map(([id, label]) => (
             <button

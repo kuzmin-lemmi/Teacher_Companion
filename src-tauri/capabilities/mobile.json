@@ -1,0 +1,7 @@
+{
+  "identifier": "mobile-capability",
+  "description": "QR code scanner for moving the schedule from the computer — phone only",
+  "platforms": ["android", "iOS"],
+  "windows": ["main"],
+  "permissions": ["barcode-scanner:default"]
+}

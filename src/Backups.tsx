@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { exportBackup, importDesktopBackup, parseBackup } from './backup';
+import { isMobile } from './desktop';
+import { ScanTransferCode, ShowTransferCode } from './QrTransfer';
 import { lessonCount } from './calendar';
 import type { AppData } from './domain';
 import type { SnapshotInfo, SnapshotReason, Storage } from './storage';
@@ -27,6 +29,7 @@ export function Backups({
   storage?: Pick<Storage, 'listSnapshots' | 'loadSnapshot'>;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const preview = useRef<HTMLDivElement>(null);
   const [candidate, setCandidate] = useState<AppData | null>(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -42,6 +45,11 @@ export function Backups({
       cancelled = true;
     };
   }, [storage, refresh]);
+  // На телефоне предпросмотр копии ниже экрана — прокручиваем к нему.
+  useEffect(() => {
+    if (candidate) preview.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }, [candidate]);
+  const phone = isTauri() && isMobile();
   async function action(fn: () => Promise<void>) {
     setStatus('');
     setBusy(true);
@@ -54,129 +62,143 @@ export function Backups({
     }
   }
   return (
-    <section className="panel backups">
-      <p className="eyebrow">РЕЗЕРВНЫЕ КОПИИ</p>
-      <h2>Расписание в надёжном месте</h2>
-      <p className="muted">
-        Сохраните уроки, звонки и настройки в один JSON-файл. Его можно восстановить на этом или
-        другом компьютере.
-      </p>
-      <div className="backup-actions">
-        <button
-          disabled={!data || busy}
-          onClick={() =>
-            action(async () => {
-              if (await exportBackup(data!)) setStatus('Резервная копия сохранена');
-            })
-          }
-        >
-          Экспортировать копию
-        </button>
-        <button
+    <>
+      {phone ? (
+        <ScanTransferCode
           disabled={busy}
-          onClick={() => {
-            if (isTauri())
-              void action(async () => {
-                setCandidate(await importDesktopBackup());
-              });
-            else input.current?.click();
+          onScanned={(value) => {
+            setCandidate(value);
+            setStatus('QR-код прочитан. Проверьте и подтвердите восстановление.');
           }}
-        >
-          Выбрать файл для восстановления
-        </button>
-      </div>
-      <input
-        ref={input}
-        className="visually-hidden"
-        tabIndex={-1}
-        type="file"
-        accept=".json,application/json"
-        aria-label="Файл резервной копии"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (file)
-            void action(async () => {
-              if (file.size > 1_000_000) throw new Error('Файл слишком большой. Максимум — 1 МБ.');
-              setCandidate(parseBackup(await file.text()));
-            });
-        }}
-      />
-      {candidate && (
-        <div className="restore-preview">
-          <h3>Копия готова к восстановлению</h3>
-          <p>
-            {lessonCount(candidate.lessons.length)} за неделю · звонков: {candidate.bells.length}
-          </p>
-          <p className="muted">
-            Текущие уроки, звонки и настройки будут заменены. Автозапуск сохранит текущее значение
-            этого компьютера.
-          </p>
-          <div className="backup-actions">
-            <button disabled={busy} onClick={() => setCandidate(null)}>
-              Отмена
-            </button>
-            <button
-              className="primary"
-              disabled={busy}
-              onClick={() =>
-                action(async () => {
-                  await onRestore({
-                    ...candidate,
-                    settings: {
-                      ...candidate.settings,
-                      launchOnStartup: data?.settings.launchOnStartup ?? false,
-                    },
-                  });
-                  setCandidate(null);
-                  setRefresh((r) => r + 1);
-                  setStatus('Расписание восстановлено');
-                })
-              }
-            >
-              Восстановить эту копию
-            </button>
+        />
+      ) : (
+        data && !isMobile() && <ShowTransferCode data={data} />
+      )}
+      <section className="panel backups">
+        <p className="eyebrow">РЕЗЕРВНЫЕ КОПИИ</p>
+        <h2>Расписание в надёжном месте</h2>
+        <p className="muted">
+          Сохраните уроки, звонки и настройки в один JSON-файл. Его можно восстановить на этом или
+          другом компьютере.
+        </p>
+        <div className="backup-actions">
+          <button
+            disabled={!data || busy}
+            onClick={() =>
+              action(async () => {
+                if (await exportBackup(data!)) setStatus('Резервная копия сохранена');
+              })
+            }
+          >
+            Экспортировать копию
+          </button>
+          <button
+            disabled={busy}
+            onClick={() => {
+              if (isTauri())
+                void action(async () => {
+                  setCandidate(await importDesktopBackup());
+                });
+              else input.current?.click();
+            }}
+          >
+            Выбрать файл для восстановления
+          </button>
+        </div>
+        <input
+          ref={input}
+          className="visually-hidden"
+          tabIndex={-1}
+          type="file"
+          accept=".json,application/json"
+          aria-label="Файл резервной копии"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file)
+              void action(async () => {
+                if (file.size > 1_000_000)
+                  throw new Error('Файл слишком большой. Максимум — 1 МБ.');
+                setCandidate(parseBackup(await file.text()));
+              });
+          }}
+        />
+        {candidate && (
+          <div className="restore-preview" ref={preview}>
+            <h3>Копия готова к восстановлению</h3>
+            <p>
+              {lessonCount(candidate.lessons.length)} за неделю · звонков: {candidate.bells.length}
+            </p>
+            <p className="muted">
+              Текущие уроки, звонки и настройки будут заменены. Автозапуск сохранит текущее значение
+              этого компьютера.
+            </p>
+            <div className="backup-actions">
+              <button disabled={busy} onClick={() => setCandidate(null)}>
+                Отмена
+              </button>
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() =>
+                  action(async () => {
+                    await onRestore({
+                      ...candidate,
+                      settings: {
+                        ...candidate.settings,
+                        launchOnStartup: data?.settings.launchOnStartup ?? false,
+                      },
+                    });
+                    setCandidate(null);
+                    setRefresh((r) => r + 1);
+                    setStatus('Расписание восстановлено');
+                  })
+                }
+              >
+                Восстановить эту копию
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-      <p role="status" className="hint">
-        {status}
-      </p>
-      {storage?.listSnapshots && (
-        <div className="snapshots">
-          <h3>Автоматические копии</h3>
-          <p className="muted">
-            Программа сама сохраняет копию расписания при обновлении, раз в день и перед каждым
-            восстановлением. Хранятся последние 30.
-          </p>
-          {!snapshots.length ? (
-            <p className="hint">Копий пока нет — первая появится после заполнения расписания.</p>
-          ) : (
-            <ul>
-              {snapshots.map((s) => (
-                <li key={s.id}>
-                  <span>
-                    <strong>{when(s.createdAt)}</strong>
-                    <small>
-                      {reasons[s.reason] ?? s.reason} · {lessonCount(s.lessons)} · звонков:{' '}
-                      {s.bells} · версия {s.version}
-                    </small>
-                  </span>
-                  <button
-                    disabled={busy}
-                    aria-label={`Восстановить копию от ${when(s.createdAt)}`}
-                    onClick={() =>
-                      action(async () => setCandidate(await storage.loadSnapshot!(s.id)))
-                    }
-                  >
-                    Восстановить
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </section>
+        )}
+        <p role="status" className="hint">
+          {status}
+        </p>
+        {storage?.listSnapshots && (
+          <div className="snapshots">
+            <h3>Автоматические копии</h3>
+            <p className="muted">
+              Программа сама сохраняет копию расписания при обновлении, раз в день и перед каждым
+              восстановлением. Хранятся последние 30.
+            </p>
+            {!snapshots.length ? (
+              <p className="hint">Копий пока нет — первая появится после заполнения расписания.</p>
+            ) : (
+              <ul>
+                {snapshots.map((s) => (
+                  <li key={s.id}>
+                    <span>
+                      <strong>{when(s.createdAt)}</strong>
+                      <small>
+                        {reasons[s.reason] ?? s.reason} · {lessonCount(s.lessons)} · звонков:{' '}
+                        {s.bells} · версия {s.version}
+                      </small>
+                    </span>
+                    <button
+                      disabled={busy}
+                      aria-label={`Восстановить копию от ${when(s.createdAt)}`}
+                      onClick={() =>
+                        action(async () => setCandidate(await storage.loadSnapshot!(s.id)))
+                      }
+                    >
+                      Восстановить
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </section>
+    </>
   );
 }

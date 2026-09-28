@@ -130,6 +130,7 @@ React / TypeScript
 ## Документация
 
 - [Инструкция по установке и использованию](docs/GUIDE.md)
+- [Android — пробная версия и перенос по QR-коду](docs/ANDROID.md)
 - [PRD и согласованные решения](PRD.md)
 - [Архитектура и хранение данных](docs/ARCHITECTURE.md)
 - [План развития](docs/ROADMAP.md)

@@ -771,3 +771,190 @@ html[data-native='true'][data-surface='widget'] body {
   font-size: 13px;
   color: var(--accent);
 }
+/* Телефон: расписание — это весь экран. */
+.widget-stage.mobile {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+.schedule-widget.screen {
+  width: 100%;
+  max-width: 640px;
+  min-height: 100dvh;
+  max-height: none;
+  margin: 0 auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg);
+  font-size: 15px;
+}
+.screen .widget-top {
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 12px;
+  cursor: default;
+}
+.screen .widget-title h1 {
+  font-size: 26px;
+  line-height: 32px;
+}
+.screen .widget-title p {
+  margin-top: 2px;
+  font-size: 15px;
+  line-height: 20px;
+}
+.screen .widget-title .screen-meta {
+  font-size: 13px;
+}
+.screen .widget-lessons {
+  flex: 1 1 auto;
+  padding: 8px 10px 16px;
+}
+.screen .widget-row {
+  height: 52px;
+  gap: 14px;
+  padding: 0 12px;
+  border-radius: 10px;
+}
+.screen .row-num {
+  width: 18px;
+  font-size: 14px;
+}
+.screen .row-class {
+  max-width: 150px;
+  font-size: 19px;
+}
+.screen .row-subject {
+  font-size: 14px;
+}
+.screen .row-time {
+  font-size: 16px;
+}
+.screen .row-room {
+  width: 64px;
+  font-size: 13px;
+}
+.screen .widget-row.current::after {
+  height: 3px;
+}
+.screen .row-note {
+  margin: -6px 0 6px;
+  padding: 0 12px 0 44px;
+  font-size: 14px;
+  white-space: normal;
+}
+.schedule-widget.screen .row-note-input {
+  width: calc(100% - 56px);
+  margin: 0 12px 8px 44px;
+  padding: 9px 11px;
+  /* 16px и крупнее — браузер телефона не увеличивает страницу при фокусе. */
+  font-size: 16px;
+  border-radius: 9px;
+}
+.screen .widget-notice {
+  padding: 4px 12px 8px;
+  font-size: 14px;
+}
+.screen .widget-empty {
+  padding: 40px 16px;
+}
+.screen .widget-empty h2 {
+  font-size: 19px;
+}
+.screen .widget-empty p {
+  font-size: 15px;
+}
+.screen .widget-empty button {
+  padding: 12px 18px;
+  font-size: 15px;
+}
+.screen .week-table th,
+.screen .week-table td {
+  height: 40px;
+  font-size: 15px;
+}
+.screen .week-table thead th {
+  font-size: 13px;
+}
+.screen-nav {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+.screen-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 48px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.screen-nav button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+/* Перенос по QR-коду. */
+.transfer {
+  margin-bottom: 20px;
+}
+.qr-image {
+  display: block;
+  width: min(100%, 420px);
+  margin: 18px 0;
+  border-radius: 8px;
+}
+/* Пока идёт сканирование, страница прозрачна: под ней изображение с камеры. */
+html.scanning,
+html.scanning body {
+  background: transparent !important;
+}
+html.scanning #root {
+  visibility: hidden;
+}
+.scan-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+  color: #fff;
+  text-align: center;
+}
+.scan-frame {
+  width: min(72vw, 320px);
+  aspect-ratio: 1;
+  border: 3px solid #fff;
+  border-radius: 20px;
+  box-shadow: 0 0 0 100vmax #0008;
+}
+.scan-overlay p {
+  max-width: 300px;
+  margin: 0;
+  font-size: 16px;
+  text-shadow: 0 1px 3px #000;
+}
+.scan-overlay button {
+  padding: 12px 28px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+  font-size: 16px;
+  font-weight: 600;
+}

@@ -31,6 +31,7 @@ import {
   syncAutostart,
 } from './desktop';
 import { useTheme, useToday } from './hooks';
+import { useBackButton } from './back';
 type Page = 'widget' | SettingsPage;
 export function Shell({
   storage: suppliedStorage,
@@ -241,6 +242,9 @@ export function Shell({
     const timer = setTimeout(() => setWidgetHeight((h) => h || 340), 1000);
     return () => clearTimeout(timer);
   }, [surface, widgetHeight]);
+  // Android «Назад»: из настроек — к расписанию, из окна подтверждения — отмена.
+  useBackButton(page !== 'widget', () => navigate('widget'));
+  useBackButton(!!confirmation, () => setConfirmation(null));
   function guard(action: () => void) {
     if (busy) return;
     if (dirty)
@@ -406,13 +410,14 @@ export function Shell({
     );
   else if (page === 'widget')
     content = (
-      <div className={`widget-stage ${isDesktop() ? 'native' : 'browser'}`}>
+      <div className={`widget-stage ${isDesktop() ? 'native' : isMobile() ? 'mobile' : 'browser'}`}>
         <Widget
           data={data}
           mode={mode}
           onMode={chooseDay}
           onSettings={() => navigate('schedule')}
           onBackups={() => navigate('backups')}
+          layout={isMobile() ? 'screen' : 'widget'}
           // На телефоне виджет — это весь экран: закрывать и закреплять нечего.
           onClose={isMobile() ? undefined : () => void close()}
           onLock={
@@ -441,7 +446,7 @@ export function Shell({
             )
           }
         />
-        {!isTauri() && (
+        {!isTauri() && !isMobile() && (
           <p className="preview-caption">Предпросмотр виджета · функции окна доступны в Windows</p>
         )}
       </div>

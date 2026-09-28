@@ -475,3 +475,43 @@ it('без обработчиков (на телефоне) виджет не п
   expect(screen.queryByRole('button', { name: 'Закрыть виджет' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Открыть настройки' })).toBeTruthy();
 });
+describe('телефон', () => {
+  const screen_ = (data: AppData, extra: Partial<Parameters<typeof Widget>[0]> = {}) =>
+    render(
+      <Widget
+        data={data}
+        mode="today"
+        onMode={vi.fn()}
+        onSettings={vi.fn()}
+        onDrag={vi.fn()}
+        layout="screen"
+        {...extra}
+      />,
+    );
+  it('весь экран: нижняя панель вместо кнопок в шапке, неделя по кнопке', async () => {
+    const user = userEvent.setup();
+    const onSettings = vi.fn();
+    screen_(fixture(), { onSettings });
+    expect(screen.queryByRole('button', { name: 'Вся неделя' })).toBeNull();
+    const nav = screen.getByRole('navigation', { name: 'Разделы' });
+    expect(nav.textContent).toContain('Сегодня');
+    await user.click(screen.getByRole('button', { name: 'Неделя' }));
+    expect(screen.getByRole('table')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    expect(onSettings).toHaveBeenCalledOnce();
+  });
+  it('пустой экран предлагает перенести расписание с компьютера', () => {
+    const onBackups = vi.fn();
+    screen_(emptyData(), { onBackups });
+    fireEvent.click(screen.getByRole('button', { name: 'Перенести с компьютера' }));
+    expect(onBackups).toHaveBeenCalledOnce();
+  });
+});
+it('на компьютере «Резервные копии» показывают QR-код для телефона', async () => {
+  const user = userEvent.setup();
+  render(<Shell storage={{ load: async () => fixture(), save: async () => {} }} />);
+  await user.click(await screen.findByRole('button', { name: 'Открыть настройки' }));
+  await user.click(await screen.findByRole('button', { name: 'Резервные копии' }));
+  await user.click(screen.getByRole('button', { name: 'Показать QR-код' }));
+  expect(await screen.findByRole('img', { name: 'QR-код с расписанием' })).toBeTruthy();
+});
