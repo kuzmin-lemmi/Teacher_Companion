@@ -4812,7 +4812,7 @@ dependencies = [
 
 [[package]]
 name = "teacher-companion"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "serde_json",
  "tauri",
