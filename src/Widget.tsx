@@ -15,6 +15,7 @@ import {
   dayOff,
   getNextSchoolDay,
   isoDate,
+  matchColorTag,
   type AppData,
   type DayMode,
   type DayOff,
@@ -24,6 +25,8 @@ import {
 import { lessonCount } from './calendar';
 import { useBackButton } from './back';
 import { useClock } from './hooks';
+import { useBellAlert } from './bellAlert';
+import { hasChecklist, parseChecklist, toggleChecklistItem } from './checklist';
 type Props = {
   data: AppData;
   /** `auto` — сегодня до конца последнего урока, потом следующий учебный день. */
@@ -82,27 +85,58 @@ function NoteEditor({
     done.current = true;
     onDone(value);
   };
+  const insertBox = () => {
+    const el = input.current;
+    if (!el) return;
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+    const prefix = text.slice(0, start);
+    const suffix = text.slice(end);
+    const space = prefix.length && !prefix.endsWith(' ') && !prefix.endsWith('\n') ? ' ' : '';
+    const inserted = `${space}[ ] `;
+    const next = (prefix + inserted + suffix).slice(0, NOTE_MAX_LENGTH);
+    setText(next);
+    setTimeout(() => {
+      el.focus();
+      const pos = start + inserted.length;
+      el.setSelectionRange(pos, pos);
+    }, 0);
+  };
   return (
-    <input
-      ref={input}
-      className="row-note-input"
-      autoFocus
-      enterKeyHint="done"
-      aria-label={label}
-      placeholder="Что не забыть?"
-      title="Enter — сохранить, Esc — отмена"
-      maxLength={NOTE_MAX_LENGTH}
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') finish(text);
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          finish(null);
-        }
-      }}
-      onBlur={() => finish(text)}
-    />
+    <div className="row-note-editor-wrap">
+      <input
+        ref={input}
+        className="row-note-input"
+        autoFocus
+        enterKeyHint="done"
+        aria-label={label}
+        placeholder="Что не забыть? Например: [ ] Раздать тетради"
+        title="Enter — сохранить, Esc — отмена"
+        maxLength={NOTE_MAX_LENGTH}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') finish(text);
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            finish(null);
+          }
+        }}
+        onBlur={() => finish(text)}
+      />
+      <button
+        type="button"
+        className="note-insert-checkbox"
+        title="Вставить задачу [ ]"
+        tabIndex={-1}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          insertBox();
+        }}
+      >
+        + [ ]
+      </button>
+    </div>
   );
 }
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -187,10 +221,12 @@ function WeekTable({ data, today, compact }: { data: AppData; today: number; com
               </th>
               {shortDays.map((d, i) => {
                 const lesson = at(i + 1, n);
+                const tag = lesson ? matchColorTag(lesson, data.settings.colorTags) : undefined;
                 return (
                   <td
                     key={d}
                     className={today === i + 1 ? 'today' : ''}
+                    data-color-tag={tag?.color}
                     title={
                       lesson
                         ? [
@@ -256,6 +292,7 @@ export function Widget({
   const showRoom = !compact && !room && lessons.some((l) => l.room.trim());
   const clock = now.toTimeString().slice(0, 5);
   const timer = shown === 'today' && day ? countdown(day, now) : null;
+  const { activeAlert, dismissAlert } = useBellAlert(data, day, timer, dateKey);
   const nextLabel = !next
     ? 'Следующий'
     : isNextDay(now, next)
@@ -406,6 +443,27 @@ export function Widget({
           </div>
         ) : (
           <>
+            {activeAlert && (
+              <div className="bell-alert-banner" role="status" onClick={dismissAlert}>
+                <span className="bell-alert-icon" aria-hidden="true">
+                  🔔
+                </span>
+                <span className="bell-alert-text">
+                  <strong>{activeAlert.minutes} мин до конца:</strong> {activeAlert.message}
+                </span>
+                <button
+                  type="button"
+                  className="bell-alert-close"
+                  aria-label="Закрыть напоминание"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dismissAlert();
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
             {notice && <p className="widget-notice">{notice}</p>}
             {rowsOf(lessons).map((row) => {
               if (row.kind === 'gap') {
@@ -434,10 +492,12 @@ export function Widget({
                       : '';
               const left = timer?.lessonId === lesson.id ? timer : null;
               const edit = onNote ? () => setEditing(noteKey) : undefined;
+              const colorTag = matchColorTag(lesson, data.settings.colorTags);
               return (
                 <Fragment key={lesson.id}>
                   <div
                     className={`widget-row ${state} ${left?.kind === 'break' ? 'upcoming' : ''} ${edit ? 'editable' : ''}`}
+                    data-color-tag={colorTag?.color}
                     aria-current={state === 'current' ? 'time' : undefined}
                     title={
                       edit ? (note ? 'Изменить заметку' : 'Добавить заметку к уроку') : undefined
@@ -493,11 +553,80 @@ export function Widget({
                       }}
                     />
                   ) : (
-                    note && (
+                    note &&
+                    (hasChecklist(note) ? (
+                      <div className={`row-note row-checklist ${state}`} title={note}>
+                        <div className="checklist-items">
+                          {parseChecklist(note).map((part, pIdx) => {
+                            if (part.kind === 'text') {
+                              return (
+                                <span key={pIdx} className="checklist-text" onClick={edit}>
+                                  {part.text}
+                                </span>
+                              );
+                            }
+                            return (
+                              <span
+                                key={pIdx}
+                                className={`checklist-item ${part.done ? 'done' : ''}`}
+                                role="checkbox"
+                                aria-checked={part.done}
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                  if (e.key === ' ' || e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const updated = toggleChecklistItem(note, part.index);
+                                    onNote?.(dateKey, lesson.lessonNumber, updated);
+                                  }
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updated = toggleChecklistItem(note, part.index);
+                                  onNote?.(dateKey, lesson.lessonNumber, updated);
+                                }}
+                              >
+                                <span className="checklist-box" aria-hidden="true">
+                                  {part.done && (
+                                    <svg
+                                      viewBox="0 0 12 12"
+                                      width="9"
+                                      height="9"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <polyline points="2.5 6 4.5 8.5 9.5 3.5" />
+                                    </svg>
+                                  )}
+                                </span>
+                                <span className="checklist-item-text">{part.text}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {edit && (
+                          <button
+                            type="button"
+                            className="checklist-edit-btn"
+                            title="Редактировать заметку"
+                            aria-label="Редактировать заметку"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              edit();
+                            }}
+                          >
+                            ✎
+                          </button>
+                        )}
+                      </div>
+                    ) : (
                       <p className={`row-note ${state}`} title={note} onClick={edit}>
                         {note}
                       </p>
-                    )
+                    ))
                   )}
                 </Fragment>
               );

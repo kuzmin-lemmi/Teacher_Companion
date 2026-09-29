@@ -38,6 +38,70 @@
   --accent-soft: #2e604914;
   --danger: #b3261e;
 }
+/* Акцентные палитры: тёмная тема */
+:root[data-accent='emerald'] {
+  --accent: #8bcaaf;
+  --accent-ink: #102e21;
+  --accent-soft: #8bcaaf1f;
+}
+:root[data-accent='indigo'] {
+  --accent: #8db2f6;
+  --accent-ink: #102246;
+  --accent-soft: #8db2f622;
+}
+:root[data-accent='amber'] {
+  --accent: #eab86a;
+  --accent-ink: #3b2404;
+  --accent-soft: #eab86a24;
+}
+:root[data-accent='berry'] {
+  --accent: #e88ba3;
+  --accent-ink: #3a0d1b;
+  --accent-soft: #e88ba324;
+}
+:root[data-accent='cyan'] {
+  --accent: #68d3c8;
+  --accent-ink: #072d29;
+  --accent-soft: #68d3c822;
+}
+:root[data-accent='lavender'] {
+  --accent: #c3a9f5;
+  --accent-ink: #28144b;
+  --accent-soft: #c3a9f524;
+}
+
+/* Акцентные палитры: светлая тема */
+:root[data-theme='light'][data-accent='emerald'],
+:root[data-theme='light']:not([data-accent]) {
+  --accent: #276348;
+  --accent-ink: #ffffff;
+  --accent-soft: #27634814;
+}
+:root[data-theme='light'][data-accent='indigo'] {
+  --accent: #2553aa;
+  --accent-ink: #ffffff;
+  --accent-soft: #2553aa14;
+}
+:root[data-theme='light'][data-accent='amber'] {
+  --accent: #9c5c0a;
+  --accent-ink: #ffffff;
+  --accent-soft: #9c5c0a14;
+}
+:root[data-theme='light'][data-accent='berry'] {
+  --accent: #992342;
+  --accent-ink: #ffffff;
+  --accent-soft: #99234214;
+}
+:root[data-theme='light'][data-accent='cyan'] {
+  --accent: #157169;
+  --accent-ink: #ffffff;
+  --accent-soft: #15716914;
+}
+:root[data-theme='light'][data-accent='lavender'] {
+  --accent: #6034ad;
+  --accent-ink: #ffffff;
+  --accent-soft: #6034ad14;
+}
 :root,
 body {
   background: var(--bg);
@@ -406,7 +470,10 @@ html[data-native='true'][data-surface='widget'] body {
   border-top: 1px dashed var(--line);
 }
 .widget-row.current {
+  position: relative;
+  overflow: hidden;
   background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .widget-row.current .row-num,
 .widget-row.current .row-time {
@@ -417,10 +484,6 @@ html[data-native='true'][data-surface='widget'] body {
   opacity: 0.45;
 }
 /* Полоска прогресса текущего урока — ширину задаёт --progress из виджета. */
-.widget-row.current {
-  position: relative;
-  overflow: hidden;
-}
 .widget-row.current::after {
   content: '';
   position: absolute;
@@ -429,7 +492,8 @@ html[data-native='true'][data-surface='widget'] body {
   width: var(--progress, 0%);
   height: 2px;
   background: var(--accent);
-  opacity: 0.7;
+  box-shadow: 0 0 6px var(--accent);
+  opacity: 0.9;
 }
 .widget-row.upcoming .row-time {
   color: var(--accent);
@@ -443,7 +507,7 @@ html[data-native='true'][data-surface='widget'] body {
 }
 /* Урок открывают и с клавиатуры: рамка внутри строки — снаружи её обрезал бы край виджета. */
 .widget-row.editable:focus-visible {
-  outline: 2px solid #8bcaaf;
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 .row-note {
@@ -969,4 +1033,511 @@ html.scanning #root {
   color: #111;
   font-size: 16px;
   font-weight: 600;
+}
+
+/* ==========================================================================
+   Цветовая маркировка (теги классов и предметов)
+   ========================================================================== */
+
+/* Пресеты цветов для темной темы (по умолчанию) */
+[data-color-tag='blue'] {
+  --tag-dot: #3b82f6;
+  --tag-bg: rgba(59, 130, 246, 0.2);
+  --tag-text: #93c5fd;
+  --tag-border: rgba(59, 130, 246, 0.4);
+}
+[data-color-tag='amber'] {
+  --tag-dot: #f59e0b;
+  --tag-bg: rgba(245, 158, 11, 0.2);
+  --tag-text: #fcd34d;
+  --tag-border: rgba(245, 158, 11, 0.4);
+}
+[data-color-tag='emerald'] {
+  --tag-dot: #10b981;
+  --tag-bg: rgba(16, 185, 129, 0.2);
+  --tag-text: #6ee7b7;
+  --tag-border: rgba(16, 185, 129, 0.4);
+}
+[data-color-tag='purple'] {
+  --tag-dot: #8b5cf6;
+  --tag-bg: rgba(139, 92, 246, 0.2);
+  --tag-text: #c4b5fd;
+  --tag-border: rgba(139, 92, 246, 0.4);
+}
+[data-color-tag='rose'] {
+  --tag-dot: #f43f5e;
+  --tag-bg: rgba(244, 63, 94, 0.2);
+  --tag-text: #fda4af;
+  --tag-border: rgba(244, 63, 94, 0.4);
+}
+[data-color-tag='teal'] {
+  --tag-dot: #06b6d4;
+  --tag-bg: rgba(6, 182, 212, 0.2);
+  --tag-text: #67e8f9;
+  --tag-border: rgba(6, 182, 212, 0.4);
+}
+[data-color-tag='orange'] {
+  --tag-dot: #f97316;
+  --tag-bg: rgba(249, 115, 22, 0.2);
+  --tag-text: #fdba74;
+  --tag-border: rgba(249, 115, 22, 0.4);
+}
+[data-color-tag='indigo'] {
+  --tag-dot: #6366f1;
+  --tag-bg: rgba(99, 102, 241, 0.2);
+  --tag-text: #a5b4fc;
+  --tag-border: rgba(99, 102, 241, 0.4);
+}
+
+/* Пресеты цветов для светлой темы */
+:root[data-theme='light'] [data-color-tag='blue'] {
+  --tag-dot: #2563eb;
+  --tag-bg: #dbeafe;
+  --tag-text: #1e40af;
+  --tag-border: #93c5fd;
+}
+:root[data-theme='light'] [data-color-tag='amber'] {
+  --tag-dot: #d97706;
+  --tag-bg: #fef3c7;
+  --tag-text: #92400e;
+  --tag-border: #fcd34d;
+}
+:root[data-theme='light'] [data-color-tag='emerald'] {
+  --tag-dot: #059669;
+  --tag-bg: #d1fae5;
+  --tag-text: #065f46;
+  --tag-border: #6ee7b7;
+}
+:root[data-theme='light'] [data-color-tag='purple'] {
+  --tag-dot: #7c3aed;
+  --tag-bg: #ede9fe;
+  --tag-text: #5b21b6;
+  --tag-border: #c4b5fd;
+}
+:root[data-theme='light'] [data-color-tag='rose'] {
+  --tag-dot: #e11d48;
+  --tag-bg: #ffe4e6;
+  --tag-text: #9f1239;
+  --tag-border: #fda4af;
+}
+:root[data-theme='light'] [data-color-tag='teal'] {
+  --tag-dot: #0891b2;
+  --tag-bg: #cffafe;
+  --tag-text: #155e75;
+  --tag-border: #67e8f9;
+}
+:root[data-theme='light'] [data-color-tag='orange'] {
+  --tag-dot: #ea580c;
+  --tag-bg: #ffedd5;
+  --tag-text: #9a3412;
+  --tag-border: #fdba74;
+}
+:root[data-theme='light'] [data-color-tag='indigo'] {
+  --tag-dot: #4f46e5;
+  --tag-bg: #e0e7ff;
+  --tag-text: #3730a3;
+  --tag-border: #a5b4fc;
+}
+
+/* Оформление строки урока в виджете */
+.widget-row[data-color-tag] {
+  border-left: 3.5px solid var(--tag-dot);
+  padding-left: 5px;
+}
+.widget-row[data-color-tag] .row-class {
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Оформление ячейки в недельной таблице */
+.week-table td[data-color-tag] {
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  font-weight: 600;
+  border-radius: 3px;
+}
+
+/* Оформление карточки урока в редакторе расписания */
+.lesson-card[data-color-tag] {
+  border-left: 4px solid var(--tag-dot);
+}
+
+/* Настройки: редактор тегов */
+.color-tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.color-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  flex-wrap: wrap;
+}
+.color-tag-target {
+  width: auto;
+  min-width: 150px;
+  flex: none;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+.color-tag-pattern {
+  flex: 1;
+  min-width: 130px;
+  padding: 7px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+}
+.color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.color-swatch:hover:not(:disabled) {
+  transform: scale(1.15);
+}
+.color-swatch.active {
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 4px var(--tag-dot, #fff);
+  transform: scale(1.15);
+}
+.color-tag-preview {
+  flex: none;
+  min-width: 50px;
+  text-align: center;
+}
+.color-tag-preview .row-class {
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.color-tag-row button.delete {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+.color-tag-row button.delete:hover {
+  background: var(--hover);
+  color: var(--danger);
+}
+.quick-tag-suggestions {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quick-tag-suggestions > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.suggestion-chip {
+  padding: 5px 11px;
+  font-size: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.suggestion-chip:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+
+/* Баннер напоминания перед звонком */
+.bell-alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 6px;
+  padding: 6px 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: var(--accent);
+  cursor: pointer;
+  animation: bell-pulse 2s infinite ease-in-out;
+}
+@keyframes bell-pulse {
+  0%,
+  100% {
+    border-color: var(--accent);
+  }
+  50% {
+    border-color: transparent;
+  }
+}
+.bell-alert-icon {
+  font-size: 13px;
+  flex: none;
+}
+.bell-alert-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bell-alert-text strong {
+  font-weight: 600;
+  margin-right: 4px;
+}
+.bell-alert-close {
+  flex: none;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+/* Редактор заметки с кнопкой вставки чекбокса */
+.row-note-editor-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(100% - 32px);
+  margin: 0 8px 4px 28px;
+}
+.row-note-editor-wrap .row-note-input {
+  flex: 1;
+  width: auto;
+  margin: 0;
+  padding: 4px 7px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.note-insert-checkbox {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--accent);
+  cursor: pointer;
+}
+.note-insert-checkbox:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+
+/* Чек-лист в заметке к уроку */
+.schedule-widget .row-note.row-checklist {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 20px;
+  padding-right: 6px;
+}
+.schedule-widget .checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.schedule-widget .checklist-item {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.25;
+}
+.schedule-widget .checklist-box {
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  max-width: 13px;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--accent);
+  border-radius: 3px;
+  background: transparent;
+  flex: 0 0 13px;
+  box-sizing: border-box;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.schedule-widget .checklist-item:hover .checklist-box {
+  background: var(--hover);
+}
+.schedule-widget .checklist-item.done .checklist-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.schedule-widget .checklist-item-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--text);
+  line-height: 1.25;
+}
+.schedule-widget .checklist-item.done .checklist-item-text {
+  text-decoration: line-through;
+  color: var(--muted);
+  opacity: 0.6;
+}
+.schedule-widget .checklist-text {
+  font-size: 11.5px;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.schedule-widget .checklist-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.35;
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+.schedule-widget .row-checklist:hover .checklist-edit-btn,
+.schedule-widget .checklist-edit-btn:hover {
+  opacity: 1;
+  color: var(--accent);
+  background: var(--hover);
+}
+
+/* Выбор акцентного цвета в настройках */
+.accent-picker-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+.accent-picker-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.accent-picker-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+.accent-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--card);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.12s;
+}
+.accent-option:hover {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+.accent-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.accent-swatch {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: var(--accent-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.accent-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+.weekly-workload-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 3px 9px;
+  border-radius: 6px;
+  margin-left: 8px;
+  font-weight: 500;
 }

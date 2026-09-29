@@ -4,6 +4,7 @@ import {
   gaps,
   isoDate,
   lessonsForDay,
+  matchColorTag,
   nextBell,
   publicHolidays,
   shortenBells,
@@ -124,7 +125,12 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
           <div>
             <p className="eyebrow">TEACHER COMPANION</p>
             <h1>{titles[tab][0]}</h1>
-            <p className="muted">{titles[tab][1]}</p>
+            <p className="muted">
+              {titles[tab][1]}
+              {tab === 'schedule' && data && data.lessons.length > 0 && (
+                <span className="weekly-workload-chip">Всего уроков: {data.lessons.length}</span>
+              )}
+            </p>
           </div>
           <span className="badge">Локально · v{appVersion}</span>
         </header>
@@ -212,7 +218,12 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                               {missing > 0 && (
                                 <div className="gap">Окно · пропущено номеров: {missing}</div>
                               )}
-                              <article className="lesson-card">
+                              <article
+                                className="lesson-card"
+                                data-color-tag={
+                                  matchColorTag(lesson, data.settings?.colorTags)?.color
+                                }
+                              >
                                 <div className="lesson-fields">
                                   <label>
                                     № урока

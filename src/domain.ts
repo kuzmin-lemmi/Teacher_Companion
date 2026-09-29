@@ -15,6 +15,117 @@ export type DayOff = { id: string; title: string; start: string; end: string };
 export type LessonNote = { date: string; lessonNumber: number; text: string };
 export const widgetCorners = ['top-right', 'top-left', 'bottom-right', 'bottom-left'] as const;
 export type WidgetCorner = (typeof widgetCorners)[number];
+
+export type ColorPreset = {
+  id: string;
+  name: string;
+  dot: string;
+  darkBg: string;
+  darkText: string;
+  lightBg: string;
+  lightText: string;
+};
+
+export const COLOR_PRESETS: ColorPreset[] = [
+  {
+    id: 'blue',
+    name: 'Синий',
+    dot: '#3b82f6',
+    darkBg: 'rgba(59, 130, 246, 0.22)',
+    darkText: '#93c5fd',
+    lightBg: '#dbeafe',
+    lightText: '#1e40af',
+  },
+  {
+    id: 'amber',
+    name: 'Янтарный',
+    dot: '#f59e0b',
+    darkBg: 'rgba(245, 158, 11, 0.22)',
+    darkText: '#fcd34d',
+    lightBg: '#fef3c7',
+    lightText: '#92400e',
+  },
+  {
+    id: 'emerald',
+    name: 'Изумрудный',
+    dot: '#10b981',
+    darkBg: 'rgba(16, 185, 129, 0.22)',
+    darkText: '#6ee7b7',
+    lightBg: '#d1fae5',
+    lightText: '#065f46',
+  },
+  {
+    id: 'purple',
+    name: 'Фиолетовый',
+    dot: '#8b5cf6',
+    darkBg: 'rgba(139, 92, 246, 0.22)',
+    darkText: '#c4b5fd',
+    lightBg: '#ede9fe',
+    lightText: '#5b21b6',
+  },
+  {
+    id: 'rose',
+    name: 'Коралловый',
+    dot: '#f43f5e',
+    darkBg: 'rgba(244, 63, 94, 0.22)',
+    darkText: '#fda4af',
+    lightBg: '#ffe4e6',
+    lightText: '#9f1239',
+  },
+  {
+    id: 'teal',
+    name: 'Бирюзовый',
+    dot: '#06b6d4',
+    darkBg: 'rgba(6, 182, 212, 0.22)',
+    darkText: '#67e8f9',
+    lightBg: '#cffafe',
+    lightText: '#155e75',
+  },
+  {
+    id: 'orange',
+    name: 'Оранжевый',
+    dot: '#f97316',
+    darkBg: 'rgba(249, 115, 22, 0.22)',
+    darkText: '#fdba74',
+    lightBg: '#ffedd5',
+    lightText: '#9a3412',
+  },
+  {
+    id: 'indigo',
+    name: 'Индиго',
+    dot: '#6366f1',
+    darkBg: 'rgba(99, 102, 241, 0.22)',
+    darkText: '#a5b4fc',
+    lightBg: '#e0e7ff',
+    lightText: '#3730a3',
+  },
+];
+
+export type ColorTag = {
+  id: string;
+  target: 'class' | 'subject';
+  pattern: string;
+  color: string;
+};
+
+export type AccentColor = 'emerald' | 'indigo' | 'amber' | 'berry' | 'cyan' | 'lavender';
+
+export interface AccentPreset {
+  id: AccentColor;
+  name: string;
+  emoji: string;
+  color: string;
+}
+
+export const ACCENT_PRESETS: AccentPreset[] = [
+  { id: 'emerald', name: 'Изумруд', emoji: '🌲', color: '#8bcaaf' },
+  { id: 'indigo', name: 'Индиго', emoji: '🫐', color: '#8db2f6' },
+  { id: 'amber', name: 'Янтарь', emoji: '🍯', color: '#eab86a' },
+  { id: 'berry', name: 'Ягода', emoji: '🌸', color: '#e88ba3' },
+  { id: 'cyan', name: 'Лазурь', emoji: '🌊', color: '#68d3c8' },
+  { id: 'lavender', name: 'Лаванда', emoji: '🪻', color: '#c3a9f5' },
+];
+
 export type Settings = {
   launchOnStartup: boolean;
   alwaysOnTop: boolean;
@@ -23,9 +134,21 @@ export type Settings = {
   widgetCorner: WidgetCorner;
   opacity: number;
   theme: 'system' | 'light' | 'dark';
+  /** Цветовая акцентная тема интерфейса */
+  accentColor?: AccentColor;
   closeBehavior: 'tray' | 'exit';
   /** Раз в несколько часов спрашивать GitHub, есть ли новая версия. */
   checkUpdates: boolean;
+  /** Цветовые метки (теги) для классов, параллелей и предметов. */
+  colorTags?: ColorTag[];
+  /** Напоминание перед звонком: за сколько минут предупреждать (0 — выключено). */
+  bellAlertMinutes?: number;
+  /** Включать тихий звуковой сигнал перед звонком. */
+  bellAlertSound?: boolean;
+  /** Показывать всплывающее уведомление Windows перед звонком. */
+  bellAlertPopup?: boolean;
+  /** Текст напоминания перед звонком. */
+  bellAlertMessage?: string;
 };
 export type AppData = {
   version: 1;
@@ -57,8 +180,14 @@ export const emptyData = (): AppData => ({
     widgetCorner: 'top-right',
     opacity: 100,
     theme: 'dark',
+    accentColor: 'emerald',
     closeBehavior: 'tray',
     checkUpdates: true,
+    colorTags: [],
+    bellAlertMinutes: 5,
+    bellAlertSound: true,
+    bellAlertPopup: true,
+    bellAlertMessage: 'Пора подводить итоги и задавать ДЗ',
   },
 });
 /**
@@ -71,12 +200,61 @@ export function normalize(data: AppData): AppData {
   if (s && typeof s === 'object' && s.widgetCorner === undefined) s.widgetCorner = 'top-right';
   // Копии до версии 0.5 не содержат настройки обновлений.
   if (s && typeof s === 'object' && s.checkUpdates === undefined) s.checkUpdates = true;
+  // Копии до добавления цветовых меток и напоминаний о звонках
+  if (s && typeof s === 'object') {
+    s.accentColor ??= 'emerald';
+    s.colorTags ??= [];
+    s.bellAlertMinutes ??= 5;
+    s.bellAlertSound ??= true;
+    s.bellAlertPopup ??= true;
+    s.bellAlertMessage ??= 'Пора подводить итоги и задавать ДЗ';
+  }
   // Копии до версии 0.7 не содержат календаря и заметок.
   data.holidays ??= [];
   data.shortDays ??= [];
   data.shortBells ??= [];
   data.notes ??= [];
   return data;
+}
+
+/** Сопоставляет урок с первым подходящим цветовым тегом. */
+export function matchColorTag(lesson: Lesson, tags?: ColorTag[]): ColorTag | undefined {
+  if (!tags || !tags.length) return undefined;
+  const cls = lesson.className.trim();
+  const subj = lesson.subject.trim();
+  for (const tag of tags) {
+    const pat = tag.pattern.trim();
+    if (!pat) continue;
+    if (tag.target === 'class') {
+      if (!cls) continue;
+      // Если шаблон — только цифры (например «5» или «10»), сопоставляем параллель:
+      // «5» подойдёт для «5», «5А», «5-Б», «5 В», но не для «15» или «50».
+      if (/^\d+$/.test(pat)) {
+        const m = cls.match(/^(\d+)/);
+        if (m && m[1] === pat) return tag;
+      } else if (
+        cls.toLowerCase().startsWith(pat.toLowerCase()) ||
+        cls.toLowerCase() === pat.toLowerCase()
+      ) {
+        return tag;
+      }
+    } else if (tag.target === 'subject') {
+      if (subj && subj.toLowerCase().includes(pat.toLowerCase())) {
+        return tag;
+      }
+    }
+  }
+  return undefined;
+}
+
+/** Находит уникальные параллели (5, 6, 7...) из списка уроков для быстрых подсказок. */
+export function extractParallels(lessons: Lesson[]): string[] {
+  const set = new Set<string>();
+  for (const l of lessons) {
+    const m = l.className.trim().match(/^(\d+)/);
+    if (m) set.add(m[1]);
+  }
+  return [...set].sort((a, b) => Number(a) - Number(b));
 }
 /** То, что правит редактор расписания. Заметки и настройки меняются в других местах. */
 export type Schedule = Pick<AppData, 'lessons' | 'bells' | 'holidays' | 'shortDays' | 'shortBells'>;
@@ -401,10 +579,32 @@ export function decode(raw: string): AppData {
     !['compact', 'normal'].includes(s.widgetSize) ||
     !widgetCorners.includes(s.widgetCorner) ||
     !['system', 'light', 'dark'].includes(s.theme) ||
+    (s.accentColor !== undefined &&
+      !['emerald', 'indigo', 'amber', 'berry', 'cyan', 'lavender'].includes(s.accentColor)) ||
     !['tray', 'exit'].includes(s.closeBehavior) ||
     !Number.isFinite(s.opacity) ||
     s.opacity < 80 ||
-    s.opacity > 100
+    s.opacity > 100 ||
+    (s.colorTags !== undefined &&
+      (!Array.isArray(s.colorTags) ||
+        s.colorTags.length > 50 ||
+        s.colorTags.some(
+          (t) =>
+            !t ||
+            typeof t.id !== 'string' ||
+            !['class', 'subject'].includes(t.target) ||
+            typeof t.pattern !== 'string' ||
+            typeof t.color !== 'string' ||
+            t.pattern.length > 50,
+        ))) ||
+    (s.bellAlertMinutes !== undefined &&
+      (!Number.isInteger(s.bellAlertMinutes) ||
+        s.bellAlertMinutes < 0 ||
+        s.bellAlertMinutes > 30)) ||
+    (s.bellAlertSound !== undefined && typeof s.bellAlertSound !== 'boolean') ||
+    (s.bellAlertPopup !== undefined && typeof s.bellAlertPopup !== 'boolean') ||
+    (s.bellAlertMessage !== undefined &&
+      (typeof s.bellAlertMessage !== 'string' || s.bellAlertMessage.length > 200))
   )
     throw new Error('Повреждены настройки.');
   for (const l of data.lessons) {

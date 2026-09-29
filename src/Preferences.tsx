@@ -1,6 +1,22 @@
 import { useEffect, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import type { Settings, WidgetCorner } from './domain';
+import {
+  ACCENT_PRESETS,
+  COLOR_PRESETS,
+  extractParallels,
+  type AccentColor,
+  type ColorTag,
+  type Lesson,
+  type Settings,
+  type WidgetCorner,
+} from './domain';
+import {
+  playChime,
+  canShowSystemNotification,
+  isNotificationGranted,
+  requestNotificationPermission,
+  showSystemNotification,
+} from './chime';
 export const cornerLabels: Record<WidgetCorner, string> = {
   'top-right': 'Справа сверху',
   'top-left': 'Слева сверху',
@@ -9,12 +25,14 @@ export const cornerLabels: Record<WidgetCorner, string> = {
 };
 export function Preferences({
   settings,
+  lessons = [],
   onSave,
   onDirty,
   onResetPosition,
   onPreview,
 }: {
   settings: Settings;
+  lessons?: Lesson[];
   onSave: (settings: Settings) => Promise<void>;
   onDirty: (dirty: boolean) => void;
   onResetPosition: () => void;
@@ -23,6 +41,7 @@ export function Preferences({
   const [draft, setDraft] = useState(settings);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const [hasNotifPermission, setHasNotifPermission] = useState(isNotificationGranted);
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
   useEffect(() => {
     onDirty(dirty);
@@ -36,6 +55,28 @@ export function Preferences({
     setDraft({ ...draft, ...patch });
     setStatus('');
   }
+  const colorTags = draft.colorTags ?? [];
+  function addColorTag(target: 'class' | 'subject' = 'class', pattern = '', color?: string) {
+    const defaultColor = color ?? COLOR_PRESETS[colorTags.length % COLOR_PRESETS.length].id;
+    const newTag: ColorTag = {
+      id: crypto.randomUUID(),
+      target,
+      pattern,
+      color: defaultColor,
+    };
+    update({ colorTags: [...colorTags, newTag] });
+  }
+  function updateColorTag(index: number, patch: Partial<ColorTag>) {
+    update({ colorTags: colorTags.map((t, i) => (i === index ? { ...t, ...patch } : t)) });
+  }
+  function removeColorTag(index: number) {
+    update({ colorTags: colorTags.filter((_, i) => i !== index) });
+  }
+  const existingPatterns = new Set(
+    colorTags.filter((t) => t.target === 'class').map((t) => t.pattern.trim()),
+  );
+  const parallels = extractParallels(lessons);
+  const unconfiguredParallels = parallels.filter((p) => !existingPatterns.has(p));
   async function save() {
     setBusy(true);
     try {
@@ -89,6 +130,43 @@ export function Preferences({
               </select>
             </label>
           </div>
+          <div className="accent-picker-section">
+            <span className="accent-picker-title">Цветовой акцент интерфейса</span>
+            <div className="accent-picker-options" role="radiogroup" aria-label="Цветовой акцент">
+              {ACCENT_PRESETS.map((preset) => {
+                const isSelected = (draft.accentColor ?? 'emerald') === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    className={`accent-option ${isSelected ? 'selected' : ''}`}
+                    onClick={() => update({ accentColor: preset.id as AccentColor })}
+                    title={preset.name}
+                  >
+                    <span className="accent-swatch" style={{ background: preset.color }}>
+                      {isSelected && (
+                        <svg
+                          viewBox="0 0 12 12"
+                          width="10"
+                          height="10"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="2.5 6 4.5 8.5 9.5 3.5" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="accent-name">{preset.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <label className="range-label">
             Непрозрачность фона: {draft.opacity}%
             <input
@@ -100,6 +178,194 @@ export function Preferences({
               onChange={(e) => update({ opacity: Number(e.target.value) })}
             />
           </label>
+        </section>
+        <section className="panel color-tags-panel">
+          <div className="section-title">
+            <div>
+              <p className="eyebrow">ЦВЕТОВАЯ МАРКИРОВКА</p>
+              <h2>Теги классов и предметов</h2>
+              <p className="muted">
+                Задайте цвета для параллелей (например, «5» для 5-х классов) или предметов. Цвет
+                сразу отобразится в виджете и расписании на неделю.
+              </p>
+            </div>
+            <button type="button" className="secondary" onClick={() => addColorTag('class')}>
+              + Добавить тег
+            </button>
+          </div>
+
+          {colorTags.length > 0 ? (
+            <div className="color-tag-list">
+              {colorTags.map((tag, idx) => (
+                <div key={tag.id} className="color-tag-row">
+                  <select
+                    className="color-tag-target"
+                    value={tag.target}
+                    onChange={(e) =>
+                      updateColorTag(idx, { target: e.target.value as 'class' | 'subject' })
+                    }
+                  >
+                    <option value="class">Класс / параллель</option>
+                    <option value="subject">Предмет</option>
+                  </select>
+                  <input
+                    type="text"
+                    className="color-tag-pattern"
+                    placeholder={
+                      tag.target === 'class' ? 'например: 5 или 7А' : 'например: Математика'
+                    }
+                    value={tag.pattern}
+                    maxLength={30}
+                    onChange={(e) => updateColorTag(idx, { pattern: e.target.value })}
+                  />
+                  <div className="color-swatches" role="radiogroup" aria-label="Выбор цвета">
+                    {COLOR_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className={`color-swatch ${tag.color === preset.id ? 'active' : ''}`}
+                        style={{ backgroundColor: preset.dot }}
+                        title={preset.name}
+                        aria-label={preset.name}
+                        aria-checked={tag.color === preset.id}
+                        onClick={() => updateColorTag(idx, { color: preset.id })}
+                      />
+                    ))}
+                  </div>
+                  <div className="color-tag-preview" data-color-tag={tag.color}>
+                    <span className="row-class">
+                      {tag.pattern.trim() || (tag.target === 'class' ? 'Класс' : 'Предмет')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="delete"
+                    title="Удалить тег"
+                    aria-label="Удалить тег"
+                    onClick={() => removeColorTag(idx)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted" style={{ margin: '14px 0 0' }}>
+              Теги пока не созданы. Добавьте первый тег вручную или выберите параллель ниже.
+            </p>
+          )}
+
+          {unconfiguredParallels.length > 0 && (
+            <div className="quick-tag-suggestions">
+              <span>Быстро добавить из расписания:</span>
+              <div className="suggestion-chips">
+                {unconfiguredParallels.map((p, i) => {
+                  const color = COLOR_PRESETS[(colorTags.length + i) % COLOR_PRESETS.length].id;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      className="suggestion-chip"
+                      onClick={() => addColorTag('class', p, color)}
+                    >
+                      + {p}-е классы
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+        <section className="panel">
+          <p className="eyebrow">НАПОМИНАНИЯ ПЕРЕД ЗВОНКОМ</p>
+          <h2>Конец урока</h2>
+          <p className="muted">
+            Помогает вовремя подвести итоги, задать домашнее задание и завершить занятие без спешки.
+          </p>
+          <div className="preference-grid" style={{ marginTop: '16px' }}>
+            <label>
+              Предупреждать до звонка
+              <select
+                value={draft.bellAlertMinutes ?? 5}
+                onChange={(e) => update({ bellAlertMinutes: Number(e.target.value) })}
+              >
+                <option value={0}>Выключено</option>
+                <option value={2}>За 2 минуты</option>
+                <option value={3}>За 3 минуты</option>
+                <option value={5}>За 5 минут</option>
+                <option value={10}>За 10 минут</option>
+              </select>
+            </label>
+            <label>
+              Текст напоминания
+              <input
+                type="text"
+                value={draft.bellAlertMessage ?? 'Пора подводить итоги и задавать ДЗ'}
+                maxLength={100}
+                placeholder="Пора подводить итоги и задавать ДЗ"
+                onChange={(e) => update({ bellAlertMessage: e.target.value })}
+              />
+            </label>
+          </div>
+          {(draft.bellAlertMinutes ?? 5) > 0 && (
+            <div style={{ marginTop: '16px', display: 'grid', gap: '14px' }}>
+              <label className="setting-toggle">
+                <div>
+                  <strong>Тихий звуковой сигнал</strong>
+                  <small>Мягкий перезвон (синтезируется браузером, не мешает уроку).</small>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
+                    onClick={playChime}
+                  >
+                    ▶ Прослушать
+                  </button>
+                  <input
+                    type="checkbox"
+                    checked={draft.bellAlertSound ?? true}
+                    onChange={(e) => update({ bellAlertSound: e.target.checked })}
+                  />
+                </div>
+              </label>
+              {canShowSystemNotification() && (
+                <label className="setting-toggle">
+                  <div>
+                    <strong>Всплывающее уведомление браузера</strong>
+                    <small>Сообщение о скором звонке.</small>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {!hasNotifPermission && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        style={{ fontSize: '12px', padding: '4px 10px' }}
+                        onClick={async () => {
+                          const granted = await requestNotificationPermission();
+                          setHasNotifPermission(granted);
+                          if (granted) {
+                            showSystemNotification(
+                              'Помощник учителя',
+                              'Уведомления успешно включены!',
+                            );
+                          }
+                        }}
+                      >
+                        Разрешить в системе
+                      </button>
+                    )}
+                    <input
+                      type="checkbox"
+                      checked={draft.bellAlertPopup ?? true}
+                      onChange={(e) => update({ bellAlertPopup: e.target.checked })}
+                    />
+                  </div>
+                </label>
+              )}
+            </div>
+          )}
         </section>
         <section className="panel">
           <p className="eyebrow">ПОВЕДЕНИЕ ОКНА</p>

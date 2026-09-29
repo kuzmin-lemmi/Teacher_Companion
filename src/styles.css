@@ -36,7 +36,7 @@ button:disabled {
 }
 button:focus-visible,
 input:focus-visible {
-  outline: 2px solid #8bcaaf;
+  outline: 2px solid var(--accent, #8bcaaf);
   outline-offset: 3px;
 }
 .app-shell {
@@ -60,8 +60,8 @@ aside {
   font-size: 15px;
 }
 .brand-icon {
-  background: #bbdcc9;
-  color: #18392b;
+  background: var(--accent);
+  color: var(--accent-ink);
   border-radius: 12px;
   padding: 10px 13px;
   font-size: 22px;
@@ -95,8 +95,8 @@ nav button {
   color: #a6afbe;
 }
 nav .active {
-  background: #293d35;
-  color: #b8e2ca;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .local-note {
   margin-top: auto;
@@ -179,9 +179,9 @@ h3 {
   color: #7d899b;
 }
 .days .selected {
-  border-color: #8ebda2;
-  background: #23392e;
-  color: #c5ead4;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .panel {
   background: #191d25;

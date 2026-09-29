@@ -687,6 +687,77 @@
     padding: 12px 20px 14px;
     border-top: 1px solid var(--line-soft);
   }
+
+  /* Цветовые теги на телефоне */
+  & .m-color-tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  & .m-color-tag-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--card);
+    border-left: 4px solid var(--tag-dot);
+  }
+  & .m-color-tag-item .row-class {
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  & .m-color-tag-desc {
+    flex: 1;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  & button.m-delete-tag {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    cursor: pointer;
+  }
+  & .m-add-tag-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line-soft);
+  }
+  & .m-tag-inputs {
+    display: flex;
+    gap: 8px;
+  }
+  & .m-tag-inputs .m-select {
+    width: auto;
+    flex: none;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: var(--card);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+  }
+  & .m-tag-inputs .m-input {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 14px;
+    background: var(--card);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+  }
 }
 @keyframes m-fade {
   from {

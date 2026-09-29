@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { hasChecklist, parseChecklist, toggleChecklistItem, getChecklistStats } from './checklist';
 import {
   generateBells,
   nextBell,
@@ -10,12 +11,16 @@ import {
   gaps,
   validate,
   decode,
+  normalize,
   publicHolidays,
   setNote,
   shortenBells,
   timeOf,
+  matchColorTag,
+  extractParallels,
   type AppData,
   type Lesson,
+  type ColorTag,
 } from './domain';
 const lesson = (weekday = 1, lessonNumber = 1): Lesson => ({
   id: `${weekday}-${lessonNumber}`,
@@ -347,5 +352,137 @@ describe('звонки с нуля', () => {
     // Дальше 20-го — первый свободный номер без времени.
     const full = Array.from({ length: 19 }, (_, i) => ({ ...bells[0], lessonNumber: i + 2 }));
     expect(nextBell(full)).toEqual({ lessonNumber: 1, start: '', end: '' });
+  });
+});
+
+describe('цветовая маркировка (теги классов и предметов)', () => {
+  const tags: ColorTag[] = [
+    { id: '1', target: 'class', pattern: '5', color: 'blue' },
+    { id: '2', target: 'class', pattern: '7А', color: 'amber' },
+    { id: '3', target: 'subject', pattern: 'Математика', color: 'emerald' },
+  ];
+
+  it('сопоставляет параллель по числу', () => {
+    expect(matchColorTag({ ...lesson(), className: '5А' }, tags)?.color).toBe('blue');
+    expect(matchColorTag({ ...lesson(), className: '5-Б' }, tags)?.color).toBe('blue');
+    expect(matchColorTag({ ...lesson(), className: '5' }, tags)?.color).toBe('blue');
+    // Не должно ложно срабатывать на 15 или 55
+    expect(matchColorTag({ ...lesson(), className: '15' }, tags)).toBeUndefined();
+    expect(matchColorTag({ ...lesson(), className: '50А' }, tags)).toBeUndefined();
+  });
+
+  it('сопоставляет конкретный класс', () => {
+    expect(matchColorTag({ ...lesson(), className: '7А' }, tags)?.color).toBe('amber');
+    expect(matchColorTag({ ...lesson(), className: '7Б' }, tags)).toBeUndefined();
+  });
+
+  it('сопоставляет предмет по вхождению подстроки без учёта регистра', () => {
+    expect(
+      matchColorTag({ ...lesson(), className: '8Б', subject: 'Математика (база)' }, tags)?.color,
+    ).toBe('emerald');
+    expect(
+      matchColorTag({ ...lesson(), className: '8Б', subject: 'Физика' }, tags),
+    ).toBeUndefined();
+  });
+
+  it('извлекает список параллелей из уроков', () => {
+    const list = [
+      { ...lesson(), className: '9А' },
+      { ...lesson(), className: '5Б' },
+      { ...lesson(), className: '9В' },
+      { ...lesson(), className: '11А' },
+      { ...lesson(), className: 'Факультатив' },
+    ];
+    expect(extractParallels(list)).toEqual(['5', '9', '11']);
+  });
+
+  it('сохраняет и декодирует теги в настройках', () => {
+    const data = {
+      ...emptyData(),
+      settings: {
+        ...emptyData().settings,
+        colorTags: tags,
+      },
+    };
+    const decoded = decode(JSON.stringify(data));
+    expect(decoded.settings.colorTags).toEqual(tags);
+  });
+});
+
+describe('чек-листы в заметках к урокам', () => {
+  it('распознаёт наличие чекбокса', () => {
+    expect(hasChecklist('Обычная заметка')).toBe(false);
+    expect(hasChecklist('[ ] Раздать тетради')).toBe(true);
+    expect(hasChecklist('[x] Собрать контрольные')).toBe(true);
+  });
+
+  it('разбирает чек-лист на элементы', () => {
+    const note = 'Важно: [ ] Раздать тетради [x] Собрать работы';
+    const parts = parseChecklist(note);
+    expect(parts).toHaveLength(3);
+    expect(parts[0]).toEqual({ kind: 'text', text: 'Важно:' });
+    expect(parts[1]).toEqual({ kind: 'item', index: 0, done: false, text: 'Раздать тетради' });
+    expect(parts[2]).toEqual({ kind: 'item', index: 1, done: true, text: 'Собрать работы' });
+  });
+
+  it('переключает состояние конкретного чекбокса', () => {
+    const initial = '[ ] Первая задача; [ ] Вторая задача';
+    const toggled = toggleChecklistItem(initial, 0);
+    expect(toggled).toBe('[x] Первая задача; [ ] Вторая задача');
+
+    const toggledBack = toggleChecklistItem(toggled, 0);
+    expect(toggledBack).toBe('[ ] Первая задача; [ ] Вторая задача');
+
+    const toggledSecond = toggleChecklistItem(initial, 1);
+    expect(toggledSecond).toBe('[ ] Первая задача; [x] Вторая задача');
+  });
+
+  it('считает прогресс чек-листа', () => {
+    expect(getChecklistStats('нет чекбокса')).toEqual({ total: 0, done: 0 });
+    expect(getChecklistStats('[ ] Один, [x] Два, [X] Три')).toEqual({ total: 3, done: 2 });
+  });
+});
+
+describe('настройки напоминаний о звонках', () => {
+  it('имеет включенные напоминания по умолчанию', () => {
+    const data = emptyData();
+    expect(data.settings.bellAlertMinutes).toBe(5);
+    expect(data.settings.bellAlertSound).toBe(true);
+    expect(data.settings.bellAlertPopup).toBe(true);
+    expect(data.settings.bellAlertMessage).toBe('Пора подводить итоги и задавать ДЗ');
+  });
+
+  it('нормализует старые копии без настроек звонков', () => {
+    const old = {
+      ...emptyData(),
+      settings: {
+        launchOnStartup: false,
+        alwaysOnTop: false,
+        locked: false,
+        widgetSize: 'compact' as const,
+        widgetCorner: 'top-right' as const,
+        opacity: 100,
+        theme: 'dark' as const,
+        closeBehavior: 'tray' as const,
+        checkUpdates: true,
+      } as unknown as AppData['settings'],
+    };
+    normalize(old);
+    expect(old.settings.bellAlertMinutes).toBe(5);
+    expect(old.settings.bellAlertSound).toBe(true);
+  });
+
+  it('валидирует и отклоняет некорректные минуты звонка', () => {
+    expect(() =>
+      decode(
+        JSON.stringify({
+          ...emptyData(),
+          settings: {
+            ...emptyData().settings,
+            bellAlertMinutes: -5,
+          },
+        }),
+      ),
+    ).toThrow('Повреждены настройки');
   });
 });

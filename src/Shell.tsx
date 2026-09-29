@@ -86,7 +86,10 @@ export function Shell({
   const today = useToday();
   const mode = dayChoice?.day === dateKey(today) ? dayChoice.mode : 'auto';
   const chooseDay = (value: DayMode) => setDayChoice({ mode: value, day: dateKey(new Date()) });
-  useTheme(preview?.theme ?? data?.settings.theme ?? 'dark');
+  useTheme(
+    preview?.theme ?? data?.settings.theme ?? 'dark',
+    preview?.accentColor ?? data?.settings.accentColor ?? 'emerald',
+  );
   /**
    * Сохраняет документ целиком или изменение последних сохранённых данных (`(current) => next`):
    * изменение, дождавшееся своей очереди, не затрёт сделанное перед ним.
@@ -394,6 +397,7 @@ export function Shell({
   const commonPreferences = data ? (
     <Preferences
       settings={data.settings}
+      lessons={data.lessons}
       onSave={saveSettings}
       onDirty={setDirty}
       onPreview={setPreview}
@@ -451,7 +455,7 @@ export function Shell({
     content = (
       <div className={`widget-stage ${isDesktop() ? 'native' : isMobile() ? 'mobile' : 'browser'}`}>
         <Widget
-          data={data}
+          data={preview ? { ...data, settings: preview } : data}
           mode={mode}
           onMode={chooseDay}
           onSettings={() => navigate(isMobile() ? 'menu' : 'schedule')}

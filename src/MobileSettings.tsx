@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useBackButton } from './back';
 import { Backups } from './Backups';
 import { lessonCount } from './calendar';
-import { isoDate, type AppData, type Settings } from './domain';
+import { COLOR_PRESETS, extractParallels, isoDate, type AppData, type Settings } from './domain';
 import {
   BellsPage,
   CalendarPage,
@@ -134,19 +134,44 @@ function Choice<T extends string>({
 }
 function PreferencesPage({
   settings,
+  lessons = [],
   onSave,
 }: {
   settings: Settings;
+  lessons?: AppData['lessons'];
   /** Изменение накладывается на последние сохранённые настройки: быстрые нажатия подряд не теряются. */
   onSave: (patch: Partial<Settings>) => Promise<void>;
 }) {
   const [error, setError] = useState('');
+  const [newTarget, setNewTarget] = useState<'class' | 'subject'>('class');
+  const [newPattern, setNewPattern] = useState('');
+  const [newColor, setNewColor] = useState('blue');
   const save = (patch: Partial<Settings>) => {
     setError('');
     onSave(patch).catch((e) =>
       setError(e instanceof Error ? e.message : 'Не удалось сохранить настройки.'),
     );
   };
+  const colorTags = settings.colorTags ?? [];
+  const addTag = (target: 'class' | 'subject', pattern: string, color: string) => {
+    if (!pattern.trim()) return;
+    const tag = {
+      id: crypto.randomUUID(),
+      target,
+      pattern: pattern.trim(),
+      color,
+    };
+    save({ colorTags: [...colorTags, tag] });
+    setNewPattern('');
+  };
+  const removeTag = (id: string) => {
+    save({ colorTags: colorTags.filter((t) => t.id !== id) });
+  };
+  const existingPatterns = new Set(
+    colorTags.filter((t) => t.target === 'class').map((t) => t.pattern.trim()),
+  );
+  const parallels = extractParallels(lessons);
+  const unconfiguredParallels = parallels.filter((p) => !existingPatterns.has(p));
   return (
     <>
       <Choice
@@ -164,6 +189,96 @@ function PreferencesPage({
         ]}
         onChange={(widgetSize) => save({ widgetSize })}
       />
+      <h2 className="m-group">Цветовая маркировка</h2>
+      <div className="m-card" style={{ padding: '14px 16px' }}>
+        <p className="m-hint" style={{ margin: '0 0 12px' }}>
+          Метки для классов (например, «5» для 5-х классов) или предметов.
+        </p>
+        {colorTags.length > 0 && (
+          <div className="m-color-tags-list">
+            {colorTags.map((tag) => (
+              <div key={tag.id} className="m-color-tag-item" data-color-tag={tag.color}>
+                <span className="row-class">{tag.pattern}</span>
+                <span className="m-color-tag-desc">
+                  {tag.target === 'class' ? 'класс / параллель' : 'предмет'}
+                </span>
+                <button
+                  type="button"
+                  className="m-delete-tag"
+                  onClick={() => removeTag(tag.id)}
+                  aria-label={`Удалить тег ${tag.pattern}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="m-add-tag-form">
+          <div className="m-tag-inputs">
+            <select
+              value={newTarget}
+              onChange={(e) => setNewTarget(e.target.value as 'class' | 'subject')}
+              className="m-select"
+            >
+              <option value="class">Класс</option>
+              <option value="subject">Предмет</option>
+            </select>
+            <input
+              type="text"
+              placeholder={newTarget === 'class' ? 'например: 5' : 'например: Алгебра'}
+              value={newPattern}
+              maxLength={30}
+              onChange={(e) => setNewPattern(e.target.value)}
+              className="m-input"
+            />
+          </div>
+          <div className="color-swatches" role="radiogroup" aria-label="Выбор цвета">
+            {COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className={`color-swatch ${newColor === preset.id ? 'active' : ''}`}
+                style={{ backgroundColor: preset.dot }}
+                title={preset.name}
+                aria-label={preset.name}
+                aria-checked={newColor === preset.id}
+                onClick={() => setNewColor(preset.id)}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="m-secondary"
+            disabled={!newPattern.trim()}
+            onClick={() => addTag(newTarget, newPattern, newColor)}
+          >
+            + Добавить метку
+          </button>
+        </div>
+        {unconfiguredParallels.length > 0 && (
+          <div style={{ marginTop: '12px' }}>
+            <span className="m-hint" style={{ display: 'block', marginBottom: '6px' }}>
+              Добавить из расписания:
+            </span>
+            <div className="suggestion-chips">
+              {unconfiguredParallels.map((p, i) => {
+                const color = COLOR_PRESETS[(colorTags.length + i) % COLOR_PRESETS.length].id;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    className="suggestion-chip"
+                    onClick={() => addTag('class', p, color)}
+                  >
+                    + {p}-е классы
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
       {error && (
         <p role="alert" className="m-alert">
           {error}
@@ -407,7 +522,9 @@ export function MobileSettings({
     content = <EditorPage key={page} page={page} storage={editorStorage} onDirty={onDirty} />;
   else if (page === 'notify') content = <NotifyPage data={data} />;
   else if (page === 'preferences')
-    content = <PreferencesPage settings={data.settings} onSave={onSaveSettings} />;
+    content = (
+      <PreferencesPage settings={data.settings} lessons={data.lessons} onSave={onSaveSettings} />
+    );
   else if (page === 'backups')
     content = (
       <div className="m-backups">

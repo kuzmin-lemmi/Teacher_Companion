@@ -56,6 +56,17 @@ export async function encodeTransfer(data: AppData, today = new Date()): Promise
   const { onboardingComplete: _, ...rest } = data;
   const payload = {
     ...rest,
+    settings: {
+      ...data.settings,
+      bellAlertMinutes: undefined,
+      bellAlertSound: undefined,
+      bellAlertPopup: undefined,
+      bellAlertMessage: undefined,
+      accentColor: data.settings.accentColor === 'emerald' ? undefined : data.settings.accentColor,
+      colorTags: data.settings.colorTags?.length
+        ? data.settings.colorTags.map(({ id: _id, ...tag }) => tag)
+        : undefined,
+    },
     lessons: data.lessons.map(({ id: _id, ...lesson }) => lesson),
     holidays: data.holidays.map(({ id: _id, ...holiday }) => holiday),
     notes: data.notes.filter((n) => n.date >= from),
@@ -84,6 +95,13 @@ export async function decodeTransfer(text: string): Promise<AppData> {
   return decode(
     JSON.stringify({
       ...parsed,
+      settings: {
+        ...parsed.settings,
+        colorTags: (parsed.settings?.colorTags ?? []).map((t, i) => ({
+          ...t,
+          id: t.id ?? `tag-${i + 1}`,
+        })),
+      },
       lessons: parsed.lessons?.map((l) => ({ ...l, id: `${l.weekday}-${l.lessonNumber}` })),
       holidays: parsed.holidays?.map((h, i) => ({ ...h, id: `h${i + 1}` })),
     }),
