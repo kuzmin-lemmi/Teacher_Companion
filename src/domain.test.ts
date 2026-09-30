@@ -21,6 +21,7 @@ import {
   type AppData,
   type Lesson,
   type ColorTag,
+  lessonColor,
 } from './domain';
 const lesson = (weekday = 1, lessonNumber = 1): Lesson => ({
   id: `${weekday}-${lessonNumber}`,
@@ -484,5 +485,18 @@ describe('настройки напоминаний о звонках', () => {
         }),
       ),
     ).toThrow('Повреждены настройки');
+  });
+});
+
+describe('lessonColor', () => {
+  const lesson = { className: '5Б', subject: 'Математика' } as Lesson;
+  it('is stable per subject and can be turned off', () => {
+    const on = { colorTags: [], autoColors: true };
+    expect(lessonColor(lesson, on)).toBe(lessonColor({ ...lesson, className: '7А' } as Lesson, on));
+    expect(lessonColor(lesson, { colorTags: [], autoColors: false })).toBeUndefined();
+  });
+  it('prefers a manual tag', () => {
+    const tags = [{ id: 't', target: 'subject' as const, pattern: 'матем', color: 'rose' }];
+    expect(lessonColor(lesson, { colorTags: tags, autoColors: true })).toBe('rose');
   });
 });

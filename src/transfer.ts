@@ -62,6 +62,7 @@ export async function encodeTransfer(data: AppData, today = new Date()): Promise
       bellAlertSound: undefined,
       bellAlertPopup: undefined,
       bellAlertMessage: undefined,
+      autoColors: data.settings.autoColors === false ? false : undefined,
       accentColor: data.settings.accentColor === 'emerald' ? undefined : data.settings.accentColor,
       colorTags: data.settings.colorTags?.length
         ? data.settings.colorTags.map(({ id: _id, ...tag }) => tag)

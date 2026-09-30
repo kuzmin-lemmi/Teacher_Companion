@@ -141,6 +141,8 @@ export type Settings = {
   checkUpdates: boolean;
   /** Цветовые метки (теги) для классов, параллелей и предметов. */
   colorTags?: ColorTag[];
+  /** Красить уроки в цвет предмета, если для них нет своей цветовой метки. */
+  autoColors?: boolean;
   /** Напоминание перед звонком: за сколько минут предупреждать (0 — выключено). */
   bellAlertMinutes?: number;
   /** Включать тихий звуковой сигнал перед звонком. */
@@ -184,6 +186,7 @@ export const emptyData = (): AppData => ({
     closeBehavior: 'tray',
     checkUpdates: true,
     colorTags: [],
+    autoColors: true,
     bellAlertMinutes: 5,
     bellAlertSound: true,
     bellAlertPopup: true,
@@ -204,6 +207,7 @@ export function normalize(data: AppData): AppData {
   if (s && typeof s === 'object') {
     s.accentColor ??= 'emerald';
     s.colorTags ??= [];
+    s.autoColors ??= true;
     s.bellAlertMinutes ??= 5;
     s.bellAlertSound ??= true;
     s.bellAlertPopup ??= true;
@@ -215,6 +219,26 @@ export function normalize(data: AppData): AppData {
   data.shortBells ??= [];
   data.notes ??= [];
   return data;
+}
+
+/** Цвет по умолчанию: один и тот же предмет всегда получает один и тот же цвет. */
+export function autoColorId(lesson: Lesson): string | undefined {
+  const key = (lesson.subject.trim() || lesson.className.trim()).toLowerCase();
+  if (!key) return undefined;
+  let hash = 0;
+  for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return COLOR_PRESETS[hash % COLOR_PRESETS.length].id;
+}
+
+/** Цвет урока: своя метка, иначе (если включено) цвет по предмету. */
+export function lessonColor(
+  lesson: Lesson,
+  settings: Pick<Settings, 'colorTags' | 'autoColors'>,
+): string | undefined {
+  return (
+    matchColorTag(lesson, settings.colorTags)?.color ??
+    (settings.autoColors === false ? undefined : autoColorId(lesson))
+  );
 }
 
 /** Сопоставляет урок с первым подходящим цветовым тегом. */

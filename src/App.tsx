@@ -4,7 +4,7 @@ import {
   gaps,
   isoDate,
   lessonsForDay,
-  matchColorTag,
+  lessonColor,
   nextBell,
   publicHolidays,
   shortenBells,
@@ -221,7 +221,7 @@ export function App({ storage, initialTab = 'schedule', onDirty }: Props) {
                               <article
                                 className="lesson-card"
                                 data-color-tag={
-                                  matchColorTag(lesson, data.settings?.colorTags)?.color
+                                  data.settings ? lessonColor(lesson, data.settings) : undefined
                                 }
                               >
                                 <div className="lesson-fields">

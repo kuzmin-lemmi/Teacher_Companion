@@ -15,7 +15,7 @@ import {
   dayOff,
   getNextSchoolDay,
   isoDate,
-  matchColorTag,
+  lessonColor,
   type AppData,
   type DayMode,
   type DayOff,
@@ -221,12 +221,12 @@ function WeekTable({ data, today, compact }: { data: AppData; today: number; com
               </th>
               {shortDays.map((d, i) => {
                 const lesson = at(i + 1, n);
-                const tag = lesson ? matchColorTag(lesson, data.settings.colorTags) : undefined;
+                const tagColor = lesson ? lessonColor(lesson, data.settings) : undefined;
                 return (
                   <td
                     key={d}
                     className={today === i + 1 ? 'today' : ''}
-                    data-color-tag={tag?.color}
+                    data-color-tag={tagColor}
                     title={
                       lesson
                         ? [
@@ -492,12 +492,12 @@ export function Widget({
                       : '';
               const left = timer?.lessonId === lesson.id ? timer : null;
               const edit = onNote ? () => setEditing(noteKey) : undefined;
-              const colorTag = matchColorTag(lesson, data.settings.colorTags);
+              const colorTag = lessonColor(lesson, data.settings);
               return (
                 <Fragment key={lesson.id}>
                   <div
                     className={`widget-row ${state} ${left?.kind === 'break' ? 'upcoming' : ''} ${edit ? 'editable' : ''}`}
-                    data-color-tag={colorTag?.color}
+                    data-color-tag={colorTag}
                     aria-current={state === 'current' ? 'time' : undefined}
                     title={
                       edit ? (note ? 'Изменить заметку' : 'Добавить заметку к уроку') : undefined

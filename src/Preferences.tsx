@@ -194,6 +194,17 @@ export function Preferences({
             </button>
           </div>
 
+          <label className="setting-toggle">
+            <div>
+              <strong>Красить уроки по предметам автоматически</strong>
+              <small>Каждый предмет получает свой цвет. Свои метки ниже важнее.</small>
+            </div>
+            <input
+              type="checkbox"
+              checked={draft.autoColors ?? true}
+              onChange={(e) => update({ autoColors: e.target.checked })}
+            />
+          </label>
           {colorTags.length > 0 ? (
             <div className="color-tag-list">
               {colorTags.map((tag, idx) => (
