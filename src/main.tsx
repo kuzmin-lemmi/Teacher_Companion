@@ -4,6 +4,7 @@ import { Shell } from './Shell';
 import './fonts.css';
 import './styles.css';
 import './surfaces.css';
+import './desk.css';
 import './mobile.css';
 import { isDesktop, isMobile } from './desktop';
 import { watchInsets } from './insets';

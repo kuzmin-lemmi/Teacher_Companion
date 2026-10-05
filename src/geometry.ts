@@ -37,3 +37,22 @@ export function safePosition(
     y: clamp(target.y, area.y, area.y + area.height - size.height),
   };
 }
+/**
+ * Размер окна настроек в логических пикселях: желаемый, но не больше 92% рабочей области
+ * экрана (проектор с меньшим разрешением) и не меньше минимума, пока тот помещается на экран.
+ */
+export function fitSize(
+  want: { width: number; height: number },
+  work: { width: number; height: number },
+  scale: number,
+  min = { width: 640, height: 480 },
+) {
+  const fit = (value: number, area: number, least: number) => {
+    const limit = Math.floor(area / scale);
+    return Math.min(limit, Math.max(Math.min(value, Math.floor(limit * 0.92)), least));
+  };
+  return {
+    width: fit(want.width, work.width, min.width),
+    height: fit(want.height, work.height, min.height),
+  };
+}

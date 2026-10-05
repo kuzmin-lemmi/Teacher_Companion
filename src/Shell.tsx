@@ -28,6 +28,9 @@ import {
 import { getStorage, type Storage } from './storage';
 import {
   configureWindow,
+  displaySignature,
+  fitWindow,
+  invalidateWindow,
   isDesktop,
   isMobile,
   exitApp,
@@ -363,7 +366,10 @@ export function Shell({
     subscribeDesktop({
       tray: (a) => handlers.current.tray(a),
       close: () => handlers.current.close(),
-      displayChanged: () => handlers.current.displayChanged(),
+      displayChanged: () => {
+        invalidateWindow();
+        handlers.current.displayChanged();
+      },
       movedError: () => setNativeError('Не удалось сохранить положение окна.'),
     })
       .then((fn) => {
@@ -371,7 +377,20 @@ export function Shell({
         else unlisten = fn;
       })
       .catch(() => setNativeError('Не удалось подключить управление окном и треем.'));
-    const focus = () => handlers.current.displayChanged();
+    // Окно возвращается в фокус постоянно (сворачивание, переключение окон): перенастраивать
+    // его нужно, только если действительно сменились экраны — например, включили проектор.
+    let screens: string | null = null;
+    const focus = async () => {
+      const now = await displaySignature().catch(() => null);
+      if (cancelled || now === null) return;
+      if (screens !== null && now !== screens) {
+        invalidateWindow();
+        handlers.current.displayChanged();
+      }
+      screens = now;
+      void fitWindow().catch(() => {});
+    };
+    void focus();
     window.addEventListener('focus', focus);
     return () => {
       cancelled = true;

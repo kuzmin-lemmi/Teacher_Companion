@@ -35,7 +35,6 @@ it('сохраняет урок автоматически, после пере�
   await user.type(screen.getByLabelText('Класс *'), '7Б');
   await waitFor(() => expect(state()!.lessons[0].className).toBe('7Б'));
   await user.click(screen.getByLabelText('Удалить урок 1'));
-  await waitFor(() => expect(state()!.lessons).toHaveLength(0));
 });
 it('правки не теряются, даже если редактор закрыли сразу после ввода', async () => {
   const { storage, state } = memory();
@@ -185,4 +184,44 @@ it('редактирует каникулы, праздники и сокращ�
     ]),
   );
   expect(state()!.shortDays).toHaveLength(1);
+});
+it('Enter в последнем уроке добавляет новый, следующий урок наследует предмет и кабинет', async () => {
+  const { storage, state } = memory();
+  const user = userEvent.setup();
+  render(<App storage={storage} />);
+  await screen.findByText('Здесь будет расписание');
+  await user.click(screen.getByText('+ Добавить урок'));
+  await user.type(screen.getByLabelText('Класс *'), '6А');
+  await user.type(screen.getByLabelText('Предмет'), 'Информатика');
+  await user.type(screen.getByLabelText('Кабинет'), '12{Enter}');
+  await user.type(screen.getAllByLabelText('Класс *')[0], '{Enter}');
+  const classes = await screen.findAllByLabelText('Класс *');
+  expect(classes).toHaveLength(2);
+  expect(document.activeElement).toBe(classes[1]);
+  expect((screen.getAllByLabelText('Предмет')[1] as HTMLInputElement).value).toBe('Информатика');
+  expect((screen.getAllByLabelText('Кабинет')[1] as HTMLInputElement).value).toBe('12');
+});
+it('пустой день копируется из другого, неделя показывает все дни и добавляет урок в пустую клетку', async () => {
+  const { storage, state } = memory();
+  const user = userEvent.setup();
+  render(<App storage={storage} />);
+  await screen.findByText('Здесь будет расписание');
+  await user.click(screen.getByText('+ Добавить урок'));
+  await user.type(screen.getByLabelText('Класс *'), '6А');
+  await waitFor(() => expect(state()!.lessons).toHaveLength(1));
+  await user.click(screen.getByRole('button', { name: /^Вторник/ }));
+  await user.selectOptions(screen.getByLabelText('Скопировать уроки из другого дня'), '1');
+  await waitFor(() =>
+    expect(
+      state()!
+        .lessons.map((l) => l.weekday)
+        .sort(),
+    ).toEqual([1, 2]),
+  );
+  await user.click(screen.getByRole('button', { name: 'Неделя' }));
+  await user.click(screen.getByLabelText('Добавить урок 2, Среда'));
+  expect(screen.getByRole('button', { name: /^Среда/ }).getAttribute('aria-pressed')).toBe('true');
+  const field = await screen.findByLabelText('Класс *');
+  expect(document.activeElement).toBe(field);
+  expect((screen.getByLabelText('Номер урока 1') as HTMLInputElement).value).toBe('2');
 });

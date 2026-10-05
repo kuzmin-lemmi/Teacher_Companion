@@ -62,7 +62,7 @@ it('автозапуск применяется, только когда мен�
   const user = userEvent.setup();
   render(<Shell storage={storage} updates={async () => null} />);
   await user.click(await screen.findByRole('button', { name: 'Открыть настройки' }));
-  await user.click(await screen.findByText('Внешний вид и окно'));
+  await user.click(await screen.findByText('Внешний вид'));
   await user.click(screen.getByLabelText(/Поверх других окон/));
   await user.click(screen.getByText('Сохранить настройки'));
   await screen.findByText('Настройки сохранены');

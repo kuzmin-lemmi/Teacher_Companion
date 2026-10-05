@@ -239,15 +239,15 @@ it('сохраняет настройки и защищает черновик �
   await screen.findByLabelText('Виджет расписания');
   await user.click(screen.getByLabelText('Открыть настройки'));
   await screen.findByText('Здесь будет расписание');
-  await user.click(screen.getByText('Внешний вид и окно'));
+  await user.click(screen.getByText('Внешний вид'));
   await user.selectOptions(screen.getByLabelText('Тема'), 'light');
-  await user.click(screen.getByText('← К виджету'));
+  await user.click(screen.getByText('К виджету'));
   expect(screen.getByRole('alertdialog')).toBeTruthy();
   await user.click(screen.getByText('Остаться'));
   await user.click(screen.getByText('Сохранить настройки'));
   await screen.findByText('Настройки сохранены');
   expect(saved.settings.theme).toBe('light');
-  await user.click(screen.getByText('← К виджету'));
+  await user.click(screen.getByText('К виджету'));
   await screen.findByLabelText('Виджет расписания');
 });
 it('импорт требует явного подтверждения и сохраняет локальный автозапуск', async () => {
@@ -265,7 +265,7 @@ it('импорт требует явного подтверждения и со�
   );
   await screen.findByLabelText('Виджет расписания');
   await user.click(screen.getByLabelText('Открыть настройки'));
-  await user.click(screen.getByText('Резервные копии'));
+  await user.click(screen.getByText('Копии'));
   const backup = {
     ...fixture(),
     lessons: [],
@@ -353,7 +353,7 @@ it('делает автоматическую копию при запуске �
   await waitFor(async () => expect(await storage.listSnapshots!()).toHaveLength(1));
   await storage.save({ ...fixture(), lessons: [] });
   await user.click(screen.getByRole('button', { name: 'Открыть настройки' }));
-  await user.click(await screen.findByRole('button', { name: 'Резервные копии' }));
+  await user.click(await screen.findByRole('button', { name: 'Копии' }));
   await user.click(await screen.findByRole('button', { name: /Восстановить копию от/ }));
   await user.click(await screen.findByText('Восстановить эту копию'));
   await screen.findByText('Расписание восстановлено');
@@ -384,7 +384,7 @@ describe('черновик редактора', () => {
     await storage.save(fixture());
     const user = userEvent.setup();
     render(<Shell storage={storage} />);
-    await leaveDraft(user, '← К виджету');
+    await leaveDraft(user, 'К виджету');
     await user.click(await screen.findByText('7Б'));
     await user.type(screen.getByLabelText('Заметка к уроку 3, 7Б'), 'контрольная{Enter}');
     await waitFor(async () => expect((await storage.load()).notes).toHaveLength(1));
@@ -402,14 +402,14 @@ describe('черновик редактора', () => {
     await storage.save(fixture());
     const user = userEvent.setup();
     render(<Shell storage={storage} />);
-    await leaveDraft(user, 'Резервные копии');
+    await leaveDraft(user, 'Копии');
     const file = new File([''], 'backup.json');
     Object.defineProperty(file, 'text', { value: async () => serializeBackup(fixture()) });
     fireEvent.change(screen.getByLabelText('Файл резервной копии'), { target: { files: [file] } });
     await user.click(await screen.findByText('Восстановить эту копию'));
     await screen.findByText('Расписание восстановлено');
     expect(await storage.loadDraft!()).toBeNull();
-    await user.click(screen.getByText('Расписание и звонки'));
+    await user.click(screen.getByText('Расписание'));
     await screen.findByText('Недельное расписание');
     expect(screen.queryByText(/Восстановлен черновик/)).toBeNull();
   });
@@ -434,7 +434,7 @@ it('показывает новую версию ненавязчиво и ст�
   expect(install).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Не сейчас' }));
   expect(screen.queryByRole('button', { name: 'Не сейчас' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: 'Расписание и звонки' }));
+  await user.click(screen.getByRole('button', { name: 'Расписание' }));
   expect(screen.queryByText(/Доступна версия/)).toBeNull();
   await user.click(screen.getByRole('button', { name: 'О программе' }));
   await user.click(screen.getByRole('button', { name: 'Установить версию 9.9.9' }));
@@ -587,7 +587,7 @@ it('на компьютере «Резервные копии» показыва
   const user = userEvent.setup();
   render(<Shell storage={{ load: async () => fixture(), save: async () => {} }} />);
   await user.click(await screen.findByRole('button', { name: 'Открыть настройки' }));
-  await user.click(await screen.findByRole('button', { name: 'Резервные копии' }));
+  await user.click(await screen.findByRole('button', { name: 'Копии' }));
   await user.click(screen.getByRole('button', { name: 'Показать QR-код' }));
   expect(await screen.findByRole('img', { name: 'QR-код с расписанием' })).toBeTruthy();
 });

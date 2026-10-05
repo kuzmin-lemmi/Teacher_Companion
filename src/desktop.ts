@@ -1,6 +1,6 @@
 import { isTauri, invoke } from '@tauri-apps/api/core';
 import type { Settings } from './domain';
-import { safePosition, type Point } from './geometry';
+import { fitSize, safePosition, type Point } from './geometry';
 export type Surface = 'widget' | 'settings';
 /** Телефон — и приложение на Android, и браузер телефона. Окна-виджета, трея и автозапуска там нет. */
 export const isMobile = () => /Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -11,6 +11,38 @@ let switching = false;
 let lastPlaced: Point | null = null;
 let queue = Promise.resolve();
 const positionKey = 'teacher-companion-widget-position-v2';
+const settingsSizeKey = 'teacher-companion-settings-size-v1';
+/** Что уже применено к окну: повторная настройка с тем же результатом окно не трогает. */
+let applied = '';
+/** Сменился экран (проектор, масштаб): окно настраивается заново. */
+let displayEpoch = 0;
+export function invalidateWindow() {
+  displayEpoch++;
+}
+function readSettingsSize(): { width: number; height: number } | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(settingsSizeKey) ?? 'null');
+    return s && s.width >= 400 && s.height >= 300 ? s : null;
+  } catch {
+    return null;
+  }
+}
+function writeSettingsSize(size: { width: number; height: number }) {
+  try {
+    localStorage.setItem(settingsSizeKey, JSON.stringify(size));
+  } catch {
+    // Размер просто не запомнится.
+  }
+}
+/** Подпись подключённых экранов: по ней видно, что подключили проектор или сменили разрешение. */
+export async function displaySignature(): Promise<string> {
+  if (!isDesktop()) return '';
+  const { availableMonitors } = await import('@tauri-apps/api/window');
+  const monitors = await availableMonitors();
+  return monitors
+    .map((m) => [m.position.x, m.position.y, m.size.width, m.size.height, m.scaleFactor].join(','))
+    .join('|');
+}
 function readPosition(): Point | null {
   try {
     const p = JSON.parse(localStorage.getItem(positionKey) ?? 'null');
@@ -71,14 +103,26 @@ export function configureWindow(
         PhysicalSize,
         PhysicalPosition,
         availableMonitors,
+        currentMonitor,
         primaryMonitor,
       } = await import('@tauri-apps/api/window');
       const w = getCurrentWindow();
+      const key = JSON.stringify([
+        next,
+        next === 'widget' && settings.alwaysOnTop,
+        next === 'widget' && settings.widgetSize,
+        next === 'widget' && settings.widgetCorner,
+        next === 'widget' && contentHeight,
+        displayEpoch,
+      ]);
+      // Повторный вызов с теми же параметрами (фокус, сворачивание, сохранение настроек)
+      // ничего не меняет: иначе окно дёргалось бы при каждом возвращении в него.
+      if (key === applied && surface === next) return;
       switching = true;
       try {
         const changed = surface !== next;
         await w.setMinSize(
-          new LogicalSize(next === 'widget' ? 200 : 680, next === 'widget' ? 100 : 500),
+          new LogicalSize(next === 'widget' ? 200 : 640, next === 'widget' ? 100 : 480),
         );
         await w.setDecorations(next !== 'widget');
         // Без тени Windows не рисует рамку вокруг окна без заголовка.
@@ -131,11 +175,72 @@ export function configureWindow(
             await w.setPosition(new PhysicalPosition(pos.x, pos.y));
           } else await w.setSize(new LogicalSize(width, preferred));
         } else if (changed) {
-          await w.setSize(new LogicalSize(1180, 800));
+          const monitor = (await currentMonitor()) ?? (await primaryMonitor());
+          if (monitor) {
+            const size = fitSize(
+              readSettingsSize() ?? { width: 1180, height: 800 },
+              monitor.workArea.size,
+              monitor.scaleFactor,
+            );
+            await w.setSize(new LogicalSize(size.width, size.height));
+          } else await w.setSize(new LogicalSize(1180, 800));
           await w.center();
         }
         surface = next;
+        applied = key;
         await w.show();
+      } finally {
+        switching = false;
+      }
+    });
+  queue = operation;
+  return operation;
+}
+/**
+ * Окно настроек больше экрана или частично за его краем (включили проектор с меньшим
+ * разрешением) — уменьшает и возвращает его на экран.
+ */
+export function fitWindow(): Promise<void> {
+  if (!isDesktop() || surface !== 'settings') return Promise.resolve();
+  const operation = queue
+    .catch(() => {})
+    .then(async () => {
+      if (surface !== 'settings' || switching) return;
+      const { getCurrentWindow, currentMonitor, PhysicalSize, PhysicalPosition } =
+        await import('@tauri-apps/api/window');
+      const w = getCurrentWindow();
+      if ((await w.isMinimized()) || (await w.isMaximized())) return;
+      const monitor = await currentMonitor();
+      if (!monitor) return;
+      const area = monitor.workArea;
+      const outer = await w.outerSize();
+      const at = await w.outerPosition();
+      const tooBig = outer.width > area.size.width || outer.height > area.size.height;
+      const outside =
+        at.x < area.position.x ||
+        at.y < area.position.y ||
+        at.x + outer.width > area.position.x + area.size.width ||
+        at.y + outer.height > area.position.y + area.size.height;
+      if (!tooBig && !outside) return;
+      switching = true;
+      try {
+        let width = outer.width;
+        let height = outer.height;
+        if (tooBig) {
+          const scale = monitor.scaleFactor;
+          const size = fitSize(
+            { width: outer.width / scale, height: outer.height / scale },
+            area.size,
+            scale,
+          );
+          width = Math.round(size.width * scale);
+          height = Math.round(size.height * scale);
+          await w.setSize(new PhysicalSize(width, height));
+        }
+        const pos = safePosition(at, { width, height }, [
+          { ...area.position, width: area.size.width, height: area.size.height },
+        ]);
+        await w.setPosition(new PhysicalPosition(pos.x, pos.y));
       } finally {
         switching = false;
       }
@@ -181,6 +286,23 @@ export async function subscribeDesktop(actions: {
         if (!switching) actions.displayChanged();
       }),
     );
+    // Размер окна настроек запоминается, чтобы в следующий раз оно открылось таким же.
+    let resizing: ReturnType<typeof setTimeout> | undefined;
+    cleanups.push(
+      await w.onResized((e) => {
+        clearTimeout(resizing);
+        if (surface !== 'settings' || switching) return;
+        resizing = setTimeout(async () => {
+          if (surface !== 'settings' || switching) return;
+          if ((await w.isMinimized()) || (await w.isMaximized())) return;
+          const scale = await w.scaleFactor();
+          const width = Math.round(e.payload.width / scale);
+          const height = Math.round(e.payload.height / scale);
+          if (width >= 400 && height >= 300) writeSettingsSize({ width, height });
+        }, 500);
+      }),
+    );
+    cleanups.push(() => clearTimeout(resizing));
     return () => cleanups.forEach((fn) => fn());
   } catch (error) {
     cleanups.forEach((fn) => fn());

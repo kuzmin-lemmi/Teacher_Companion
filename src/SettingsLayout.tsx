@@ -1,18 +1,23 @@
 import type { ReactNode } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import { App as ScheduleEditor } from './App';
+import { App as ScheduleEditor, type Tab } from './App';
 import { Backups } from './Backups';
 import type { AppData } from './domain';
 import type { Storage } from './storage';
 import { appVersion } from './version';
-export type SettingsPage = 'schedule' | 'preferences' | 'backups' | 'about';
-const sections = [
-  ['schedule', 'Расписание и звонки'],
-  ['preferences', 'Внешний вид и окно'],
-  ['backups', 'Резервные копии'],
-  ['about', 'О программе'],
-] as const;
-const titles: Record<Exclude<SettingsPage, 'schedule'>, string> = {
+export type SettingsPage = Tab | 'preferences' | 'backups' | 'about';
+const editorPages: SettingsPage[] = ['schedule', 'bells', 'calendar'];
+/** Разделы меню; пустая строка — разделитель групп. */
+const sections: ([SettingsPage, string, string] | null)[] = [
+  ['schedule', '▦', 'Расписание'],
+  ['bells', '◷', 'Звонки'],
+  ['calendar', '☼', 'Каникулы'],
+  null,
+  ['preferences', '⚙', 'Внешний вид'],
+  ['backups', '⛁', 'Копии'],
+  ['about', 'ⓘ', 'О программе'],
+];
+const titles: Record<Exclude<SettingsPage, Tab>, string> = {
   preferences: 'Настройки приложения',
   backups: 'Ваши данные',
   about: 'О программе',
@@ -42,31 +47,48 @@ export function SettingsLayout({
 }) {
   return (
     <div className="settings-root">
-      <div className="settings-toolbar">
-        <button onClick={() => onNavigate('widget')}>← К виджету</button>
-        <nav aria-label="Разделы приложения">
-          {sections.map(([id, label]) => (
+      <nav className="rail" aria-label="Разделы приложения">
+        <button className="rail-back" onClick={() => onNavigate('widget')} title="К виджету">
+          <span aria-hidden="true">←</span>
+          <span className="rail-label">К виджету</span>
+        </button>
+        <div className="rail-sep" />
+        {sections.map((section, i) =>
+          section ? (
             <button
-              key={id}
-              aria-current={page === id ? 'page' : undefined}
-              onClick={() => onNavigate(id)}
+              key={section[0]}
+              className="rail-item"
+              title={section[2]}
+              aria-current={page === section[0] ? 'page' : undefined}
+              onClick={() => onNavigate(section[0])}
             >
-              {label}
+              <span aria-hidden="true" className="rail-icon">
+                {section[1]}
+              </span>
+              <span className="rail-label">{section[2]}</span>
             </button>
-          ))}
-        </nav>
+          ) : (
+            <div className="rail-sep" key={i} />
+          ),
+        )}
+        <span className="rail-spacer" />
         {updateVersion && page !== 'about' && (
-          <button className="update-pill" onClick={() => onNavigate('about')}>
+          <button
+            className="update-pill"
+            title={`Доступна версия ${updateVersion}`}
+            onClick={() => onNavigate('about')}
+          >
             Доступна версия {updateVersion}
           </button>
         )}
-      </div>
-      {page === 'schedule' ? (
-        <ScheduleEditor storage={editorStorage} onDirty={onDirty} />
+        <small className="rail-version">v{appVersion}</small>
+      </nav>
+      {/* Один и тот же редактор на трёх страницах: переключение не сбрасывает его правки. */}
+      {editorPages.includes(page) ? (
+        <ScheduleEditor storage={editorStorage} onDirty={onDirty} tab={page as Tab} />
       ) : (
         <main className="settings-content">
-          <p className="eyebrow">ПОМОЩНИК УЧИТЕЛЯ</p>
-          <h1>{titles[page]}</h1>
+          <h1>{titles[page as Exclude<SettingsPage, Tab>]}</h1>
           {page === 'preferences' ? (
             preferences
           ) : page === 'backups' ? (
