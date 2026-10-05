@@ -20,6 +20,8 @@ class Lesson(
     val startText: String,
     val endText: String,
     val note: String,
+    /** Цвет предмета, как в приложении; null — без цвета. */
+    val color: Int? = null,
 ) {
     /** «7Б · каб. 214» */
     val title: String
@@ -150,6 +152,7 @@ class Plan(val days: List<Day>, val prefs: Prefs) {
                             startText = l.optString("start"),
                             endText = l.optString("end"),
                             note = l.optString("note"),
+                            color = color(l.optString("color")),
                         ),
                     )
                 }
@@ -159,6 +162,10 @@ class Plan(val days: List<Day>, val prefs: Prefs) {
             days.sortBy { it.date }
             return Plan(days, prefs)
         }
+
+        /** «#rrggbb» → цвет; пусто или ошибка — без цвета. */
+        fun color(text: String): Int? =
+            if (Regex("^#[0-9a-fA-F]{6}$").matches(text)) android.graphics.Color.parseColor(text) else null
 
         fun minutes(text: String): Int? {
             val m = Regex("^(\\d\\d):(\\d\\d)$").find(text) ?: return null

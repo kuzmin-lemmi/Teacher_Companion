@@ -1,5 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core';
-import { dayOf, isoDate, type AppData } from './domain';
+import { COLOR_PRESETS, dayOf, isoDate, lessonColor, type AppData } from './domain';
 import { isMobile } from './desktop';
 /**
  * Телефон: расписание в шторке, напоминания и виджеты (плагин src-tauri/plugins/lessons).
@@ -72,6 +72,9 @@ export function buildPlan(data: AppData, settings: PhoneSettings, from = new Dat
             start: time.start,
             end: time.end,
             note: day.note(lesson.lessonNumber),
+            // Цвет полоски урока в виджете: как в приложении, «#rrggbb» или пусто.
+            color:
+              COLOR_PRESETS.find((p) => p.id === lessonColor(lesson, data.settings))?.dot ?? '',
           },
         ];
       }),

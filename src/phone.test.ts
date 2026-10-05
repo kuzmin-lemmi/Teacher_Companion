@@ -20,6 +20,14 @@ const data: AppData = {
 describe('план для телефона', () => {
   const plan = buildPlan(data, defaultPhoneSettings, new Date(2026, 9, 5));
   const day = (date: string) => plan.days.find((d) => d.date === date)!;
+  it('без авто-цветов полоска урока пустая', () => {
+    const plain = buildPlan(
+      { ...data, settings: { ...data.settings, autoColors: false } },
+      defaultPhoneSettings,
+      new Date(2026, 9, 5),
+    );
+    expect(plain.days[0].lessons.map((l) => l.color)).toEqual(['', '']);
+  });
   it('охватывает несколько недель подряд', () => {
     expect(plan.days).toHaveLength(PLAN_DAYS);
     expect(plan.days[0].date).toBe('2026-10-05');
@@ -34,6 +42,7 @@ describe('план для телефона', () => {
         start: '08:30',
         end: '09:15',
         note: '',
+        color: '#f43f5e',
       },
       {
         number: 2,
@@ -43,6 +52,7 @@ describe('план для телефона', () => {
         start: '09:25',
         end: '10:10',
         note: 'контрольная',
+        color: '#3b82f6',
       },
     ]);
     expect(day('2026-10-06').lessons).toEqual([]);
