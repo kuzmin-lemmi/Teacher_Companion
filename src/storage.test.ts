@@ -102,22 +102,27 @@ it('черновик с ошибками переживает перезапус
     expect(await store.loadDraft!()).toBeNull();
     raw.close();
   }));
-it('делает копию при первом запуске и после смены версии, хранит не больше 30', () =>
-  withSchema(async (path) => {
-    const { raw, db } = openDb(path);
-    const store = sqlStorage(db);
-    expect(await store.autoSnapshot!(emptyData())).toBeNull();
-    expect(await store.autoSnapshot!(sample())).toBe('daily');
-    expect(await store.autoSnapshot!(sample())).toBeNull();
-    raw.exec("UPDATE snapshots SET app_version = '0.0.1'");
-    expect(await store.autoSnapshot!(sample())).toBe('update');
-    for (let i = 0; i < 35; i++) await store.snapshot!(sample(), 'before-restore');
-    const list = await store.listSnapshots!();
-    expect(list).toHaveLength(30);
-    expect(list[0].lessons).toBe(1);
-    expect(await store.loadSnapshot!(list[0].id)).toEqual(sample());
-    raw.close();
-  }));
+it(
+  'делает копию при первом запуске и после смены версии, хранит не больше 30',
+  () =>
+    withSchema(async (path) => {
+      const { raw, db } = openDb(path);
+      const store = sqlStorage(db);
+      expect(await store.autoSnapshot!(emptyData())).toBeNull();
+      expect(await store.autoSnapshot!(sample())).toBe('daily');
+      expect(await store.autoSnapshot!(sample())).toBeNull();
+      raw.exec("UPDATE snapshots SET app_version = '0.0.1'");
+      expect(await store.autoSnapshot!(sample())).toBe('update');
+      for (let i = 0; i < 35; i++) await store.snapshot!(sample(), 'before-restore');
+      const list = await store.listSnapshots!();
+      expect(list).toHaveLength(30);
+      expect(list[0].lessons).toBe(1);
+      expect(await store.loadSnapshot!(list[0].id)).toEqual(sample());
+      raw.close();
+    }),
+  // 35 записей в настоящий файл SQLite: на медленном диске сборочного сервера Windows это долго.
+  30_000,
+);
 it('копия прошлого дня не мешает новой ежедневной', () => {
   expect(snapshotReason({ version: appVersion, createdAt: '2026-01-01T10:00:00Z' })).toBe('daily');
   expect(snapshotReason({ version: appVersion, createdAt: new Date().toISOString() })).toBeNull();
