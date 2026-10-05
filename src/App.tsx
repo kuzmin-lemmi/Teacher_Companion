@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Icon } from './icons';
 import {
-  gaps,
   isoDate,
   lessonsForDay,
   lessonColor,
@@ -30,6 +30,12 @@ const titles: Record<Tab, string> = {
   calendar: 'Каникулы и сокращённые дни',
 };
 const shortDay = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
+const lessonWord = (n: number) =>
+  n % 10 === 1 && n % 100 !== 11
+    ? 'урок'
+    : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)
+      ? 'урока'
+      : 'уроков';
 const MAX_LESSONS = 20;
 const mostCommon = (values: string[]) => {
   const counts = new Map<string, number>();
@@ -185,12 +191,154 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
   const classes = unique(data.lessons.map((l) => l.className));
   const subjects = unique(data.lessons.map((l) => l.subject));
   const rooms = unique(data.lessons.map((l) => l.room));
-  const rowsOfDay = (list: Lesson[]) =>
-    list.map((lesson, index) => ({
-      lesson,
-      index,
-      missing: index ? lesson.lessonNumber - list[index - 1].lessonNumber - 1 : 0,
-    }));
+  const bellText = (n: number) => {
+    const bell = data.bells.find((b) => b.lessonNumber === n);
+    return bell ? `${bell.start}–${bell.end}` : '';
+  };
+  /** Строки дня: уроки, между ними «окна», в конце — следующий урок. Нажатие на пустую строку добавляет урок. */
+  function renderRows() {
+    const rows: ReactNode[] = [];
+    const ghost = (n: number, label: string) => (
+      <tr className="ed-ghost" key={`ghost-${n}`}>
+        <td>{n}</td>
+        <td>{bellText(n)}</td>
+        <td colSpan={4}>
+          <button
+            disabled={lessons.length >= MAX_LESSONS}
+            title="Enter в последней строке тоже добавляет урок"
+            onClick={() => addLesson(n)}
+          >
+            {label}
+          </button>
+        </td>
+      </tr>
+    );
+    lessons.forEach((lesson, index) => {
+      const time = timeOf(lesson, data.bells);
+      const color = data.settings ? lessonColor(lesson, data.settings) : undefined;
+      if (index)
+        for (let n = lessons[index - 1].lessonNumber + 1; n < lesson.lessonNumber; n++)
+          rows.push(ghost(n, 'окно — нажмите, чтобы добавить урок'));
+      rows.push(
+        <tr className="ed-row" key={lesson.id} data-lesson-id={lesson.id} data-color-tag={color}>
+          <td>
+            <input
+              aria-label={`Номер урока ${index + 1}`}
+              type="number"
+              min="1"
+              max="20"
+              value={lesson.lessonNumber}
+              onChange={(e) => updateLesson(lesson.id, { lessonNumber: Number(e.target.value) })}
+            />
+          </td>
+          <td>
+            <div className="ed-time">
+              <span className={lesson.customTime ? 'custom' : ''}>
+                {time ? `${time.start}–${time.end}` : 'Время не задано'}
+              </span>
+              <button
+                className="ed-icon"
+                aria-label="Индивидуальное время"
+                aria-pressed={!!lesson.customTime}
+                title="Индивидуальное время урока"
+                onClick={() =>
+                  updateLesson(lesson.id, {
+                    customTime: lesson.customTime
+                      ? undefined
+                      : { start: time?.start ?? '08:30', end: time?.end ?? '09:15' },
+                  })
+                }
+              >
+                <Icon name="clock" size={14} />
+              </button>
+            </div>
+          </td>
+          <td className="ed-classcell">
+            <input
+              aria-label="Класс *"
+              data-field="class"
+              list="ed-classes"
+              placeholder="6А"
+              value={lesson.className}
+              onChange={(e) => updateLesson(lesson.id, { className: e.target.value })}
+              onKeyDown={(e) => onEnter(e, 'class')}
+            />
+          </td>
+          <td>
+            <input
+              aria-label="Предмет"
+              data-field="subject"
+              list="ed-subjects"
+              placeholder="Необязательно"
+              value={lesson.subject}
+              onChange={(e) => updateLesson(lesson.id, { subject: e.target.value })}
+              onKeyDown={(e) => onEnter(e, 'subject')}
+            />
+          </td>
+          <td>
+            <input
+              aria-label="Кабинет"
+              data-field="room"
+              list="ed-rooms"
+              placeholder="—"
+              value={lesson.room}
+              onChange={(e) => updateLesson(lesson.id, { room: e.target.value })}
+              onKeyDown={(e) => onEnter(e, 'room')}
+            />
+          </td>
+          <td>
+            <button
+              className="delete"
+              aria-label={`Удалить урок ${lesson.lessonNumber}`}
+              title="Удалить урок. Пропущенный номер покажется как окно."
+              onClick={() =>
+                change({ ...data, lessons: data.lessons.filter((l) => l.id !== lesson.id) })
+              }
+            >
+              <Icon name="x" size={14} />
+            </button>
+          </td>
+        </tr>,
+      );
+      if (lesson.customTime)
+        rows.push(
+          <tr className="ed-custom" key={`time-${lesson.id}`}>
+            <td />
+            <td colSpan={5}>
+              <div className="ed-custom-fields">
+                <label>
+                  Начало
+                  <input
+                    type="time"
+                    value={lesson.customTime.start}
+                    onChange={(e) =>
+                      updateLesson(lesson.id, {
+                        customTime: { ...lesson.customTime!, start: e.target.value },
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Окончание
+                  <input
+                    type="time"
+                    value={lesson.customTime.end}
+                    onChange={(e) =>
+                      updateLesson(lesson.id, {
+                        customTime: { ...lesson.customTime!, end: e.target.value },
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </td>
+          </tr>,
+        );
+    });
+    const next = lessons[lessons.length - 1].lessonNumber + 1;
+    if (lessons.length < MAX_LESSONS && next <= MAX_LESSONS) rows.push(ghost(next, '+ урок'));
+    return rows;
+  }
   return (
     <div className="ed">
       {controlled === undefined && (
@@ -274,27 +422,21 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
               </div>
               <span className="ed-spacer" />
               {mode === 'day' && !lessons.length && otherDays.length > 0 && (
-                <select
-                  aria-label="Скопировать уроки из другого дня"
-                  value=""
-                  onChange={(e) => e.target.value && copyFrom(Number(e.target.value))}
-                >
-                  <option value="">Скопировать из…</option>
-                  {otherDays.map((d) => (
-                    <option key={d} value={d}>
-                      {weekdays[d - 1]}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {mode === 'day' && (
-                <button
-                  className="secondary"
-                  disabled={lessons.length >= MAX_LESSONS}
-                  onClick={() => addLesson()}
-                >
-                  + Добавить урок
-                </button>
+                <span className="ed-copy">
+                  <Icon name="copy" size={14} />
+                  <select
+                    aria-label="Скопировать уроки из другого дня"
+                    value=""
+                    onChange={(e) => e.target.value && copyFrom(Number(e.target.value))}
+                  >
+                    <option value="">Скопировать день из…</option>
+                    {otherDays.map((d) => (
+                      <option key={d} value={d}>
+                        {weekdays[d - 1]}
+                      </option>
+                    ))}
+                  </select>
+                </span>
               )}
             </div>
           )}
@@ -324,6 +466,9 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                     <br />
                     Дни без уроков будут пропущены при поиске следующего учебного дня.
                   </p>
+                  <button className="secondary" onClick={() => addLesson()}>
+                    + Добавить урок
+                  </button>
                 </div>
               ) : (
                 <>
@@ -346,165 +491,7 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                         <th />
                       </tr>
                     </thead>
-                    <tbody>
-                      {rowsOfDay(lessons).map(({ lesson, index, missing }) => {
-                        const time = timeOf(lesson, data.bells);
-                        const color = data.settings
-                          ? lessonColor(lesson, data.settings)
-                          : undefined;
-                        return [
-                          missing > 0 && (
-                            <tr className="ed-gap" key={`gap-${lesson.id}`}>
-                              <td colSpan={6}>
-                                <button
-                                  disabled={lessons.length >= MAX_LESSONS}
-                                  onClick={() => addLesson(lessons[index - 1].lessonNumber + 1)}
-                                >
-                                  Окно · номера {lessons[index - 1].lessonNumber + 1}
-                                  {missing > 1 ? `–${lesson.lessonNumber - 1}` : ''} · нажмите,
-                                  чтобы добавить урок
-                                </button>
-                              </td>
-                            </tr>
-                          ),
-                          <tr
-                            className="ed-row"
-                            key={lesson.id}
-                            data-lesson-id={lesson.id}
-                            data-color-tag={color}
-                          >
-                            <td>
-                              <input
-                                aria-label={`Номер урока ${index + 1}`}
-                                type="number"
-                                min="1"
-                                max="20"
-                                value={lesson.lessonNumber}
-                                onChange={(e) =>
-                                  updateLesson(lesson.id, { lessonNumber: Number(e.target.value) })
-                                }
-                              />
-                            </td>
-                            <td>
-                              <div className="ed-time">
-                                <span className={lesson.customTime ? 'custom' : ''}>
-                                  {time ? `${time.start} — ${time.end}` : 'Время не задано'}
-                                </span>
-                                <button
-                                  className="ed-icon"
-                                  aria-label="Индивидуальное время"
-                                  aria-pressed={!!lesson.customTime}
-                                  title="Индивидуальное время урока"
-                                  onClick={() =>
-                                    updateLesson(lesson.id, {
-                                      customTime: lesson.customTime
-                                        ? undefined
-                                        : {
-                                            start: time?.start ?? '08:30',
-                                            end: time?.end ?? '09:15',
-                                          },
-                                    })
-                                  }
-                                >
-                                  ◷
-                                </button>
-                              </div>
-                            </td>
-                            <td>
-                              <input
-                                aria-label="Класс *"
-                                data-field="class"
-                                list="ed-classes"
-                                placeholder="6А"
-                                value={lesson.className}
-                                onChange={(e) =>
-                                  updateLesson(lesson.id, { className: e.target.value })
-                                }
-                                onKeyDown={(e) => onEnter(e, 'class')}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                aria-label="Предмет"
-                                data-field="subject"
-                                list="ed-subjects"
-                                placeholder="Необязательно"
-                                value={lesson.subject}
-                                onChange={(e) =>
-                                  updateLesson(lesson.id, { subject: e.target.value })
-                                }
-                                onKeyDown={(e) => onEnter(e, 'subject')}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                aria-label="Кабинет"
-                                data-field="room"
-                                list="ed-rooms"
-                                placeholder="—"
-                                value={lesson.room}
-                                onChange={(e) => updateLesson(lesson.id, { room: e.target.value })}
-                                onKeyDown={(e) => onEnter(e, 'room')}
-                              />
-                            </td>
-                            <td>
-                              <button
-                                className="delete"
-                                aria-label={`Удалить урок ${lesson.lessonNumber}`}
-                                title="Удалить урок. Пропущенный номер покажется как окно."
-                                onClick={() =>
-                                  change({
-                                    ...data,
-                                    lessons: data.lessons.filter((l) => l.id !== lesson.id),
-                                  })
-                                }
-                              >
-                                ×
-                              </button>
-                            </td>
-                          </tr>,
-                          lesson.customTime && (
-                            <tr className="ed-custom" key={`time-${lesson.id}`}>
-                              <td />
-                              <td colSpan={5}>
-                                <div className="ed-custom-fields">
-                                  <label>
-                                    Начало
-                                    <input
-                                      type="time"
-                                      value={lesson.customTime.start}
-                                      onChange={(e) =>
-                                        updateLesson(lesson.id, {
-                                          customTime: {
-                                            ...lesson.customTime!,
-                                            start: e.target.value,
-                                          },
-                                        })
-                                      }
-                                    />
-                                  </label>
-                                  <label>
-                                    Окончание
-                                    <input
-                                      type="time"
-                                      value={lesson.customTime.end}
-                                      onChange={(e) =>
-                                        updateLesson(lesson.id, {
-                                          customTime: {
-                                            ...lesson.customTime!,
-                                            end: e.target.value,
-                                          },
-                                        })
-                                      }
-                                    />
-                                  </label>
-                                </div>
-                              </td>
-                            </tr>
-                          ),
-                        ];
-                      })}
-                    </tbody>
+                    <tbody>{renderRows()}</tbody>
                   </table>
                   <datalist id="ed-classes">
                     {classes.map((v) => (
@@ -521,10 +508,6 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                       <option key={v} value={v} />
                     ))}
                   </datalist>
-                  <p className="hint">
-                    Enter — к следующему уроку, в последнем — новый урок. Окно — пропущенный номер.
-                    {gaps(lessons).length ? ` Окна: ${gaps(lessons).join(', ')}.` : ''}
-                  </p>
                 </>
               )
             ) : tab === 'calendar' ? (
@@ -830,9 +813,11 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
             )}
           </div>
           <div className="ed-foot">
-            <span role="status">
-              {status || (pending ? 'Сохранение…' : 'Все изменения сохраняются автоматически')}
+            <span className="ed-count">
+              {tab === 'schedule' &&
+                `Неделя: ${data.lessons.length} ${lessonWord(data.lessons.length)}`}
             </span>
+            <span role="status">{status || (pending ? 'Сохранение…' : 'Сохранено')}</span>
             <div>
               {failed && <button onClick={editor.flush}>Повторить сохранение</button>}
               <button

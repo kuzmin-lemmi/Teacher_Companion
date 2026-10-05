@@ -143,7 +143,7 @@ it('редактирует звонки и индивидуальное врем
   await user.click(screen.getByRole('button', { name: /▦.*Расписание/ }));
   await user.click(screen.getByText('+ Добавить урок'));
   await user.type(screen.getByLabelText('Класс *'), '5А');
-  expect(screen.getByText('08:30 — 09:15')).toBeTruthy();
+  expect(screen.getByText('08:30–09:15')).toBeTruthy();
   await user.click(screen.getByLabelText('Индивидуальное время'));
   await user.clear(screen.getByLabelText('Начало'));
   await user.type(screen.getByLabelText('Начало'), '08:35');

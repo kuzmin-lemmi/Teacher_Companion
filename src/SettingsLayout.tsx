@@ -2,20 +2,21 @@ import type { ReactNode } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { App as ScheduleEditor, type Tab } from './App';
 import { Backups } from './Backups';
+import { Icon, type IconName } from './icons';
 import type { AppData } from './domain';
 import type { Storage } from './storage';
 import { appVersion } from './version';
 export type SettingsPage = Tab | 'preferences' | 'backups' | 'about';
 const editorPages: SettingsPage[] = ['schedule', 'bells', 'calendar'];
 /** Разделы меню; пустая строка — разделитель групп. */
-const sections: ([SettingsPage, string, string] | null)[] = [
-  ['schedule', '▦', 'Расписание'],
-  ['bells', '◷', 'Звонки'],
-  ['calendar', '☼', 'Каникулы'],
+const sections: ([SettingsPage, IconName, string] | null)[] = [
+  ['schedule', 'table', 'Расписание'],
+  ['bells', 'bell', 'Звонки'],
+  ['calendar', 'beach', 'Каникулы'],
   null,
-  ['preferences', '⚙', 'Внешний вид'],
-  ['backups', '⛁', 'Копии'],
-  ['about', 'ⓘ', 'О программе'],
+  ['preferences', 'palette', 'Внешний вид'],
+  ['backups', 'database', 'Копии'],
+  ['about', 'info', 'О программе'],
 ];
 const titles: Record<Exclude<SettingsPage, Tab>, string> = {
   preferences: 'Настройки приложения',
@@ -49,7 +50,7 @@ export function SettingsLayout({
     <div className="settings-root">
       <nav className="rail" aria-label="Разделы приложения">
         <button className="rail-back" onClick={() => onNavigate('widget')} title="К виджету">
-          <span aria-hidden="true">←</span>
+          <Icon name="back" />
           <span className="rail-label">К виджету</span>
         </button>
         <div className="rail-sep" />
@@ -62,9 +63,7 @@ export function SettingsLayout({
               aria-current={page === section[0] ? 'page' : undefined}
               onClick={() => onNavigate(section[0])}
             >
-              <span aria-hidden="true" className="rail-icon">
-                {section[1]}
-              </span>
+              <Icon name={section[1]} />
               <span className="rail-label">{section[2]}</span>
             </button>
           ) : (
