@@ -121,6 +121,9 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
   const [day, setDay] = useState(1);
   const [mode, setMode] = useState<'day' | 'week'>('day');
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [targets, setTargets] = useState<number[]>([]);
+  const popover = useRef<HTMLDivElement>(null);
   const table = useRef<HTMLTableElement>(null);
   function updateLesson(id: string, patch: Partial<Lesson>) {
     change({ ...data, lessons: data.lessons.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
@@ -154,6 +157,19 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
     });
     setFocusId(id);
   }
+  useEffect(() => {
+    if (!copyOpen) return;
+    const away = (e: MouseEvent) => {
+      if (!popover.current?.contains(e.target as Node)) setCopyOpen(false);
+    };
+    const escape = (e: globalThis.KeyboardEvent) => e.key === 'Escape' && setCopyOpen(false);
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [copyOpen]);
   // После добавления урока курсор встаёт в его поле «Класс».
   useEffect(() => {
     if (!focusId) return;
@@ -187,7 +203,22 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
       .map((l) => ({ ...l, id: crypto.randomUUID(), weekday: day }));
     change({ ...data, lessons: [...data.lessons, ...copies] });
     setStatus(`Скопировано уроков: ${copies.length}`);
+    setCopyOpen(false);
   }
+  /** Уроки этого дня заменяют уроки в выбранных днях. */
+  function copyTo(days: number[]) {
+    const copies = days.flatMap((target) =>
+      lessons.map((l) => ({ ...l, id: crypto.randomUUID(), weekday: target })),
+    );
+    change({
+      ...data,
+      lessons: [...data.lessons.filter((l) => !days.includes(l.weekday)), ...copies],
+    });
+    setStatus(`Скопировано в: ${days.map((d) => weekdays[d - 1].toLowerCase()).join(', ')}`);
+    setCopyOpen(false);
+    setTargets([]);
+  }
+  const countOf = (d: number) => data.lessons.filter((l) => l.weekday === d).length;
   const classes = unique(data.lessons.map((l) => l.className));
   const subjects = unique(data.lessons.map((l) => l.subject));
   const rooms = unique(data.lessons.map((l) => l.room));
@@ -421,22 +452,74 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                 </button>
               </div>
               <span className="ed-spacer" />
-              {mode === 'day' && !lessons.length && otherDays.length > 0 && (
-                <span className="ed-copy">
-                  <Icon name="copy" size={14} />
-                  <select
-                    aria-label="Скопировать уроки из другого дня"
-                    value=""
-                    onChange={(e) => e.target.value && copyFrom(Number(e.target.value))}
+              {mode === 'day' && (
+                <div className="ed-copywrap" ref={popover}>
+                  <button
+                    className="ed-copybtn"
+                    aria-expanded={copyOpen}
+                    aria-haspopup="true"
+                    onClick={() => {
+                      setCopyOpen((open) => !open);
+                      setTargets([]);
+                    }}
                   >
-                    <option value="">Скопировать день из…</option>
-                    {otherDays.map((d) => (
-                      <option key={d} value={d}>
-                        {weekdays[d - 1]}
-                      </option>
-                    ))}
-                  </select>
-                </span>
+                    <Icon name="copy" size={14} />
+                    Скопировать день
+                  </button>
+                  {copyOpen && (
+                    <div className="ed-pop" role="dialog" aria-label="Скопировать день">
+                      {lessons.length ? (
+                        <>
+                          <p>Скопировать «{weekdays[day - 1]}» в:</p>
+                          {weekdays.map(
+                            (name, i) =>
+                              i + 1 !== day && (
+                                <label className="ed-pop-item" key={name}>
+                                  <input
+                                    type="checkbox"
+                                    checked={targets.includes(i + 1)}
+                                    onChange={(e) =>
+                                      setTargets(
+                                        e.target.checked
+                                          ? [...targets, i + 1]
+                                          : targets.filter((t) => t !== i + 1),
+                                      )
+                                    }
+                                  />
+                                  {name}
+                                  <small>
+                                    {countOf(i + 1)
+                                      ? `заменит ${countOf(i + 1)} ${lessonWord(countOf(i + 1))}`
+                                      : 'пусто'}
+                                  </small>
+                                </label>
+                              ),
+                          )}
+                          <button
+                            className="secondary"
+                            disabled={!targets.length}
+                            onClick={() => copyTo(targets)}
+                          >
+                            Скопировать
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p>Взять уроки из:</p>
+                          {otherDays.length ? (
+                            otherDays.map((d) => (
+                              <button className="ed-pop-pick" key={d} onClick={() => copyFrom(d)}>
+                                {weekdays[d - 1]} · {countOf(d)} {lessonWord(countOf(d))}
+                              </button>
+                            ))
+                          ) : (
+                            <small>В других днях уроков пока нет.</small>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

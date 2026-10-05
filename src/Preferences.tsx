@@ -203,6 +203,35 @@ export function Preferences({
               Вернуть виджет в угол: {cornerLabels[settings.widgetCorner].toLowerCase()}
             </button>
           </section>
+          <section className="pf-card">
+            <h2>Запуск и обновления</h2>
+            <label className="pf-toggle">
+              <div>
+                <strong>Запускать вместе с Windows</strong>
+                <small>
+                  {isTauri()
+                    ? 'После входа откроется ваше расписание. Переносной .exe держите в постоянной папке.'
+                    : 'Применяется в Windows-приложении.'}
+                </small>
+              </div>
+              <input
+                type="checkbox"
+                checked={draft.launchOnStartup}
+                onChange={(e) => update({ launchOnStartup: e.target.checked })}
+              />
+            </label>
+            <label className="pf-toggle">
+              <div>
+                <strong>Проверять обновления</strong>
+                <small>Раз в несколько часов, только на GitHub. Расписание не отправляется.</small>
+              </div>
+              <input
+                type="checkbox"
+                checked={draft.checkUpdates}
+                onChange={(e) => update({ checkUpdates: e.target.checked })}
+              />
+            </label>
+          </section>
         </div>
         <div className="pf-col">
           <section className="pf-card color-tags-panel">
@@ -372,35 +401,6 @@ export function Preferences({
                 )}
               </>
             )}
-          </section>
-          <section className="pf-card">
-            <h2>Запуск и обновления</h2>
-            <label className="pf-toggle">
-              <div>
-                <strong>Запускать вместе с Windows</strong>
-                <small>
-                  {isTauri()
-                    ? 'После входа откроется ваше расписание. Переносной .exe держите в постоянной папке.'
-                    : 'Применяется в Windows-приложении.'}
-                </small>
-              </div>
-              <input
-                type="checkbox"
-                checked={draft.launchOnStartup}
-                onChange={(e) => update({ launchOnStartup: e.target.checked })}
-              />
-            </label>
-            <label className="pf-toggle">
-              <div>
-                <strong>Проверять обновления</strong>
-                <small>Раз в несколько часов, только на GitHub. Расписание не отправляется.</small>
-              </div>
-              <input
-                type="checkbox"
-                checked={draft.checkUpdates}
-                onChange={(e) => update({ checkUpdates: e.target.checked })}
-              />
-            </label>
           </section>
         </div>
       </fieldset>

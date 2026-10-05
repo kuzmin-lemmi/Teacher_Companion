@@ -165,32 +165,74 @@
   opacity: 1;
   color: var(--text);
 }
-.ed-copy {
+.ed-copywrap {
+  position: relative;
+}
+.ed .ed-copybtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding-left: 10px;
+  gap: 7px;
+  padding: 6px 12px;
   border: 1px solid var(--line);
   border-radius: 9px;
-  color: var(--muted);
-}
-.ed .ed-bar .ed-copy select {
-  border: 0;
   background: transparent;
-  padding: 6px 8px 6px 0;
   color: var(--text);
-}
-.ed-days button span {
-  margin-left: 6px;
-  opacity: 0.6;
-}
-.ed .ed-bar select {
-  width: auto;
-  padding: 6px 9px;
   font-size: 12px;
 }
-.ed .ed-bar .secondary {
-  padding: 6px 12px;
+.ed-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  min-width: 250px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px #00000066;
+}
+.ed-pop p {
+  margin: 0 2px 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ed-pop small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+.ed .ed-pop-item {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  font-size: 13px;
+  color: var(--text);
+  border-radius: 6px;
+}
+.ed .ed-pop-item:hover {
+  background: var(--hover);
+}
+.ed-pop-item input {
+  width: 15px;
+  accent-color: var(--accent);
+}
+.ed .ed-pop-pick {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 7px 6px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.ed .ed-pop-pick:hover {
+  background: var(--hover);
+}
+.ed .ed-pop .secondary {
+  margin-top: 4px;
+  justify-self: end;
 }
 .ed-body {
   flex: 1;
@@ -676,10 +718,16 @@
 }
 
 /* Настройки приложения: две колонки, строки «подпись — элемент управления» */
+.pf {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 82px);
+}
 .pf .ed-foot {
+  margin-top: auto;
   position: sticky;
   bottom: -28px;
-  margin: 14px -28px -28px;
+  margin: auto -28px -28px;
   padding-left: 28px;
   padding-right: 28px;
 }
@@ -691,6 +739,7 @@
 }
 .pf-col {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
 }
@@ -839,4 +888,23 @@
   .pf-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Окно настроек: основной фон темнее обычного, меню ещё темнее */
+.settings-root {
+  background: var(--bg);
+}
+[data-theme='dark'] .settings-root {
+  --bg: #131417;
+  --panel: #191b1f;
+  --card: #1d1f24;
+  --line: #2b2e34;
+  --line-soft: #ffffff10;
+}
+[data-theme='dark'] .rail {
+  background: #0a0b0d;
+  border-right-color: #1c1e22;
+}
+[data-theme='light'] .rail {
+  background: #e3e9e4;
 }

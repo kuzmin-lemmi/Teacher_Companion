@@ -210,7 +210,8 @@ it('пустой день копируется из другого, неделя
   await user.type(screen.getByLabelText('Класс *'), '6А');
   await waitFor(() => expect(state()!.lessons).toHaveLength(1));
   await user.click(screen.getByRole('button', { name: /^Вторник/ }));
-  await user.selectOptions(screen.getByLabelText('Скопировать уроки из другого дня'), '1');
+  await user.click(screen.getByRole('button', { name: /Скопировать день/ }));
+  await user.click(screen.getByRole('button', { name: /^Понедельник · 1 урок/ }));
   await waitFor(() =>
     expect(
       state()!
