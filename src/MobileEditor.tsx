@@ -244,6 +244,33 @@ function DateField({
     </label>
   );
 }
+/** Один вариант из нескольких — крупные строки с пояснением под названием. */
+export function Choice<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: [T, string, string?][];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset className="m-choice">
+      <legend>{label}</legend>
+      {options.map(([id, title, hint]) => (
+        <label key={id}>
+          <input type="radio" name={label} checked={value === id} onChange={() => onChange(id)} />
+          <span>
+            {title}
+            {hint && <small>{hint}</small>}
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 export function Switch({
   label,
   hint,

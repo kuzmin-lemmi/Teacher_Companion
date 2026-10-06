@@ -613,27 +613,77 @@
     color: var(--accent-ink);
     font-weight: 600;
   }
-  /* Звук уведомления: три варианта и «Проверить» в одну строку. */
-  & .m-sound {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
-    margin: 10px 0 16px;
-  }
-  & .m-sound .m-segmented {
-    flex: 1 1 auto;
+  & .m-segmented-3 {
     grid-template-columns: repeat(3, 1fr);
   }
-  & .m-sound .m-segmented button {
-    font-size: 13px;
+  & .m-card + .m-choice legend,
+  & .m-hint + .m-choice legend {
+    margin-top: 22px;
   }
-  & .m-sound button.m-secondary {
-    flex: none;
-    width: auto;
-    min-height: 0;
-    margin: 0;
-    padding: 0 14px;
+  /* Выключенное уведомление в списке — подпись тише. */
+  & .m-row-main small.m-off {
+    opacity: 0.7;
+  }
+  /* Пример уведомления — как карточка в шторке телефона. */
+  & .m-notice {
+    display: grid;
+    gap: 3px;
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--line-soft);
+    border-radius: 20px;
+    background: var(--panel);
+    box-shadow: 0 6px 20px #0000001a;
+    color: var(--text);
     font-size: 14px;
+    line-height: 1.35;
+  }
+  & .m-notice strong {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  & .m-notice > span:last-child {
+    color: var(--muted);
+  }
+  & .m-notice-app {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  & .m-notice-icon {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  /* Выключено — пример блёкнет: так оно выглядело бы, если включить. */
+  & .m-notice-off {
+    opacity: 0.45;
+    box-shadow: none;
+  }
+  & .m-field textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.35;
+    resize: none;
+  }
+  & .m-field textarea:focus {
+    border-color: var(--accent);
+    outline: none;
   }
   & .m-row-action {
     flex: none;

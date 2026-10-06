@@ -16,7 +16,7 @@ function memory(initial: AppData) {
   };
   return { state, storage };
 }
-function setup(data: AppData, initial: 'lessons' | 'bells' = 'lessons') {
+function setup(data: AppData, initial: 'lessons' | 'bells' | 'notify' = 'lessons') {
   const { state, storage } = memory(data);
   render(
     <MobileSettings
@@ -74,5 +74,31 @@ describe('настройки на телефоне', () => {
     expect(state.data.bells[1]).toEqual({ lessonNumber: 2, start: '09:25', end: '10:10' });
     await user.click(screen.getByRole('button', { name: 'Добавить звонок' }));
     expect(screen.getByLabelText('Начало')).toHaveProperty('value', '14:55');
+  });
+  it('уведомление открывается на своём экране: пример, когда, как сообщать — и назад к списку', async () => {
+    const user = userEvent.setup();
+    localStorage.clear();
+    setup(emptyData(), 'notify');
+    const row = screen.getByRole('button', { name: /Перед концом урока/ });
+    expect(row.textContent).toContain('За 5 мин до звонка · вибрация');
+    await user.click(row);
+    expect(screen.getByRole('heading', { name: 'Перед концом урока' })).toBeTruthy();
+    expect(screen.getByLabelText('Пример уведомления').textContent).toContain(
+      'Пора подводить итоги и задавать ДЗ',
+    );
+    await user.click(screen.getByRole('button', { name: 'За 10 мин' }));
+    await user.click(screen.getByRole('radio', { name: /^Звук/ }));
+    // Выключили и включили снова — минуты прежние.
+    await user.click(screen.getByRole('switch', { name: /Присылать/ }));
+    expect(screen.queryByRole('group', { name: 'Когда' })).toBeNull();
+    await user.click(screen.getByRole('switch', { name: /Присылать/ }));
+    expect(screen.getByRole('button', { name: 'За 10 мин' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    await user.click(screen.getByRole('button', { name: 'К уведомлениям' }));
+    expect(screen.getByRole('button', { name: /Перед концом урока/ }).textContent).toContain(
+      'За 10 мин до звонка · со звуком',
+    );
+    localStorage.clear();
   });
 });
