@@ -18,9 +18,13 @@ import {
   loadPhoneSettings,
   phoneStatus,
   pinWidget,
+  previewSound,
   savePhoneSettings,
   syncPhone,
+  ENDING_TEXT,
+  type PhonePreview,
   type PhoneSettings,
+  type PhoneSound,
   type PhoneStatus,
 } from './phone';
 import type { Storage } from './storage';
@@ -294,20 +298,81 @@ const reminders: [number, string][] = [
   [5, 'За 5 мин'],
   [10, 'За 10 мин'],
 ];
+const sounds: [PhoneSound, string][] = [
+  ['chime', 'Звук'],
+  ['vibrate', 'Вибрация'],
+  ['silent', 'Тихо'],
+];
 function notifyDetail(s: PhoneSettings) {
   return (
     [
       s.ongoing && 'урок в шторке',
       s.remind > 0 && `напоминание за ${s.remind} мин`,
+      s.ending > 0 && `до звонка ${s.ending} мин`,
       s.morning && `сводка в ${s.morningTime}`,
+      s.evening && `на завтра в ${s.eveningTime}`,
     ]
       .filter(Boolean)
       .join(' · ') || 'Выключены'
   );
 }
+/** «Нет · За 2 мин · За 5 мин · За 10 мин» */
+function Minutes({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="m-segmented" role="group" aria-label={label}>
+      {reminders.map(([minutes, title]) => (
+        <button
+          key={minutes}
+          type="button"
+          aria-pressed={value === minutes}
+          onClick={() => onChange(minutes)}
+        >
+          {title}
+        </button>
+      ))}
+    </div>
+  );
+}
+/** Звук, вибрация или тихо — и «Проверить»: пример уведомления приходит в шторку. */
+function SoundPicker({
+  label,
+  value,
+  onChange,
+  onPreview,
+}: {
+  label: string;
+  value: PhoneSound;
+  onChange: (value: PhoneSound) => void;
+  onPreview: () => void;
+}) {
+  return (
+    <div className="m-sound">
+      <div className="m-segmented" role="group" aria-label={label}>
+        {sounds.map(([id, title]) => (
+          <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}>
+            {title}
+          </button>
+        ))}
+      </div>
+      <button type="button" className="m-secondary" onClick={onPreview}>
+        Проверить
+      </button>
+    </div>
+  );
+}
 /** Шторка, напоминания, утренняя сводка и виджеты на рабочем столе. */
 function NotifyPage({ data }: { data: AppData }) {
   const [settings, setSettings] = useState(loadPhoneSettings);
+  // Текст сохраняется, когда поле теряет фокус, — не на каждую букву.
+  const [endingText, setEndingText] = useState(settings.endingText);
   const [status, setStatus] = useState<PhoneStatus | null>(null);
   const [message, setMessage] = useState('');
   const check = useCallback(() => {
@@ -332,6 +397,12 @@ function NotifyPage({ data }: { data: AppData }) {
     savePhoneSettings(next);
     syncPhone(data, next).catch(() =>
       setMessage('Не удалось обновить уведомления. Попробуйте перезапустить приложение.'),
+    );
+  }
+  function preview(kind: PhonePreview, sound: PhoneSound) {
+    setMessage('');
+    previewSound(kind, sound).catch(() =>
+      setMessage('Не удалось показать пример. Попробуйте перезапустить приложение.'),
     );
   }
   async function pin(kind: 'now' | 'day') {
@@ -371,25 +442,61 @@ function NotifyPage({ data }: { data: AppData }) {
         />
       </div>
       <h2 className="m-group">Напоминать перед уроком</h2>
-      <div className="m-segmented" role="group" aria-label="Напоминать перед уроком">
-        {reminders.map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={settings.remind === value}
-            onClick={() => update({ remind: value })}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Minutes
+        label="Напоминать перед уроком"
+        value={settings.remind}
+        onChange={(remind) => update({ remind })}
+      />
       <p className="m-hint">
         Всплывает, как сообщение: «Через 5 мин — 7Б · каб. 214» и заметка к уроку.
       </p>
+      {settings.remind > 0 && (
+        <SoundPicker
+          label="Звук напоминания"
+          value={settings.remindSound}
+          onChange={(remindSound) => update({ remindSound })}
+          onPreview={() => preview('remind', settings.remindSound)}
+        />
+      )}
+      <h2 className="m-group">Перед концом урока</h2>
+      <Minutes
+        label="Перед концом урока"
+        value={settings.ending}
+        onChange={(ending) => update({ ending })}
+      />
+      <p className="m-hint">«Через 5 мин звонок — 7Б» и ваш текст. На уроке лучше вибрация.</p>
+      {settings.ending > 0 && (
+        <>
+          <div className="m-card">
+            <label className="m-field">
+              <span>Текст</span>
+              <input
+                type="text"
+                value={endingText}
+                maxLength={200}
+                placeholder={ENDING_TEXT}
+                onChange={(e) => setEndingText(e.target.value)}
+                onBlur={() => {
+                  const text = endingText.trim() || ENDING_TEXT;
+                  setEndingText(text);
+                  if (text !== settings.endingText) update({ endingText: text });
+                }}
+              />
+            </label>
+          </div>
+          <SoundPicker
+            label="Звук перед концом урока"
+            value={settings.endingSound}
+            onChange={(endingSound) => update({ endingSound })}
+            onPreview={() => preview('ending', settings.endingSound)}
+          />
+        </>
+      )}
+      <h2 className="m-group">Сводки</h2>
       <div className="m-card">
         <Switch
           label="Утренняя сводка"
-          hint="Сколько сегодня уроков и когда первый. В выходные и каникулы не приходит."
+          hint="Какой сегодня день, сколько уроков, какой первый и во сколько. В выходные и каникулы не приходит."
           checked={settings.morning}
           onChange={(morning) => update({ morning })}
         />
@@ -401,6 +508,50 @@ function NotifyPage({ data }: { data: AppData }) {
           />
         )}
       </div>
+      {settings.morning && (
+        <SoundPicker
+          label="Звук утренней сводки"
+          value={settings.morningSound}
+          onChange={(morningSound) => update({ morningSound })}
+          onPreview={() => preview('morning', settings.morningSound)}
+        />
+      )}
+      <div className="m-card">
+        <Switch
+          label="Сводка на завтра"
+          hint="Вечером: сколько уроков завтра, какой первый и во сколько, заметки к урокам. Приходит, только если завтра есть уроки."
+          checked={settings.evening}
+          onChange={(evening) => update({ evening })}
+        />
+        {settings.evening && (
+          <TimeField
+            label="Во сколько"
+            value={settings.eveningTime}
+            onChange={(eveningTime) => /^\d\d:\d\d$/.test(eveningTime) && update({ eveningTime })}
+          />
+        )}
+      </div>
+      {settings.evening && (
+        <SoundPicker
+          label="Звук сводки на завтра"
+          value={settings.eveningSound}
+          onChange={(eveningSound) => update({ eveningSound })}
+          onPreview={() => preview('evening', settings.eveningSound)}
+        />
+      )}
+      <h2 className="m-group">На уроке</h2>
+      <div className="m-card">
+        <Switch
+          label="Тихо во время уроков"
+          hint="Пока идёт урок, вместо звука — вибрация. На переменах и после уроков — как выбрано выше."
+          checked={settings.quiet}
+          onChange={(quiet) => update({ quiet })}
+        />
+      </div>
+      <p className="m-hint">
+        «Звук» — мягкий перезвон «Помощника учителя», его легко отличить от мессенджеров. В
+        беззвучном режиме телефона будет только вибрация.
+      </p>
       <h2 className="m-group">Виджеты на рабочем столе</h2>
       <div className="m-list">
         <button type="button" className="m-row" onClick={() => void pin('now')}>

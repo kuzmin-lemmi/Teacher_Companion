@@ -27,6 +27,7 @@
 
 - `Plan.kt` — план и «что сейчас» (урок, перемена, уроки закончились).
 - `Scheduler.kt` — шторка, напоминания, утренняя сводка, будильник.
+- Уведомления со звуком: напоминание перед уроком, перед концом урока (`ending`, `endingText`), утренняя сводка и сводка на завтра (`evening`, `eveningTime`). У каждого свой звук: «Звук», «Вибрация» или «Тихо» (`remindSound`, `endingSound`, `morningSound`, `eveningSound` в плане). `quiet` — во время урока перезвон заменяется вибрацией. Звук канала Android после создания не меняется, поэтому у каждого вида по два канала (`Alerting` в `Scheduler.kt`): с перезвоном `res/raw/tc_chime.wav` и только с вибрацией; «Тихо» — уведомление с `setSilent`. Старые каналы `reminders` и `morning` удаляются. Перезвон собирается `python scripts/chime.py` (те же ноты, что в `src/chime.ts`). Команда `plugin:lessons|preview` присылает пример в шторку для кнопки «Проверить».
 - `Widgets.kt` — виджеты (`res/layout/tc_widget_*.xml`).
 - `LessonsPlugin.kt` — команды: `sync`, `status`, `notifications`, `battery`, `pin`.
 

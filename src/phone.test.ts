@@ -1,6 +1,7 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { emptyData, type AppData } from './domain';
-import { PLAN_DAYS, buildPlan, defaultPhoneSettings } from './phone';
+import { PLAN_DAYS, buildPlan, defaultPhoneSettings, loadPhoneSettings } from './phone';
 const data: AppData = {
   ...emptyData(),
   lessons: [
@@ -27,6 +28,26 @@ describe('план для телефона', () => {
       new Date(2026, 9, 5),
     );
     expect(plain.days[0].lessons.map((l) => l.color)).toEqual(['', '']);
+  });
+  it('звук напоминаний и сводки уходит в план; старые настройки получают перезвон', () => {
+    localStorage.setItem(
+      'teacher-companion-phone-v1',
+      JSON.stringify({ ongoing: false, remind: 10, morning: true, morningTime: '07:00' }),
+    );
+    const saved = loadPhoneSettings();
+    expect(saved).toMatchObject({ remind: 10, remindSound: 'chime', morningSound: 'chime' });
+    // Новое после обновления: вибрация за 5 минут до звонка, тишина на уроках, вечер выключен.
+    expect(saved).toMatchObject({
+      ending: 5,
+      endingSound: 'vibrate',
+      endingText: 'Пора подводить итоги и задавать ДЗ',
+      evening: false,
+      eveningTime: '19:00',
+      quiet: true,
+    });
+    const quiet = buildPlan(data, { ...saved, morningSound: 'vibrate' }, new Date(2026, 9, 5));
+    expect(quiet.settings).toMatchObject({ remindSound: 'chime', morningSound: 'vibrate' });
+    localStorage.clear();
   });
   it('охватывает несколько недель подряд', () => {
     expect(plan.days).toHaveLength(PLAN_DAYS);

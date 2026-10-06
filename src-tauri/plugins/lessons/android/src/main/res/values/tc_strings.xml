@@ -8,8 +8,16 @@
     <string name="tc_channel_schedule_description">Текущий или следующий урок с отсчётом до звонка</string>
     <string name="tc_channel_reminders">Напоминания перед уроком</string>
     <string name="tc_channel_reminders_description">«Через 5 минут — 7Б»</string>
+    <string name="tc_channel_reminders_vibrate">Напоминания перед уроком — без звука</string>
+    <string name="tc_channel_ending">Перед концом урока</string>
+    <string name="tc_channel_ending_vibrate">Перед концом урока — без звука</string>
+    <string name="tc_channel_ending_description">«Через 5 мин звонок — пора подводить итоги и задавать ДЗ»</string>
+    <string name="tc_channel_evening">Сводка на завтра</string>
+    <string name="tc_channel_evening_vibrate">Сводка на завтра — без звука</string>
+    <string name="tc_channel_evening_description">Сколько уроков завтра, какой первый и заметки к урокам</string>
     <string name="tc_channel_morning">Утренняя сводка</string>
-    <string name="tc_channel_morning_description">Сколько уроков сегодня и когда первый</string>
+    <string name="tc_channel_morning_vibrate">Утренняя сводка — без звука</string>
+    <string name="tc_channel_morning_description">Какой сегодня день, сколько уроков и когда первый</string>
     <string name="tc_channel_plan">Обновление расписания</string>
     <string name="tc_channel_plan_description">Расписание на телефоне заканчивается — пора открыть приложение</string>
 </resources>

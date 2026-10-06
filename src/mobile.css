@@ -613,6 +613,28 @@
     color: var(--accent-ink);
     font-weight: 600;
   }
+  /* Звук уведомления: три варианта и «Проверить» в одну строку. */
+  & .m-sound {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin: 10px 0 16px;
+  }
+  & .m-sound .m-segmented {
+    flex: 1 1 auto;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  & .m-sound .m-segmented button {
+    font-size: 13px;
+  }
+  & .m-sound button.m-secondary {
+    flex: none;
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0 14px;
+    font-size: 14px;
+  }
   & .m-row-action {
     flex: none;
     color: var(--accent);

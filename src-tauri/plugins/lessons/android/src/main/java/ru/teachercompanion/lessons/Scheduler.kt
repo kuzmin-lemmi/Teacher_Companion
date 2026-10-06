@@ -6,7 +6,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.ContentResolver
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -19,20 +23,62 @@ import androidx.core.content.ContextCompat
  * после перезагрузки и смены времени.
  */
 object Scheduler {
+    /**
+     * Звук канала Android менять не даёт — поэтому у каждого вида уведомлений два канала:
+     * с перезвоном и только с вибрацией. «Беззвучно» — канал с вибрацией и тихое уведомление.
+     */
+    private class Alerting(
+        val chime: String,
+        val vibrate: String,
+        val name: Int,
+        val quietName: Int,
+        val description: Int,
+        val importance: Int,
+    )
+
     private const val CHANNEL_SCHEDULE = "schedule"
-    private const val CHANNEL_REMINDERS = "reminders"
-    private const val CHANNEL_MORNING = "morning"
     private const val CHANNEL_PLAN = "plan"
+    private val REMINDERS = Alerting(
+        "reminders_chime", "reminders_vibrate", R.string.tc_channel_reminders,
+        R.string.tc_channel_reminders_vibrate, R.string.tc_channel_reminders_description,
+        NotificationManager.IMPORTANCE_HIGH,
+    )
+    private val ENDING = Alerting(
+        "ending_chime", "ending_vibrate", R.string.tc_channel_ending,
+        R.string.tc_channel_ending_vibrate, R.string.tc_channel_ending_description,
+        NotificationManager.IMPORTANCE_HIGH,
+    )
+    private val MORNING = Alerting(
+        "morning_chime", "morning_vibrate", R.string.tc_channel_morning,
+        R.string.tc_channel_morning_vibrate, R.string.tc_channel_morning_description,
+        NotificationManager.IMPORTANCE_DEFAULT,
+    )
+    private val EVENING = Alerting(
+        "evening_chime", "evening_vibrate", R.string.tc_channel_evening,
+        R.string.tc_channel_evening_vibrate, R.string.tc_channel_evening_description,
+        NotificationManager.IMPORTANCE_DEFAULT,
+    )
+    /** Каналы до 0.13: со стандартным звуком телефона. */
+    private val OLD_CHANNELS = listOf("reminders", "morning")
     private const val ID_ONGOING = 1
     private const val ID_MORNING = 2
     private const val ID_PLAN = 3
+    private const val ID_PREVIEW = 4
+    private const val ID_EVENING = 5
     private const val ID_REMINDER = 100
+    private const val ID_ENDING = 200
+
+    /** Короткая двойная вибрация — заметно в кармане, но не тревожно. */
+    private val VIBRATION = longArrayOf(0, 180, 120, 180)
 
     /** Расписание в шторке появляется за час до первого урока. */
     private const val ONGOING_AHEAD = 60 * 60_000L
 
     /** Утренняя сводка не приходит, если опоздала больше чем на два часа (телефон был выключен). */
     private const val MORNING_WINDOW = 2 * 60 * 60_000L
+
+    /** Вечерняя сводка опоздавшей не приходит позже чем через три часа — и не после полуночи. */
+    private const val EVENING_WINDOW = 3 * 60 * 60_000L
 
     fun refresh(context: Context) {
         val app = context.applicationContext
@@ -46,7 +92,9 @@ object Scheduler {
         }
         ongoing(app, plan, now)
         reminder(app, plan, now)
+        ending(app, plan, now)
         morning(app, plan, now)
+        evening(app, plan, now)
         expiry(app, plan, now)
         Widgets.updateAll(app, plan, now)
         schedule(app, next(plan, now))
@@ -62,26 +110,66 @@ object Scheduler {
         )
         schedule.description = context.getString(R.string.tc_channel_schedule_description)
         schedule.setShowBadge(false)
-        val reminders = NotificationChannel(
-            CHANNEL_REMINDERS,
-            context.getString(R.string.tc_channel_reminders),
-            NotificationManager.IMPORTANCE_HIGH,
-        )
-        reminders.description = context.getString(R.string.tc_channel_reminders_description)
-        val morning = NotificationChannel(
-            CHANNEL_MORNING,
-            context.getString(R.string.tc_channel_morning),
-            NotificationManager.IMPORTANCE_DEFAULT,
-        )
-        morning.description = context.getString(R.string.tc_channel_morning_description)
         val plan = NotificationChannel(
             CHANNEL_PLAN,
             context.getString(R.string.tc_channel_plan),
             NotificationManager.IMPORTANCE_DEFAULT,
         )
         plan.description = context.getString(R.string.tc_channel_plan_description)
-        manager.createNotificationChannels(listOf(schedule, reminders, morning, plan))
+        val alerting = listOf(REMINDERS, ENDING, MORNING, EVENING).flatMap {
+            listOf(
+                channel(context, it.chime, it.name, it, true),
+                channel(context, it.vibrate, it.quietName, it, false),
+            )
+        }
+        manager.createNotificationChannels(listOf(schedule) + alerting + plan)
+        for (id in OLD_CHANNELS) manager.deleteNotificationChannel(id)
     }
+
+    private fun channel(
+        context: Context,
+        id: String,
+        name: Int,
+        kind: Alerting,
+        chime: Boolean,
+    ): NotificationChannel {
+        val channel = NotificationChannel(id, context.getString(name), kind.importance)
+        channel.description = context.getString(kind.description)
+        channel.setSound(if (chime) chimeUri(context) else null, if (chime) chimeAudio() else null)
+        channel.enableVibration(true)
+        channel.vibrationPattern = VIBRATION
+        return channel
+    }
+
+    private fun chimeUri(context: Context): Uri =
+        Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.tc_chime}")
+
+    private fun chimeAudio(): AudioAttributes =
+        AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+    /**
+     * Канал под выбранный звук, а для Android 7 и старше — звук и вибрация прямо в уведомлении:
+     * там каналов нет.
+     */
+    private fun alert(context: Context, kind: Alerting, sound: Sound): NotificationCompat.Builder {
+        val builder = base(context, if (sound == Sound.CHIME) kind.chime else kind.vibrate)
+        when (sound) {
+            Sound.CHIME -> builder.setSound(chimeUri(context), AudioManager.STREAM_NOTIFICATION)
+                .setVibrate(VIBRATION)
+            Sound.VIBRATE -> builder.setVibrate(VIBRATION)
+            Sound.SILENT -> builder.setSilent(true)
+        }
+        return builder
+    }
+
+    /** «Тихо во время уроков»: пока идёт урок, перезвон заменяется вибрацией. */
+    private fun quieted(plan: Plan, now: Long, sound: Sound): Sound =
+        if (sound == Sound.CHIME && plan.prefs.quiet && Moment.of(plan, now) is Moment.During)
+            Sound.VIBRATE
+        else sound
 
     fun openApp(context: Context, request: Int): PendingIntent? {
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -172,22 +260,67 @@ object Scheduler {
         if (Plan.shown(context, key)) return
         Plan.markShown(context, key)
         val left = ((lesson.start - now + 59_999) / 60_000).toInt()
+        val builder = reminderContent(context, quieted(plan, now, plan.prefs.remindSound), lesson, left)
+            .setTimeoutAfter(lesson.start + 10 * 60_000L - now)
+        notify(context, ID_REMINDER + lesson.number, builder)
+    }
+
+    private fun reminderContent(
+        context: Context,
+        sound: Sound,
+        lesson: Lesson,
+        left: Int,
+    ): NotificationCompat.Builder {
         val detail = listOfNotNull(
             "${lesson.number}-й урок в ${lesson.startText}",
             lesson.subject.takeIf { it.isNotBlank() },
         ).joinToString(" · ")
-        val builder = base(context, CHANNEL_REMINDERS)
+        return alert(context, REMINDERS, sound)
             .setContentTitle("Через $left мин — ${lesson.title}")
             .setContentText(detail)
             .setStyle(NotificationCompat.BigTextStyle().bigText(withNote(detail, lesson)))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
-            .setTimeoutAfter(lesson.start + 10 * 60_000L - now)
-        notify(context, ID_REMINDER + lesson.number, builder)
     }
 
-    /** Утром — сколько сегодня уроков и когда первый. */
+    /** «Через 5 мин звонок — пора подводить итоги и задавать ДЗ» за `ending` минут до конца урока. */
+    private fun ending(context: Context, plan: Plan, now: Long) {
+        val minutes = plan.prefs.ending
+        if (minutes <= 0) return
+        val moment = Moment.of(plan, now) as? Moment.During ?: return
+        val lesson = moment.lesson
+        if (now < lesson.end - minutes * 60_000L) return
+        val key = "${Plan.dateKey(now)}:ending:${lesson.number}"
+        if (Plan.shown(context, key)) return
+        Plan.markShown(context, key)
+        val left = ((lesson.end - now + 59_999) / 60_000).toInt()
+        val builder = endingContent(context, plan, quieted(plan, now, plan.prefs.endingSound), moment, left)
+            .setTimeoutAfter(lesson.end + 60_000L - now)
+        notify(context, ID_ENDING + lesson.number, builder)
+    }
+
+    private fun endingContent(
+        context: Context,
+        plan: Plan,
+        sound: Sound,
+        moment: Moment.During,
+        left: Int,
+    ): NotificationCompat.Builder {
+        val lesson = moment.lesson
+        val message = plan.prefs.endingText
+        val detail = "${lesson.number}-й урок до ${lesson.endText} · " +
+            (moment.next?.let { "далее ${it.className} в ${it.startText}" } ?: "последний урок")
+        return alert(context, ENDING, sound)
+            .setContentTitle("Через $left мин звонок — ${lesson.className}")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$message\n$detail"))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+    }
+
+    /** Утром — какой сегодня день, сколько уроков, какой первый и во сколько. */
     private fun morning(context: Context, plan: Plan, now: Long) {
         if (!plan.prefs.morning) return
         val day = plan.day(now) ?: return
@@ -198,19 +331,100 @@ object Scheduler {
         val key = "${day.date}:morning"
         if (Plan.shown(context, key)) return
         Plan.markShown(context, key)
-        val list = day.lessons.joinToString("\n") {
-            "${it.number}. ${it.startText}  ${it.title}" +
-                if (it.subject.isNotBlank()) " · ${it.subject}" else ""
-        }
-        val title = "Сегодня ${Words.lessons(day.lessons.size)}" +
-            if (day.short) " · сокращённые" else ""
-        val builder = base(context, CHANNEL_MORNING)
-            .setContentTitle(title)
-            .setContentText("${first.startText}–${day.lessons.last().endText} · первый ${first.title}")
-            .setStyle(NotificationCompat.BigTextStyle().bigText(list))
-            .setAutoCancel(true)
+        val sound = quieted(plan, now, plan.prefs.morningSound)
+        val builder = summary(context, MORNING, sound, day, "Сегодня")
             .setTimeoutAfter(first.start - now)
         notify(context, ID_MORNING, builder)
+    }
+
+    /** Вечером — что завтра: день, сколько уроков, первый урок и заметки. */
+    private fun evening(context: Context, plan: Plan, now: Long) {
+        if (!plan.prefs.evening) return
+        val at = Plan.midnight(Plan.dateKey(now))!! + plan.prefs.eveningAt * 60_000L
+        if (now < at || now > at + EVENING_WINDOW) return
+        val tomorrow = plan.day(Plan.nextMidnight(now)) ?: return
+        if (tomorrow.lessons.isEmpty()) return
+        val key = "${tomorrow.date}:evening"
+        if (Plan.shown(context, key)) return
+        Plan.markShown(context, key)
+        val sound = quieted(plan, now, plan.prefs.eveningSound)
+        val builder = summary(context, EVENING, sound, tomorrow, "Завтра")
+            .setTimeoutAfter(tomorrow.lessons.first().start - now)
+        notify(context, ID_EVENING, builder)
+    }
+
+    /**
+     * «Сегодня понедельник · 5 уроков», «Первый — 1-й урок в 08:30: 7Б · каб. 214»
+     * и все уроки списком, с заметками.
+     */
+    private fun summary(
+        context: Context,
+        kind: Alerting,
+        sound: Sound,
+        day: Day,
+        heading: String,
+    ): NotificationCompat.Builder {
+        val first = day.lessons.first()
+        val list = day.lessons.joinToString("\n") {
+            "${it.number}. ${it.startText}  ${it.title}" +
+                (if (it.subject.isNotBlank()) " · ${it.subject}" else "") +
+                if (it.note.isNotBlank()) "\n     ✎ ${it.note}" else ""
+        }
+        val title = "$heading ${Words.weekday(day)} · ${Words.lessons(day.lessons.size)}" +
+            if (day.short) " · сокращённые" else ""
+        val notes = day.lessons.count { it.note.isNotBlank() }
+        val text = "Первый — ${first.number}-й урок в ${first.startText}: ${first.title}" +
+            if (notes > 0) " · заметок: $notes" else ""
+        return alert(context, kind, sound)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\n$list"))
+            .setAutoCancel(true)
+    }
+
+    /**
+     * «Проверить звук» в настройках: настоящее уведомление выбранного вида — на ближайших
+     * уроках из плана, чтобы было видно и как оно выглядит.
+     */
+    fun preview(context: Context, kind: String, sound: Sound) {
+        val app = context.applicationContext
+        channels(app)
+        val plan = Plan.load(app)
+        val now = System.currentTimeMillis()
+        val day = plan?.let { p -> p.day(now)?.takeIf { it.lessons.isNotEmpty() } ?: p.nextSchoolDay(now) }
+        val builder = when (kind) {
+            "morning", "evening" -> {
+                val type = if (kind == "morning") MORNING else EVENING
+                if (day != null) summary(app, type, sound, day, "Пример:")
+                else alert(app, type, sound)
+                    .setContentTitle(if (kind == "morning") "Пример утренней сводки" else "Пример сводки на завтра")
+                    .setContentText("Здесь будут день недели, уроки и время первого")
+                    .setAutoCancel(true)
+            }
+            "ending" -> {
+                val moment = plan?.let { Moment.of(it, now) } as? Moment.During
+                val lessons = day?.lessons.orEmpty()
+                val sample = moment ?: lessons.firstOrNull()?.let { Moment.During(it, lessons.getOrNull(1)) }
+                val minutes = plan?.prefs?.ending?.takeIf { it > 0 } ?: 5
+                if (plan != null && sample != null) endingContent(app, plan, sound, sample, minutes)
+                else alert(app, ENDING, sound)
+                    .setContentTitle("Через $minutes мин звонок")
+                    .setContentText(plan?.prefs?.endingText ?: Prefs.ENDING_TEXT)
+                    .setAutoCancel(true)
+            }
+            else -> {
+                val lesson = day?.lessons?.firstOrNull { it.start > now } ?: day?.lessons?.firstOrNull()
+                val minutes = plan?.prefs?.remind?.takeIf { it > 0 } ?: 5
+                if (lesson != null) reminderContent(app, sound, lesson, minutes)
+                else alert(app, REMINDERS, sound)
+                    .setContentTitle("Через $minutes мин — урок")
+                    .setContentText("Пример напоминания перед уроком")
+                    .setAutoCancel(true)
+            }
+        }
+        // Повторное нажатие — снова со звуком, а не тихое обновление прежнего.
+        NotificationManagerCompat.from(app).cancel(ID_PREVIEW)
+        notify(app, ID_PREVIEW, builder.setTimeoutAfter(30_000L))
     }
 
     /**
@@ -254,6 +468,8 @@ object Scheduler {
         times.add(Plan.nextMidnight(now))
         for (day in plan.days) {
             if (day.dayStart > now + 2 * 86_400_000L) break
+            // Вечерняя сводка — каждый вечер: есть ли уроки завтра, решается в evening().
+            if (plan.prefs.evening) times.add(day.dayStart + plan.prefs.eveningAt * 60_000L)
             val first = day.lessons.firstOrNull()
             if (first != null) {
                 times.add(first.start - ONGOING_AHEAD)
@@ -263,6 +479,7 @@ object Scheduler {
                 times.add(l.start)
                 times.add(l.end)
                 if (plan.prefs.remind > 0) times.add(l.start - plan.prefs.remind * 60_000L)
+                if (plan.prefs.ending > 0) times.add(l.end - plan.prefs.ending * 60_000L)
             }
         }
         // Во время урока полоска прогресса в шторке обновляется раз в 5 минут.

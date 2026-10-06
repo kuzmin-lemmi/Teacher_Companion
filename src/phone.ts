@@ -6,14 +6,30 @@ import { isMobile } from './desktop';
  * Плагин не считает расписание сам — получает готовый план на несколько недель, поэтому
  * каникулы, сокращённые дни и заметки учитываются так же, как в приложении.
  */
+/** Как звучит уведомление: мягкий перезвон, только вибрация или беззвучно. */
+export type PhoneSound = 'chime' | 'vibrate' | 'silent';
 export type PhoneSettings = {
   /** Текущий или следующий урок в шторке и на экране блокировки. */
   ongoing: boolean;
   /** За сколько минут напомнить об уроке; 0 — не напоминать. */
   remind: number;
+  remindSound: PhoneSound;
+  /** За сколько минут до конца урока напомнить про итоги и ДЗ; 0 — не напоминать. */
+  ending: number;
+  endingSound: PhoneSound;
+  endingText: string;
   morning: boolean;
   morningTime: string;
+  morningSound: PhoneSound;
+  /** Вечером — сводка на завтра. */
+  evening: boolean;
+  eveningTime: string;
+  eveningSound: PhoneSound;
+  /** Во время урока перезвон заменяется вибрацией. */
+  quiet: boolean;
 };
+export type PhonePreview = 'remind' | 'ending' | 'morning' | 'evening';
+export const ENDING_TEXT = 'Пора подводить итоги и задавать ДЗ';
 export type PhoneStatus = {
   notifications: boolean;
   exact: boolean;
@@ -26,8 +42,18 @@ const KEY = 'teacher-companion-phone-v1';
 export const defaultPhoneSettings: PhoneSettings = {
   ongoing: true,
   remind: 5,
+  remindSound: 'chime',
+  // На уроке звук ни к чему — только вибрация.
+  ending: 5,
+  endingSound: 'vibrate',
+  endingText: ENDING_TEXT,
   morning: false,
   morningTime: '07:30',
+  morningSound: 'chime',
+  evening: false,
+  eveningTime: '19:00',
+  eveningSound: 'chime',
+  quiet: true,
 };
 export function loadPhoneSettings(): PhoneSettings {
   try {
@@ -100,6 +126,10 @@ export async function allowNotifications() {
 }
 export async function allowBackground() {
   if (phone()) await call('battery');
+}
+/** Пример уведомления выбранного вида и звука — прямо в шторке. */
+export async function previewSound(kind: PhonePreview, sound: PhoneSound) {
+  if (phone()) await call('preview', { kind, sound });
 }
 /** Предложить лаунчеру поставить виджет. `false` — лаунчер так не умеет. */
 export async function pinWidget(kind: 'now' | 'day'): Promise<boolean> {

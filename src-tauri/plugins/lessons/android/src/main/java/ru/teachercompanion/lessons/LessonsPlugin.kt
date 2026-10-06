@@ -33,6 +33,14 @@ class PinArgs {
     var kind: String? = null
 }
 
+@InvokeArg
+class PreviewArgs {
+    /** `remind` или `morning` */
+    var kind: String? = null
+    /** `chime`, `vibrate` или `silent` */
+    var sound: String? = null
+}
+
 /** Команды для приложения: `plugin:lessons|sync` и другие (src/phone.ts). */
 @TauriPlugin
 class LessonsPlugin(private val activity: Activity) : Plugin(activity) {
@@ -112,6 +120,14 @@ class LessonsPlugin(private val activity: Activity) : Plugin(activity) {
                     .setData(Uri.parse("package:${activity.packageName}")),
             )
         else start(appDetails())
+        invoke.resolve()
+    }
+
+    /** Показать пример напоминания или утренней сводки — услышать выбранный звук. */
+    @Command
+    fun preview(invoke: Invoke) {
+        val args = invoke.parseArgs(PreviewArgs::class.java)
+        Scheduler.preview(activity, args.kind ?: "remind", Sound.of(args.sound ?: ""))
         invoke.resolve()
     }
 

@@ -48,7 +48,37 @@ class Prefs(
     val morning: Boolean,
     /** Минуты от полуночи. */
     val morningAt: Int,
-)
+    val remindSound: Sound = Sound.CHIME,
+    val morningSound: Sound = Sound.CHIME,
+    /** За сколько минут до конца урока напомнить про итоги и ДЗ; 0 — не напоминать. */
+    val ending: Int = 0,
+    val endingSound: Sound = Sound.VIBRATE,
+    val endingText: String = ENDING_TEXT,
+    /** Сводка на завтра вечером. */
+    val evening: Boolean = false,
+    /** Минуты от полуночи. */
+    val eveningAt: Int = 19 * 60,
+    val eveningSound: Sound = Sound.CHIME,
+    /** Во время урока перезвон заменяется вибрацией. */
+    val quiet: Boolean = true,
+) {
+    companion object {
+        const val ENDING_TEXT = "Пора подводить итоги и задавать ДЗ"
+    }
+}
+
+/** Как заявляет о себе уведомление: мягкий перезвон, только вибрация или беззвучно. */
+enum class Sound {
+    CHIME, VIBRATE, SILENT;
+
+    companion object {
+        fun of(text: String): Sound = when (text) {
+            "vibrate" -> VIBRATE
+            "silent" -> SILENT
+            else -> CHIME
+        }
+    }
+}
 
 class Plan(val days: List<Day>, val prefs: Prefs) {
     /** Последний день плана: дальше телефон расписания не знает, пока не откроют приложение. */
@@ -128,6 +158,15 @@ class Plan(val days: List<Day>, val prefs: Prefs) {
                 remind = s.optInt("remind", 5),
                 morning = s.optBoolean("morning", false),
                 morningAt = minutes(s.optString("morningTime", "07:30")) ?: (7 * 60 + 30),
+                remindSound = Sound.of(s.optString("remindSound")),
+                morningSound = Sound.of(s.optString("morningSound")),
+                ending = s.optInt("ending", 0),
+                endingSound = Sound.of(s.optString("endingSound", "vibrate")),
+                endingText = s.optString("endingText").trim().ifEmpty { Prefs.ENDING_TEXT },
+                evening = s.optBoolean("evening", false),
+                eveningAt = minutes(s.optString("eveningTime", "19:00")) ?: (19 * 60),
+                eveningSound = Sound.of(s.optString("eveningSound")),
+                quiet = s.optBoolean("quiet", true),
             )
             val days = ArrayList<Day>()
             val list = root.getJSONArray("days")
@@ -264,6 +303,13 @@ object Words {
             days < 7 -> "$on $name"
             else -> "$on $name, ${c.get(Calendar.DAY_OF_MONTH)} ${months[c.get(Calendar.MONTH)]}"
         }
+    }
+
+    /** «вторник» */
+    fun weekday(day: Day): String {
+        val c = Calendar.getInstance()
+        c.timeInMillis = day.dayStart
+        return weekdays[c.get(Calendar.DAY_OF_WEEK) - 1]
     }
 
     /** «Вторник, 29 сентября» */
