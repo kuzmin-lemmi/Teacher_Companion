@@ -1,15 +1,14 @@
 name: Release
+# Тег vX.Y.Z → Windows (установщик, переносной EXE, latest.json) и Android (APK) на одной
+# странице релиза. Если не собралось что-то одно, релиз не публикуется вовсе.
 on:
   push:
     tags: ['v*']
 permissions:
   contents: write
 jobs:
-  release:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
+  check:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Tag matches app version
@@ -17,6 +16,18 @@ jobs:
           version=$(node -p "require('./package.json').version")
           test "v$version" = "$GITHUB_REF_NAME" || { echo "Тег $GITHUB_REF_NAME не совпадает с версией $version"; exit 1; }
           test -f "docs/releases/$GITHUB_REF_NAME.md" || { echo "Нет docs/releases/$GITHUB_REF_NAME.md"; exit 1; }
+  android:
+    needs: check
+    uses: ./.github/workflows/android.yml
+    secrets: inherit
+  windows:
+    needs: check
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -42,12 +53,45 @@ jobs:
           cp "$setup" release/TeacherCompanion-Setup.exe
           node scripts/latest-json.mjs "$GITHUB_REF_NAME" "$setup.sig" release/latest.json
           cp src-tauri/target/release/teacher-companion.exe release/TeacherCompanion-Portable.exe
-          (cd release && sha256sum *.exe | sed 's/ \*/  /' > SHA256SUMS.txt && cat SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: release/
+          if-no-files-found: error
+  publish:
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Checksums
+        run: cd release && ls -l && sha256sum *.exe *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create "$GITHUB_REF_NAME"
-          release/TeacherCompanion-Setup.exe release/TeacherCompanion-Portable.exe release/SHA256SUMS.txt release/latest.json
+          release/TeacherCompanion-Setup.exe release/TeacherCompanion-Portable.exe
+          release/TeacherCompanion-Android.apk release/SHA256SUMS.txt release/latest.json
           --title "Помощник учителя ${GITHUB_REF_NAME}"
           --notes-file "docs/releases/$GITHUB_REF_NAME.md"
+      # До 0.13.0 Android выкладывался на пре-релиз android-preview. Ссылки на него остались
+      # у тех, кто ставил пробную версию, — там всегда лежит свежий APK и ссылка сюда.
+      - name: Refresh the old android-preview page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view android-preview >/dev/null 2>&1 || exit 0
+          repo="https://github.com/${GITHUB_REPOSITORY}"
+          cat > preview.md <<EOF
+          **Android-версия вышла из пробной.** Теперь она выходит вместе с Windows в обычных релизах:
+
+          ### [⬇ Скачать для Android](${repo}/releases/latest/download/TeacherCompanion-Android.apk)
+
+          Здесь лежит та же последняя версия (${GITHUB_REF_NAME}), чтобы старая ссылка продолжала работать. Установите поверх — расписание и заметки сохранятся. Все версии и что в них нового — на [странице релизов](${repo}/releases).
+          EOF
+          gh release edit android-preview --prerelease --title "Android — перенесено в обычные релизы" --notes-file preview.md
+          gh release upload android-preview release/TeacherCompanion-Android.apk --clobber

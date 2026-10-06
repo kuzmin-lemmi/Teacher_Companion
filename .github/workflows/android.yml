@@ -1,13 +1,14 @@
-name: Android (пробная версия)
-# Собирает APK и выкладывает его на страницу пре-релиза android-preview.
-# Это не «последний релиз»: Windows-обновления и ссылка «Скачать для Windows» его не видят.
+name: Android
+# Собирает APK. При изменениях в main и android — проверка сборки: подписанный APK лежит
+# в артефактах запуска. Из Release (тег vX.Y.Z) — APK для страницы релиза рядом с Windows.
 on:
   workflow_dispatch:
+  workflow_call:
   push:
     branches: [main, android]
     paths-ignore: ['**.md', 'docs/**']
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: true
@@ -16,10 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NDK_VERSION: 27.0.11902837
-      # Без ключа APK собирается, но не подписывается и не публикуется — только проверка сборки.
+      # Без ключа APK собирается, но не подписывается — только проверка сборки.
       HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
+      # Для релиза нужен APK, который встанет поверх прежнего, — только подписанный тем же ключом.
+      - name: Signing key is configured
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: test "$HAS_KEY" = true || { echo "Добавьте секреты ANDROID_KEYSTORE_BASE64 и ANDROID_KEYSTORE_PASSWORD"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -84,27 +89,11 @@ jobs:
             --out TeacherCompanion-Android.apk "$RUNNER_TEMP/aligned.apk"
           rm -f "$key"
           "$tools/apksigner" verify --print-certs TeacherCompanion-Android.apk
-      - name: Publish to android-preview
+      # Release забирает этот артефакт на страницу релиза.
+      - name: Upload signed APK
         if: env.HAS_KEY == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag=android-preview
-          version=$(node -p "require('./package.json').version")
-          cat > notes.md <<EOF
-          Пробная версия **Помощника учителя для Android** — для проверки на своём телефоне.
-
-          **Установка:** откройте эту страницу на телефоне, нажмите **TeacherCompanion-Android.apk** в разделе Assets и установите. Телефон попросит разрешить установку из браузера — это нормально для приложений не из магазина.
-
-          **Обновление:** скачайте файл по той же ссылке и установите поверх — расписание и заметки сохранятся.
-
-          Версия $version · сборка ${GITHUB_SHA::7} · $(date -u +'%d.%m.%Y %H:%M') UTC
-          EOF
-          git tag -f "$tag"
-          git push -f origin "refs/tags/$tag"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --prerelease --notes-file notes.md
-          else
-            gh release create "$tag" --prerelease --title "Android — пробная версия" --notes-file notes.md
-          fi
-          gh release upload "$tag" TeacherCompanion-Android.apk --clobber
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: TeacherCompanion-Android.apk
+          if-no-files-found: error

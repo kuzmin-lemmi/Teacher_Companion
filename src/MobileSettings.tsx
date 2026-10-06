@@ -595,14 +595,14 @@ function AboutPage() {
     <div className="m-about">
       <span className="brand-icon">У</span>
       <h2>Помощник учителя</h2>
-      <p>Версия {appVersion} · пробная версия для Android</p>
+      <p>Версия {appVersion} для Android</p>
       <p className="m-hint">
         Расписание хранится только на этом телефоне и работает без интернета. Приложение не
         отправляет данные на сервер и не требует аккаунта.
       </p>
       <p className="m-hint">
-        Новую версию скачайте по той же ссылке, что и первую, и установите поверх — расписание и
-        заметки сохранятся.
+        Новые версии — на странице github.com/kuzmin-lemmi/Teacher_Companion/releases: скачайте
+        TeacherCompanion-Android.apk и установите поверх — расписание и заметки сохранятся.
       </p>
     </div>
   );
