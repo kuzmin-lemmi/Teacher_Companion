@@ -221,8 +221,50 @@ it('пустой день копируется из другого, неделя
   );
   await user.click(screen.getByRole('button', { name: 'Неделя' }));
   await user.click(screen.getByLabelText('Добавить урок 2, Среда'));
-  expect(screen.getByRole('button', { name: /^Среда/ }).getAttribute('aria-pressed')).toBe('true');
+  // Урок заполняется прямо в сетке недели, без перехода в «День».
+  expect(screen.getByRole('button', { name: 'Неделя' }).getAttribute('aria-pressed')).toBe('true');
   const field = await screen.findByLabelText('Класс *');
   expect(document.activeElement).toBe(field);
-  expect((screen.getByLabelText('Номер урока 1') as HTMLInputElement).value).toBe('2');
+  await user.type(field, '7Б{Enter}');
+  // Enter открывает урок ниже; Esc закрывает его, а пустой урок не остаётся.
+  await user.type(await screen.findByLabelText('Класс *'), '8В{Escape}');
+  await waitFor(() =>
+    expect(
+      state()!
+        .lessons.filter((l) => l.weekday === 3)
+        .map((l) => [l.lessonNumber, l.className]),
+    ).toEqual([
+      [2, '7Б'],
+      [3, '8В'],
+    ]),
+  );
+  await user.click(screen.getByLabelText('Добавить урок 5, Среда'));
+  await user.keyboard('{Escape}');
+  expect(screen.queryByLabelText('Класс *')).toBeNull();
+  await waitFor(() => expect(state()!.lessons.filter((l) => l.weekday === 3)).toHaveLength(2));
+});
+it('в неделе урок копируется Ctrl+C / Ctrl+V и удаляется Delete', async () => {
+  const { storage, state } = memory();
+  const user = userEvent.setup();
+  render(<App storage={storage} />);
+  await screen.findByText('Здесь будет расписание');
+  await user.click(screen.getByRole('button', { name: 'Неделя' }));
+  await user.click(screen.getByLabelText('Добавить урок 1, Понедельник'));
+  await user.type(screen.getByLabelText('Класс *'), '10А{Escape}');
+  await user.keyboard('{Control>}c{/Control}{ArrowRight}{Control>}v{/Control}');
+  await waitFor(() =>
+    expect(
+      state()!
+        .lessons.map((l) => [l.weekday, l.className])
+        .sort(),
+    ).toEqual([
+      [1, '10А'],
+      [2, '10А'],
+    ]),
+  );
+  await user.keyboard('{Delete}');
+  await waitFor(() => expect(state()!.lessons.map((l) => l.weekday)).toEqual([1]));
+  // Набор текста на клетке сразу начинает ввод класса.
+  await user.keyboard('{ArrowDown}9');
+  expect((screen.getByLabelText('Класс *') as HTMLInputElement).value).toBe('9');
 });

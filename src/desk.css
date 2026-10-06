@@ -542,6 +542,98 @@
 .ed .ed-cell[data-color-tag] {
   background: var(--tag-bg);
 }
+.ed-week td {
+  position: relative;
+}
+.ed .ed-cell.sel,
+.ed .ed-cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  opacity: 1;
+}
+.ed-week.dragging,
+.ed-week.dragging * {
+  cursor: grabbing;
+  user-select: none;
+}
+.ed .ed-cell.lifted {
+  opacity: 0.4;
+}
+.ed .ed-cell.drop {
+  outline: 2px dashed var(--accent);
+  outline-offset: -1px;
+  opacity: 1;
+  color: var(--text);
+}
+.ed .ed-cell.drop.copy {
+  outline-style: solid;
+}
+/* Крестик удаления появляется при наведении на урок */
+.ed .ed-cell-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  padding: 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  line-height: 0;
+}
+.ed-week td:hover .ed-cell-del {
+  display: block;
+}
+.ed-week.dragging td:hover .ed-cell-del {
+  display: none;
+}
+.ed .ed-cell-del:hover {
+  color: var(--danger, #e5484d);
+  background: var(--line-soft);
+}
+/* Урок, открытый для ввода прямо в клетке */
+.ed .ed-cell-edit {
+  gap: 2px;
+  padding: 3px 4px;
+  cursor: default;
+}
+.ed .ed-cell-edit input {
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--bg);
+  font-size: 11px;
+}
+.ed .ed-cell-edit input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.ed .ed-cell-edit input[data-field='class'] {
+  font-size: 13px;
+  font-weight: 700;
+}
+.ed .ed-cell-edit > div {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+}
+.ed .ed-cell-edit input[data-field='room'] {
+  flex: 0 0 52px;
+}
+.ed .ed-cell-edit .ed-icon {
+  flex: none;
+  padding: 0 3px;
+}
+.ed-week-hint kbd {
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+}
 
 /* Звонки, каникулы: плотные карточки и строки-сетки */
 .ed-card {

@@ -15,6 +15,7 @@ import {
 } from './domain';
 import type { Storage } from './storage';
 import { useEditor } from './useEditor';
+import { WeekGrid } from './WeekGrid';
 type Props = {
   storage?: Storage;
   initialTab?: Tab;
@@ -528,15 +529,13 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
               mode === 'week' ? (
                 <WeekGrid
                   data={data}
-                  onOpen={(weekday, id) => {
+                  change={change}
+                  defaults={defaults}
+                  onStatus={setStatus}
+                  onOpenDay={(weekday, id) => {
                     setDay(weekday);
                     setMode('day');
                     setFocusId(id);
-                  }}
-                  onAdd={(weekday, number) => {
-                    setDay(weekday);
-                    setMode('day');
-                    addLesson(number, weekday);
                   }}
                 />
               ) : !lessons.length ? (
@@ -915,85 +914,5 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
         </>
       )}
     </div>
-  );
-}
-/** Неделя целиком: уроки по дням и номерам. Нажатие открывает урок, пустая клетка добавляет его. */
-function WeekGrid({
-  data,
-  onOpen,
-  onAdd,
-}: {
-  data: AppData;
-  onOpen: (weekday: number, id: string) => void;
-  onAdd: (weekday: number, number: number) => void;
-}) {
-  const last = Math.max(
-    6,
-    ...data.lessons.map((l) => l.lessonNumber),
-    ...data.bells.map((b) => b.lessonNumber),
-  );
-  const numbers = Array.from({ length: Math.min(last, 12) }, (_, i) => i + 1);
-  return (
-    <table className="ed-week">
-      <thead>
-        <tr>
-          <th>№</th>
-          {weekdays.map((name, i) => (
-            <th key={name} title={name}>
-              {shortDay[i]}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {numbers.map((n) => {
-          const bell = data.bells.find((b) => b.lessonNumber === n);
-          return (
-            <tr key={n}>
-              <th scope="row">
-                {n}
-                {bell && <small>{bell.start}</small>}
-              </th>
-              {weekdays.map((name, i) => {
-                const lesson = data.lessons.find(
-                  (l) => l.weekday === i + 1 && l.lessonNumber === n,
-                );
-                if (!lesson)
-                  return (
-                    <td key={name}>
-                      <button
-                        className="ed-cell blank"
-                        aria-label={`Добавить урок ${n}, ${name}`}
-                        onClick={() => onAdd(i + 1, n)}
-                      >
-                        +
-                      </button>
-                    </td>
-                  );
-                return (
-                  <td key={name}>
-                    <button
-                      className="ed-cell"
-                      data-color-tag={
-                        data.settings ? lessonColor(lesson, data.settings) : undefined
-                      }
-                      title={`${name}, урок ${n}`}
-                      onClick={() => onOpen(i + 1, lesson.id)}
-                    >
-                      <b>{lesson.className || '—'}</b>
-                      <span>
-                        {[lesson.subject, lesson.room && `каб. ${lesson.room}`]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </button>
-                  </td>
-                );
-              })}
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
   );
 }
