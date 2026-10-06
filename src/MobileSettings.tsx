@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useBackButton } from './back';
 import { Backups } from './Backups';
 import { lessonCount } from './calendar';
@@ -19,7 +19,7 @@ import {
   notifyTitles,
   type NotifyKind,
 } from './MobileNotify';
-import { loadPhoneSettings } from './phone';
+import { installSource, loadPhoneSettings, type InstallSource } from './phone';
 import type { Storage } from './storage';
 import { useEditor } from './useEditor';
 import { appVersion } from './version';
@@ -274,6 +274,13 @@ function PreferencesPage({
   );
 }
 function AboutPage() {
+  // Пока не узнали, откуда установлено, — без подсказки про обновления, чтобы не мигала.
+  const [source, setSource] = useState<InstallSource | null>(null);
+  useEffect(() => {
+    installSource()
+      .then(setSource)
+      .catch(() => setSource('file'));
+  }, []);
   return (
     <div className="m-about">
       <span className="brand-icon">У</span>
@@ -283,10 +290,15 @@ function AboutPage() {
         Расписание хранится только на этом телефоне и работает без интернета. Приложение не
         отправляет данные на сервер и не требует аккаунта.
       </p>
-      <p className="m-hint">
-        Новые версии — на странице github.com/kuzmin-lemmi/Teacher_Companion/releases: скачайте
-        TeacherCompanion-Android.apk и установите поверх — расписание и заметки сохранятся.
-      </p>
+      {source === 'rustore' && (
+        <p className="m-hint">Новые версии приходят через RuStore, как у других приложений.</p>
+      )}
+      {source === 'file' && (
+        <p className="m-hint">
+          Новые версии — на странице github.com/kuzmin-lemmi/Teacher_Companion/releases: скачайте
+          TeacherCompanion-Android.apk и установите поверх — расписание и заметки сохранятся.
+        </p>
+      )}
     </div>
   );
 }

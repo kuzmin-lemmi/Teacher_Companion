@@ -137,6 +137,7 @@ React / TypeScript
 
 - [Инструкция по установке и использованию](docs/GUIDE.md)
 - [Android: установка, перенос по QR-коду, уведомления и виджеты](docs/ANDROID.md)
+- [Публикация в RuStore](docs/RUSTORE.md) · [Политика конфиденциальности](docs/PRIVACY.md) · [План платных функций](docs/MONETIZATION.md)
 - [PRD и согласованные решения](PRD.md)
 - [Архитектура и хранение данных](docs/ARCHITECTURE.md)
 - [План развития](docs/ROADMAP.md)

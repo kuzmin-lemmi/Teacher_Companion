@@ -131,6 +131,16 @@ export async function allowBackground() {
 export async function previewSound(kind: PhonePreview, sound: PhoneSound) {
   if (phone()) await call('preview', { kind, sound });
 }
+/**
+ * Откуда установлено приложение: из RuStore или файлом APK (с GitHub). От этого зависит,
+ * где искать новые версии, — RuStore не разрешает ссылки на скачивание в обход магазина.
+ */
+export type InstallSource = 'rustore' | 'file';
+export async function installSource(): Promise<InstallSource> {
+  if (!phone()) return 'file';
+  const { installer } = await call<{ installer: string }>('installer');
+  return installer === 'ru.vk.store' ? 'rustore' : 'file';
+}
 /** Предложить лаунчеру поставить виджет. `false` — лаунчер так не умеет. */
 export async function pinWidget(kind: 'now' | 'day'): Promise<boolean> {
   if (!phone()) return false;

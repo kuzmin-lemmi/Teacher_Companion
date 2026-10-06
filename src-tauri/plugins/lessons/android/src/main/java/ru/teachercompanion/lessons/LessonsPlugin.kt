@@ -131,6 +131,26 @@ class LessonsPlugin(private val activity: Activity) : Plugin(activity) {
         invoke.resolve()
     }
 
+    /**
+     * Кто установил приложение: `ru.vk.store` — RuStore, пусто — файл APK из браузера.
+     * В версии из магазина нет ссылок на скачивание APK — обновления приходят через магазин.
+     */
+    @Suppress("DEPRECATION")
+    @Command
+    fun installer(invoke: Invoke) {
+        val name = activity.packageName
+        val source = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                activity.packageManager.getInstallSourceInfo(name).installingPackageName
+            else activity.packageManager.getInstallerPackageName(name)
+        } catch (e: Exception) {
+            null
+        }
+        val result = JSObject()
+        result.put("installer", source ?: "")
+        invoke.resolve(result)
+    }
+
     /** Предложить лаунчеру поставить виджет на рабочий стол. */
     @Command
     fun pin(invoke: Invoke) {

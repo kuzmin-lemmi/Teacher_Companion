@@ -68,9 +68,10 @@ class MainActivity : TauriActivity() {
 console.log(`Обновлён ${file}`);
 
 // Названия берутся из productName: «Teacher Companion» под значком обрезается до «Teacher Co…».
-// Под значком — короткое русское, в настройках Android и в уведомлениях — полное.
+// RuStore требует, чтобы название под значком совпадало с названием в магазине, — поэтому
+// везде полное «Помощник учителя» (узкий лаунчер может показать «Помощник учи…»).
 const strings = 'src-tauri/gen/android/app/src/main/res/values/strings.xml';
-const labels = { app_name: 'Помощник учителя', main_activity_title: 'Помощник' };
+const labels = { app_name: 'Помощник учителя', main_activity_title: 'Помощник учителя' };
 let xml = readFileSync(strings, 'utf8');
 for (const [name, label] of Object.entries(labels)) {
   const pattern = new RegExp(`(<string name="${name}">)[^<]*(</string>)`);

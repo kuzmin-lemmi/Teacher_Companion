@@ -2,4 +2,4 @@
 
 [default]
 description = "Расписание в шторке, напоминания и виджеты."
-permissions = ["allow-sync", "allow-status", "allow-notifications", "allow-battery", "allow-pin", "allow-preview"]
+permissions = ["allow-sync", "allow-status", "allow-notifications", "allow-battery", "allow-pin", "allow-preview", "allow-installer"]

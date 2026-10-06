@@ -1,5 +1,5 @@
 // Команды выполняет Kotlin-часть (android/); отсюда — только права на их вызов.
-const COMMANDS: &[&str] = &["sync", "status", "notifications", "battery", "pin", "preview"];
+const COMMANDS: &[&str] = &["sync", "status", "notifications", "battery", "pin", "preview", "installer"];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)
