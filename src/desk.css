@@ -69,13 +69,25 @@
 }
 
 /* Страницы без таблиц: внешний вид, копии, о программе */
+/*
+ * Прокручивается вся правая часть окна — полоса прокрутки у края окна, а не посреди
+ * широкого экрана; содержимое — по центру, не шире --content-w.
+ */
 .settings-content {
-  max-width: 1040px;
+  --content-w: 984px;
+  container-type: inline-size;
   width: 100%;
-  margin: 0 auto;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
   padding: 18px 28px 28px;
   height: 100vh;
   overflow: auto;
+}
+.settings-content > * {
+  max-width: var(--content-w);
+  margin-left: auto;
+  margin-right: auto;
 }
 .settings-content > h1,
 .ed-head h1 {
@@ -83,6 +95,10 @@
   font-weight: 650;
   letter-spacing: -0.2px;
   margin: 0 0 14px;
+}
+.settings-content > h1 {
+  margin-left: auto;
+  margin-right: auto;
 }
 .settings-content .panel {
   padding: 16px 18px;
@@ -815,13 +831,17 @@
   flex-direction: column;
   min-height: calc(100vh - 82px);
 }
+/* Подвал «Сохранить» — ровно по колонке с карточками, прилипает к низу окна. */
 .pf .ed-foot {
-  margin-top: auto;
   position: sticky;
   bottom: -28px;
-  margin: auto -28px -28px;
-  padding-left: 28px;
-  padding-right: 28px;
+  margin: auto 0 -28px;
+  padding-left: 0;
+  padding-right: 0;
+}
+/* Счётчика уроков, как в редакторе, здесь нет — статус с края колонки. */
+.pf .ed-foot > [role='status'] {
+  margin-left: 0;
 }
 .pf-grid {
   display: grid;
@@ -976,7 +996,8 @@
   margin-top: 4px;
   font-size: 12px;
 }
-@media (max-width: 900px) {
+/* По ширине самих настроек, а не окна: меню слева тоже занимает место. */
+@container (max-width: 720px) {
   .pf-grid {
     grid-template-columns: 1fr;
   }
