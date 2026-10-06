@@ -1,6 +1,6 @@
 [package]
 name = "teacher-companion"
-version = "0.13.1"
+version = "0.13.2"
 edition = "2021"
 
 # Библиотека нужна Android: приложение на телефоне загружает её как .so.
