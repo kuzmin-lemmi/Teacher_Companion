@@ -826,18 +826,33 @@
 }
 
 /* Настройки приложения: две колонки, строки «подпись — элемент управления» */
-.pf {
+.settings-content:has(> .pf) {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 82px);
 }
-/* Подвал «Сохранить» — ровно по колонке с карточками, прилипает к низу окна. */
+/* Занимает остаток окна: прокрутка появляется, только если карточки правда не помещаются. */
+.settings-content > .pf {
+  max-width: none;
+  margin: 0;
+}
+.pf > .pf-grid {
+  width: 100%;
+  max-width: var(--content-w);
+  margin: 0 auto;
+}
+.pf {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+/* Подвал «Сохранить» — на всю ширину окна, текст и кнопки по колонке с карточками. */
 .pf .ed-foot {
   position: sticky;
   bottom: -28px;
-  margin: auto 0 -28px;
-  padding-left: 0;
-  padding-right: 0;
+  margin: auto -28px -28px;
+  max-width: none;
+  padding-left: calc(28px + max(0px, (100cqw - var(--content-w)) / 2));
+  padding-right: calc(28px + max(0px, (100cqw - var(--content-w)) / 2));
 }
 /* Счётчика уроков, как в редакторе, здесь нет — статус с края колонки. */
 .pf .ed-foot > [role='status'] {
