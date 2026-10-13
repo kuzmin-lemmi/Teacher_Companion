@@ -44,6 +44,7 @@ import {
 import { useTheme, useToday } from './hooks';
 import { useBackButton } from './back';
 import { syncPhone } from './phone';
+import { hasPlus } from './plus';
 /** `menu` — список разделов настроек на телефоне. */
 type Page = 'widget' | 'menu' | SettingsPage;
 export function Shell({
@@ -91,7 +92,8 @@ export function Shell({
   const chooseDay = (value: DayMode) => setDayChoice({ mode: value, day: dateKey(new Date()) });
   useTheme(
     preview?.theme ?? data?.settings.theme ?? 'dark',
-    preview?.accentColor ?? data?.settings.accentColor ?? 'emerald',
+    // Акцентный цвет, кроме зелёного, — в «Плюсе».
+    hasPlus() ? (preview?.accentColor ?? data?.settings.accentColor ?? 'emerald') : 'emerald',
   );
   /**
    * Сохраняет документ целиком или изменение последних сохранённых данных (`(current) => next`):

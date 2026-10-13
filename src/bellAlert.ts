@@ -71,7 +71,7 @@ export function useBellAlert(
           const time = day.time(lesson);
           const endStr = time ? ` (до ${time.end})` : '';
           showSystemNotification(
-            `Помощник учителя · ${lesson.className}`,
+            `Расписание учителя · ${lesson.className}`,
             `Урок ${lesson.lessonNumber}${endStr}: осталось ${minutesLeft} мин. ${bellAlertMessage}`,
           );
         }

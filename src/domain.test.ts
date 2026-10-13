@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { hasChecklist, parseChecklist, toggleChecklistItem, getChecklistStats } from './checklist';
 import {
   generateBells,
@@ -23,6 +23,13 @@ import {
   type ColorTag,
   lessonColor,
 } from './domain';
+// «Плюс» в тестах включается и выключается: по умолчанию — куплен.
+const plus = vi.hoisted(() => ({ on: true }));
+vi.mock('./plus', () => ({
+  hasPlus: () => plus.on,
+  showsPlus: () => plus.on,
+  PLUS_ON_SALE: false,
+}));
 const lesson = (weekday = 1, lessonNumber = 1): Lesson => ({
   id: `${weekday}-${lessonNumber}`,
   weekday,
@@ -498,5 +505,11 @@ describe('lessonColor', () => {
   it('prefers a manual tag', () => {
     const tags = [{ id: 't', target: 'subject' as const, pattern: 'матем', color: 'rose' }];
     expect(lessonColor(lesson, { colorTags: tags, autoColors: true })).toBe('rose');
+  });
+  it('без «Плюса» уроки без цвета, хотя метки сохранены', () => {
+    plus.on = false;
+    const tags = [{ id: 't', target: 'subject' as const, pattern: 'матем', color: 'rose' }];
+    expect(lessonColor(lesson, { colorTags: tags, autoColors: true })).toBeUndefined();
+    plus.on = true;
   });
 });

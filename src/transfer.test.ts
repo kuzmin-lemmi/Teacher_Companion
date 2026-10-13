@@ -64,7 +64,7 @@ describe('перенос через QR-код', () => {
     expect(back.notes).toEqual([data.notes[1]]);
   });
   it('понятно отказывает на чужом или повреждённом коде', async () => {
-    await expect(decodeTransfer('https://example.com')).rejects.toThrow('не QR-код Помощника');
+    await expect(decodeTransfer('https://example.com')).rejects.toThrow('не QR-код «Расписания');
     const text = await encodeTransfer(week(), new Date(2026, 8, 28));
     await expect(decodeTransfer(text.slice(0, -20))).rejects.toThrow('прочитан не полностью');
   });

@@ -23,7 +23,7 @@ export function parseBackup(raw: string): AppData {
     throw new Error('Не удалось прочитать JSON-файл.');
   }
   if (value?.application !== 'teacher-companion' || value.backupVersion !== 1)
-    throw new Error('Это не поддерживаемая резервная копия Помощника учителя.');
+    throw new Error('Это не поддерживаемая резервная копия «Расписания учителя».');
   if (!value.data || typeof value.data !== 'object')
     throw new Error('Резервная копия повреждена: в ней нет расписания.');
   return decode(JSON.stringify(value.data));

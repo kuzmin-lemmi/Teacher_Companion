@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { lessonCount } from './calendar';
 import type { AppData } from './domain';
 import { Choice, Switch, TimeField, chevronRight } from './MobileEditor';
+import { hasPlus, showsPlus } from './plus';
 import {
   ENDING_TEXT,
   allowBackground,
@@ -35,7 +36,7 @@ const soundWords: Record<PhoneSound, string> = {
   silent: 'беззвучно',
 };
 const soundOptions: [PhoneSound, string, string][] = [
-  ['chime', 'Звук', 'Мягкий перезвон «Помощника учителя» и короткая вибрация'],
+  ['chime', 'Звук', 'Мягкий перезвон «Расписания учителя» и короткая вибрация'],
   ['vibrate', 'Только вибрация', 'Телефон коротко завибрирует, без звука'],
   ['silent', 'Беззвучно', 'Уведомление просто появится в шторке'],
 ];
@@ -47,6 +48,11 @@ const purpose: Record<NotifyKind, string> = {
   evening: 'Вечером, если завтра есть уроки: сколько их, когда первый и заметки к урокам.',
 };
 const minuteOptions = [2, 5, 10];
+/** Бесплатно — только утренняя сводка; остальные — в «Плюсе» и без него скрыты. */
+const FREE_KINDS: NotifyKind[] = ['morning'];
+function visibleKinds(): NotifyKind[] {
+  return showsPlus() ? (Object.keys(notifyTitles) as NotifyKind[]) : FREE_KINDS;
+}
 function enabled(s: PhoneSettings, kind: NotifyKind) {
   if (kind === 'remind') return s.remind > 0;
   if (kind === 'ending') return s.ending > 0;
@@ -68,11 +74,14 @@ export function notifyState(s: PhoneSettings, kind: NotifyKind) {
 }
 /** Для строки меню «Уведомления». */
 export function notifySummary(s: PhoneSettings) {
-  const on = (Object.keys(notifyTitles) as NotifyKind[]).filter((k) => enabled(s, k));
-  if (!on.length && !s.ongoing) return 'Выключены';
-  return [s.ongoing && 'урок в шторке', on.length && `включено: ${on.length} из 4`]
-    .filter(Boolean)
-    .join(' · ');
+  // Считаем только то, что работает: без «Плюса» — урок в шторке и утренняя сводка.
+  const kinds = visibleKinds().filter((k) => hasPlus() || FREE_KINDS.includes(k));
+  const on = kinds.filter((k) => enabled(s, k));
+  const rest =
+    kinds.length === 1
+      ? s.morning && `сводка в ${s.morningTime}`
+      : on.length > 0 && `включено: ${on.length} из ${kinds.length}`;
+  return [s.ongoing && 'урок в шторке', rest].filter(Boolean).join(' · ') || 'Выключены';
 }
 /** Настройки уведомлений: сохраняются на телефоне и сразу уходят в плагин. */
 function usePhoneSettings(data: AppData) {
@@ -142,7 +151,7 @@ export function NotifyList({
       <PermissionAlert {...phone} />
       <h2 className="m-group">Что присылать</h2>
       <div className="m-list">
-        {(Object.keys(notifyTitles) as NotifyKind[]).map((kind) => (
+        {visibleKinds().map((kind) => (
           <button
             key={kind}
             type="button"
@@ -168,22 +177,26 @@ export function NotifyList({
           onChange={(ongoing) => update({ ongoing })}
         />
       </div>
-      <h2 className="m-group">Во время урока</h2>
-      <div className="m-card">
-        <Switch
-          label="Не звенеть на уроке"
-          hint="Пока идёт урок, уведомления со звуком только вибрируют. На переменах — как настроено."
-          checked={settings.quiet}
-          onChange={(quiet) => update({ quiet })}
-        />
-      </div>
+      {showsPlus() && (
+        <>
+          <h2 className="m-group">Во время урока</h2>
+          <div className="m-card">
+            <Switch
+              label="Не звенеть на уроке"
+              hint="Пока идёт урок, уведомления со звуком только вибрируют. На переменах — как настроено."
+              checked={settings.quiet}
+              onChange={(quiet) => update({ quiet })}
+            />
+          </div>
+        </>
+      )}
       {message && <p className="m-status">{message}</p>}
       {phone.status && !phone.status.battery && (
         <>
           <h2 className="m-group">Если уведомления опаздывают</h2>
           <p className="m-hint">
             Некоторые телефоны (Realme, OPPO, Xiaomi, Huawei) усыпляют приложения ради экономии
-            батареи. Разрешите «Помощнику учителя» работать в фоне — заряд почти не тратится:
+            батареи. Разрешите «Расписанию учителя» работать в фоне — заряд почти не тратится:
             приложение просыпается только к звонкам.
           </p>
           <button type="button" className="m-secondary" onClick={() => void allowBackground()}>
@@ -244,7 +257,8 @@ export function NotifyDetail({ data, kind }: { data: AppData; kind: NotifyKind }
     ending: settings.ending || 5,
   });
   const on = enabled(settings, kind);
-  const sound = soundOf(settings, kind);
+  // Выбор звука — в «Плюсе»; без него — мягкий перезвон, как в плане для телефона.
+  const sound = hasPlus() ? soundOf(settings, kind) : 'chime';
   // Текст ещё не сохранён (сохраняется, когда поле теряет фокус), но пример — уже с ним.
   const example = sample(kind, data, { ...settings, endingText: endingText.trim() });
   function toggle(value: boolean) {
@@ -285,7 +299,7 @@ export function NotifyDetail({ data, kind }: { data: AppData; kind: NotifyKind }
       <div className={`m-notice${on ? '' : ' m-notice-off'}`} aria-label="Пример уведомления">
         <span className="m-notice-app">
           <span className="m-notice-icon">У</span>
-          Помощник учителя · сейчас
+          Расписание учителя · сейчас
         </span>
         <strong>{example.title}</strong>
         <span>{example.text}</span>
@@ -347,7 +361,9 @@ export function NotifyDetail({ data, kind }: { data: AppData; kind: NotifyKind }
               </label>
             </div>
           )}
-          <Choice label="Как сообщать" value={sound} options={soundOptions} onChange={setSound} />
+          {showsPlus() && (
+            <Choice label="Как сообщать" value={sound} options={soundOptions} onChange={setSound} />
+          )}
           {atLesson && (
             <p className="m-hint">
               Включено «Не звенеть на уроке»: если уведомление придёт во время урока, будет только
@@ -397,7 +413,8 @@ export function WidgetsPage() {
       </div>
       {message && <p className="m-status">{message}</p>}
       <p className="m-hint">
-        Вручную: нажмите и подержите пустое место на рабочем столе → «Виджеты» → «Помощник учителя».
+        Вручную: нажмите и подержите пустое место на рабочем столе → «Виджеты» → «Расписание
+        учителя».
         {status && status.widgets > 0 && ` Сейчас на рабочем столе виджетов: ${status.widgets}.`}
       </p>
     </>

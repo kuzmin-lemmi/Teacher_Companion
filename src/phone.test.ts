@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { emptyData, type AppData } from './domain';
 import { PLAN_DAYS, buildPlan, defaultPhoneSettings, loadPhoneSettings } from './phone';
+// «Плюс» в тестах включается и выключается: по умолчанию — куплен.
+const plus = vi.hoisted(() => ({ on: true }));
+vi.mock('./plus', () => ({
+  hasPlus: () => plus.on,
+  showsPlus: () => plus.on,
+  PLUS_ON_SALE: false,
+}));
 const data: AppData = {
   ...emptyData(),
   lessons: [
@@ -84,5 +91,32 @@ describe('план для телефона', () => {
       off: 'Осенние каникулы · до 3 ноября',
       lessons: [],
     });
+  });
+  it('без «Плюса»: в плане только урок в шторке и утренняя сводка, без цветов', () => {
+    plus.on = false;
+    const free = buildPlan(
+      data,
+      {
+        ...defaultPhoneSettings,
+        remind: 10,
+        ending: 5,
+        evening: true,
+        morning: true,
+        quiet: true,
+        morningSound: 'silent',
+      },
+      new Date(2026, 9, 5),
+    );
+    plus.on = true;
+    expect(free.settings).toMatchObject({
+      ongoing: true,
+      morning: true,
+      morningSound: 'chime',
+      remind: 0,
+      ending: 0,
+      evening: false,
+      quiet: false,
+    });
+    expect(free.days[0].lessons.map((l) => l.color)).toEqual(['', '']);
   });
 });

@@ -69,9 +69,9 @@ console.log(`Обновлён ${file}`);
 
 // Названия берутся из productName: «Teacher Companion» под значком обрезается до «Teacher Co…».
 // RuStore требует, чтобы название под значком совпадало с названием в магазине, — поэтому
-// везде полное «Помощник учителя» (узкий лаунчер может показать «Помощник учи…»).
+// везде полное «Расписание учителя» (узкий лаунчер может показать «Расписание уч…»).
 const strings = 'src-tauri/gen/android/app/src/main/res/values/strings.xml';
-const labels = { app_name: 'Помощник учителя', main_activity_title: 'Помощник учителя' };
+const labels = { app_name: 'Расписание учителя', main_activity_title: 'Расписание учителя' };
 let xml = readFileSync(strings, 'utf8');
 for (const [name, label] of Object.entries(labels)) {
   const pattern = new RegExp(`(<string name="${name}">)[^<]*(</string>)`);

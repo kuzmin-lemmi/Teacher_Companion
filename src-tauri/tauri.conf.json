@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Помощник учителя",
+        "title": "Расписание учителя",
         "width": 1180,
         "height": 800,
         "minWidth": 200,
@@ -33,7 +33,7 @@
     "icon": ["icons/icon.ico"],
     "publisher": "Teacher Companion",
     "category": "Education",
-    "shortDescription": "Помощник учителя — расписание на рабочем столе",
+    "shortDescription": "Расписание учителя — уроки и звонки на рабочем столе",
     "windows": {
       "webviewInstallMode": {
         "type": "downloadBootstrapper",

@@ -1,6 +1,7 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { COLOR_PRESETS, dayOf, isoDate, lessonColor, type AppData } from './domain';
 import { isMobile } from './desktop';
+import { hasPlus } from './plus';
 /**
  * Телефон: расписание в шторке, напоминания и виджеты (плагин src-tauri/plugins/lessons).
  * Плагин не считает расписание сам — получает готовый план на несколько недель, поэтому
@@ -77,7 +78,17 @@ function offLabel(title: string, end: string, start: string) {
   return `${name} · до ${date}`;
 }
 /** Готовые дни с сегодняшнего: уроки со временем, каникулы, сокращённые дни, заметки. */
-export function buildPlan(data: AppData, settings: PhoneSettings, from = new Date()) {
+/**
+ * Какие уведомления на самом деле работают. Бесплатно — урок в шторке и утренняя сводка
+ * со стандартным звуком; остальное — в «Плюсе». Сохранённые настройки не меняются:
+ * с «Плюсом» включатся такими, как их настроили.
+ */
+export function effectivePhoneSettings(settings: PhoneSettings): PhoneSettings {
+  if (hasPlus()) return settings;
+  return { ...settings, remind: 0, ending: 0, evening: false, morningSound: 'chime', quiet: false };
+}
+export function buildPlan(data: AppData, saved: PhoneSettings, from = new Date()) {
+  const settings = effectivePhoneSettings(saved);
   const days = [];
   for (let i = 0; i < PLAN_DAYS; i++) {
     const date = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i);

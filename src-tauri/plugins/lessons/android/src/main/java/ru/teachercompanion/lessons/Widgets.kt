@@ -73,7 +73,7 @@ object Widgets {
         Scheduler.openApp(context, 1)?.let { views.setOnClickPendingIntent(R.id.tc_root, it) }
         views.setViewVisibility(R.id.tc_now_timer, View.GONE)
         if (plan == null) {
-            views.setTextViewText(R.id.tc_now_title, "Помощник учителя")
+            views.setTextViewText(R.id.tc_now_title, "Расписание учителя")
             views.setTextViewText(R.id.tc_now_detail, "Откройте приложение, чтобы показать расписание")
             return views
         }

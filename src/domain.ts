@@ -1,3 +1,4 @@
+import { hasPlus } from './plus';
 export const weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'];
 export type LessonTime = { lessonNumber: number; start: string; end: string };
 export type Lesson = {
@@ -230,11 +231,12 @@ export function autoColorId(lesson: Lesson): string | undefined {
   return COLOR_PRESETS[hash % COLOR_PRESETS.length].id;
 }
 
-/** Цвет урока: своя метка, иначе (если включено) цвет по предмету. */
+/** Цвет урока: своя метка, иначе (если включено) цвет по предмету. Цвета — в «Плюсе». */
 export function lessonColor(
   lesson: Lesson,
   settings: Pick<Settings, 'colorTags' | 'autoColors'>,
 ): string | undefined {
+  if (!hasPlus()) return undefined;
   return (
     matchColorTag(lesson, settings.colorTags)?.color ??
     (settings.autoColors === false ? undefined : autoColorId(lesson))

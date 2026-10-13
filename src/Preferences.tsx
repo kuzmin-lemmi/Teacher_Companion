@@ -17,6 +17,7 @@ import {
   requestNotificationPermission,
   showSystemNotification,
 } from './chime';
+import { showsPlus } from './plus';
 export const cornerLabels: Record<WidgetCorner, string> = {
   'top-right': 'Справа сверху',
   'top-left': 'Слева сверху',
@@ -129,27 +130,29 @@ export function Preferences({
                 ))}
               </select>
             </label>
-            <div className="pf-row">
-              <span>Акцент</span>
-              <div className="pf-accents" role="radiogroup" aria-label="Цветовой акцент">
-                {ACCENT_PRESETS.map((preset) => {
-                  const isSelected = (draft.accentColor ?? 'emerald') === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      className={`pf-accent ${isSelected ? 'selected' : ''}`}
-                      style={{ background: preset.color }}
-                      onClick={() => update({ accentColor: preset.id as AccentColor })}
-                      title={preset.name}
-                      aria-label={preset.name}
-                    />
-                  );
-                })}
+            {showsPlus() && (
+              <div className="pf-row">
+                <span>Акцент</span>
+                <div className="pf-accents" role="radiogroup" aria-label="Цветовой акцент">
+                  {ACCENT_PRESETS.map((preset) => {
+                    const isSelected = (draft.accentColor ?? 'emerald') === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        className={`pf-accent ${isSelected ? 'selected' : ''}`}
+                        style={{ background: preset.color }}
+                        onClick={() => update({ accentColor: preset.id as AccentColor })}
+                        title={preset.name}
+                        aria-label={preset.name}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
             <label className="pf-row">
               <span>Фон {draft.opacity}%</span>
               <input
@@ -234,95 +237,98 @@ export function Preferences({
           </section>
         </div>
         <div className="pf-col">
-          <section className="pf-card color-tags-panel">
-            <div className="pf-head">
-              <h2>Цвета уроков</h2>
-              <button type="button" className="secondary" onClick={() => addColorTag('class')}>
-                + Тег
-              </button>
-            </div>
-            <label className="pf-toggle">
-              <div>
-                <strong>Красить уроки по предметам автоматически</strong>
-                <small>Свои теги важнее.</small>
+          {/* Цвета уроков — в «Плюсе»: пока его нельзя купить, раздела нет. */}
+          {showsPlus() && (
+            <section className="pf-card color-tags-panel">
+              <div className="pf-head">
+                <h2>Цвета уроков</h2>
+                <button type="button" className="secondary" onClick={() => addColorTag('class')}>
+                  + Тег
+                </button>
               </div>
-              <input
-                type="checkbox"
-                checked={draft.autoColors ?? true}
-                onChange={(e) => update({ autoColors: e.target.checked })}
-              />
-            </label>
-            {colorTags.length > 0 ? (
-              <div className="pf-tags">
-                {colorTags.map((tag, idx) => (
-                  <div key={tag.id} className="pf-tag" data-color-tag={tag.color}>
-                    <select
-                      value={tag.target}
-                      aria-label="Для чего тег"
-                      onChange={(e) =>
-                        updateColorTag(idx, { target: e.target.value as 'class' | 'subject' })
-                      }
-                    >
-                      <option value="class">Класс</option>
-                      <option value="subject">Предмет</option>
-                    </select>
-                    <input
-                      type="text"
-                      aria-label="Название класса или предмета"
-                      placeholder={tag.target === 'class' ? '5 или 7А' : 'Математика'}
-                      value={tag.pattern}
-                      maxLength={30}
-                      onChange={(e) => updateColorTag(idx, { pattern: e.target.value })}
-                    />
-                    <div className="pf-swatches" role="radiogroup" aria-label="Выбор цвета">
-                      {COLOR_PRESETS.map((preset) => (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          className={`pf-swatch ${tag.color === preset.id ? 'active' : ''}`}
-                          style={{ backgroundColor: preset.dot }}
-                          title={preset.name}
-                          aria-label={preset.name}
-                          aria-checked={tag.color === preset.id}
-                          onClick={() => updateColorTag(idx, { color: preset.id })}
-                        />
-                      ))}
+              <label className="pf-toggle">
+                <div>
+                  <strong>Красить уроки по предметам автоматически</strong>
+                  <small>Свои теги важнее.</small>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={draft.autoColors ?? true}
+                  onChange={(e) => update({ autoColors: e.target.checked })}
+                />
+              </label>
+              {colorTags.length > 0 ? (
+                <div className="pf-tags">
+                  {colorTags.map((tag, idx) => (
+                    <div key={tag.id} className="pf-tag" data-color-tag={tag.color}>
+                      <select
+                        value={tag.target}
+                        aria-label="Для чего тег"
+                        onChange={(e) =>
+                          updateColorTag(idx, { target: e.target.value as 'class' | 'subject' })
+                        }
+                      >
+                        <option value="class">Класс</option>
+                        <option value="subject">Предмет</option>
+                      </select>
+                      <input
+                        type="text"
+                        aria-label="Название класса или предмета"
+                        placeholder={tag.target === 'class' ? '5 или 7А' : 'Математика'}
+                        value={tag.pattern}
+                        maxLength={30}
+                        onChange={(e) => updateColorTag(idx, { pattern: e.target.value })}
+                      />
+                      <div className="pf-swatches" role="radiogroup" aria-label="Выбор цвета">
+                        {COLOR_PRESETS.map((preset) => (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            className={`pf-swatch ${tag.color === preset.id ? 'active' : ''}`}
+                            style={{ backgroundColor: preset.dot }}
+                            title={preset.name}
+                            aria-label={preset.name}
+                            aria-checked={tag.color === preset.id}
+                            onClick={() => updateColorTag(idx, { color: preset.id })}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="delete"
+                        title="Удалить тег"
+                        aria-label="Удалить тег"
+                        onClick={() => removeColorTag(idx)}
+                      >
+                        ×
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className="delete"
-                      title="Удалить тег"
-                      aria-label="Удалить тег"
-                      onClick={() => removeColorTag(idx)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">
-                Тегов пока нет: задайте цвет для параллели («5» — все пятые) или предмета.
-              </p>
-            )}
-            {unconfiguredParallels.length > 0 && (
-              <div className="pf-chips">
-                {unconfiguredParallels.map((p, i) => {
-                  const color = COLOR_PRESETS[(colorTags.length + i) % COLOR_PRESETS.length].id;
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      className="suggestion-chip"
-                      onClick={() => addColorTag('class', p, color)}
-                    >
-                      + {p}-е классы
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">
+                  Тегов пока нет: задайте цвет для параллели («5» — все пятые) или предмета.
+                </p>
+              )}
+              {unconfiguredParallels.length > 0 && (
+                <div className="pf-chips">
+                  {unconfiguredParallels.map((p, i) => {
+                    const color = COLOR_PRESETS[(colorTags.length + i) % COLOR_PRESETS.length].id;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        className="suggestion-chip"
+                        onClick={() => addColorTag('class', p, color)}
+                      >
+                        + {p}-е классы
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
           <section className="pf-card">
             <h2>Напоминание перед звонком</h2>
             <label className="pf-row">
@@ -382,7 +388,7 @@ export function Preferences({
                             setHasNotifPermission(granted);
                             if (granted) {
                               showSystemNotification(
-                                'Помощник учителя',
+                                'Расписание учителя',
                                 'Уведомления успешно включены!',
                               );
                             }

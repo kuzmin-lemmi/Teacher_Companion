@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MobileSettings } from './MobileSettings';
 import { emptyData, type AppData } from './domain';
 import type { Storage } from './storage';
+// «Плюс» в тестах включается и выключается: по умолчанию — куплен.
+const plus = vi.hoisted(() => ({ on: true }));
+vi.mock('./plus', () => ({
+  hasPlus: () => plus.on,
+  showsPlus: () => plus.on,
+  PLUS_ON_SALE: false,
+}));
 afterEach(cleanup);
 function memory(initial: AppData) {
   const state = { data: initial };
@@ -100,5 +107,16 @@ describe('настройки на телефоне', () => {
       'За 10 мин до звонка · со звуком',
     );
     localStorage.clear();
+  });
+  it('без «Плюса» в уведомлениях только утренняя сводка и урок в шторке', async () => {
+    plus.on = false;
+    localStorage.clear();
+    setup(emptyData(), 'notify');
+    expect(screen.getByRole('button', { name: /Утренняя сводка/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Перед уроком/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Перед концом урока/ })).toBeNull();
+    expect(screen.queryByRole('switch', { name: /Не звенеть на уроке/ })).toBeNull();
+    expect(screen.getByRole('switch', { name: /Урок в шторке/ })).toBeTruthy();
+    plus.on = true;
   });
 });

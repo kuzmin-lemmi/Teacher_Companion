@@ -79,7 +79,7 @@ export async function decodeTransfer(text: string): Promise<AppData> {
   const value = text.trim();
   if (!value.startsWith(TRANSFER_PREFIX))
     throw new Error(
-      'Это не QR-код Помощника учителя. Откройте на компьютере «Перенос на телефон».',
+      'Это не QR-код «Расписания учителя». Откройте на компьютере «Перенос на телефон».',
     );
   let parsed: Omit<AppData, 'lessons' | 'holidays'> & {
     lessons?: Omit<AppData['lessons'][number], 'id'>[];

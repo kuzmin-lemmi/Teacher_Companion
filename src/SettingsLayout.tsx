@@ -107,8 +107,8 @@ function About() {
   return (
     <section className="panel about">
       <span className="brand-icon">У</span>
-      <h2>Teacher Companion</h2>
-      <p>Версия {appVersion} · Помощник учителя</p>
+      <h2>Расписание учителя</h2>
+      <p>Версия {appVersion} · Teacher Companion</p>
       <p className="muted">
         Небольшое расписание для повседневной работы. Все данные хранятся локально. Приложение не
         отправляет расписание на сервер и не требует аккаунта. В сеть оно обращается только для

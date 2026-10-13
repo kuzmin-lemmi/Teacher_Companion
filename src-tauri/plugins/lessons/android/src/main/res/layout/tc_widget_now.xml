@@ -26,7 +26,7 @@
             android:ellipsize="end"
             android:fontFamily="sans-serif-medium"
             android:singleLine="true"
-            android:text="Помощник учителя"
+            android:text="Расписание учителя"
             android:textColor="@color/tc_text"
             android:textSize="18sp" />
 

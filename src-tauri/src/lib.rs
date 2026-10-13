@@ -59,7 +59,7 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     let quit = MenuItem::with_id(app, "quit", MENU_QUIT, true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &today, &next, &settings, &quit])?;
     let mut tray = TrayIconBuilder::new()
-        .tooltip("Помощник учителя")
+        .tooltip("Расписание учителя")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
@@ -119,5 +119,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("Не удалось запустить Помощник учителя");
+        .expect("Не удалось запустить «Расписание учителя»");
 }
