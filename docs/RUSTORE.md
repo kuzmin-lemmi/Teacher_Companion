@@ -4,13 +4,13 @@
 
 ## Что уже готово
 
-| Что                         | Где                                                                                                         |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Значок 512×512, PNG         | [store/rustore/icon-512.png](store/rustore/icon-512.png)                                                    |
-| Скриншоты 1080×1920, 6 штук | [store/rustore/](store/rustore/) — `01-segodnya` … `06-uroki`, загружать по порядку                         |
-| Политика конфиденциальности | https://github.com/kuzmin-lemmi/Teacher_Companion/blob/main/docs/PRIVACY.md                                 |
-| APK                         | `TeacherCompanion-Android.apk` из релиза на GitHub, подписан тем же ключом, пакет `ru.teachercompanion.app` |
-| Тексты карточки             | ниже — копировать как есть                                                                                  |
+| Что                         | Где                                                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Значок 512×512, PNG         | [store/rustore/icon-512.png](store/rustore/icon-512.png)                                                                    |
+| Скриншоты 1080×1920, 5 штук | [store/rustore/](store/rustore/) — `01-segodnya` … `05-uroki`, загружать по порядку; сняты с бесплатной версией, без цветов |
+| Политика конфиденциальности | https://github.com/kuzmin-lemmi/Teacher_Companion/blob/main/docs/PRIVACY.md                                                 |
+| APK                         | `TeacherCompanion-Android.apk` из релиза на GitHub, подписан тем же ключом, пакет `ru.teachercompanion.app`                 |
+| Тексты карточки             | ниже — копировать как есть                                                                                                  |
 
 Скриншоты пересобираются из демо-расписания (`docs/examples/demo-backup.json`) скриптом в браузере, без личных данных и без строки состояния телефона.
 
