@@ -708,6 +708,22 @@
 .ed-holidays .ed-grid-row {
   grid-template-columns: minmax(0, 1fr) 150px 150px 36px;
 }
+.ed .ed-grid-row .ed-oneday {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: left;
+}
+.ed .ed-grid-row .ed-oneday span {
+  color: var(--accent);
+}
+.ed .ed-grid-row .ed-oneday:hover {
+  border-color: var(--accent);
+}
 .ed-shortdays .ed-grid-row {
   grid-template-columns: 170px 36px;
 }

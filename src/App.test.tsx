@@ -164,7 +164,7 @@ it('редактирует каникулы, праздники и сокращ�
   render(<App storage={storage} />);
   await screen.findByText('Здесь будет расписание');
   await user.click(screen.getByRole('button', { name: /☼.*Каникулы/ }));
-  await user.click(screen.getByText('+ Добавить период'));
+  await user.click(screen.getByText('+ Каникулы'));
   await user.type(screen.getByLabelText('Название'), 'Осенние каникулы');
   fireEvent.change(screen.getByLabelText('По'), { target: { value: '2026-11-06' } });
   fireEvent.change(screen.getByLabelText('С'), { target: { value: '2026-10-26' } });
@@ -184,6 +184,19 @@ it('редактирует каникулы, праздники и сокращ�
     ]),
   );
   expect(state()!.shortDays).toHaveLength(1);
+});
+it('выходной день — одна дата, при желании превращается в промежуток', async () => {
+  const { storage, state } = memory();
+  const user = userEvent.setup();
+  render(<App storage={storage} initialTab="calendar" />);
+  await user.click(await screen.findByText('+ Выходной день'));
+  expect(screen.queryByLabelText('По')).toBeNull();
+  fireEvent.change(screen.getByLabelText('С'), { target: { value: '2026-11-04' } });
+  await user.click(screen.getByTitle('Сделать промежуток от даты до даты'));
+  fireEvent.change(screen.getByLabelText('По'), { target: { value: '2026-11-08' } });
+  await waitFor(() =>
+    expect(state()!.holidays).toMatchObject([{ start: '2026-11-04', end: '2026-11-08' }]),
+  );
 });
 it('Enter в последнем уроке добавляет новый, следующий урок наследует предмет и кабинет', async () => {
   const { storage, state } = memory();

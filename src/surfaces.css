@@ -532,6 +532,54 @@ html[data-native='true'][data-surface='widget'] body {
   font-size: 12px;
   border-radius: 6px;
 }
+/* Сегодня каникулы: плашка вверху, по нажатию — изменить даты. */
+.holiday-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  margin: 2px 8px 6px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.holiday-banner:disabled {
+  cursor: default;
+}
+.holiday-banner:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.holiday-banner-icon {
+  display: grid;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.holiday-banner-icon svg {
+  width: 15px;
+  height: 15px;
+}
+.holiday-banner-text {
+  display: grid;
+  min-width: 0;
+}
+.holiday-banner-text strong,
+.holiday-banner-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.holiday-banner-text strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.holiday-banner-text small {
+  font-size: 11px;
+  color: var(--muted);
+}
 .widget-notice {
   margin: 0;
   padding: 2px 8px 5px;
@@ -925,6 +973,35 @@ html[data-native='true'][data-surface='widget'] body {
   font-size: 16px;
   border-radius: 9px;
 }
+.screen .widget-actions button {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  opacity: 1;
+}
+.screen .widget-actions svg {
+  width: 22px;
+  height: 22px;
+}
+.screen .holiday-banner {
+  gap: 12px;
+  width: calc(100% - 4px);
+  margin: 0 2px 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+.screen .holiday-banner-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.screen .holiday-banner-text strong {
+  font-size: 15px;
+  white-space: normal;
+}
+.screen .holiday-banner-text small {
+  font-size: 13px;
+  white-space: normal;
+}
 .screen .widget-notice {
   padding: 4px 12px 8px;
   font-size: 14px;
@@ -984,6 +1061,13 @@ html[data-native='true'][data-surface='widget'] body {
 /* Перенос по QR-коду. */
 .transfer {
   margin-bottom: 20px;
+}
+.transfer-steps {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 16px;
+  padding-left: 22px;
+  line-height: 1.4;
 }
 .qr-image {
   display: block;

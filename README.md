@@ -13,7 +13,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Local first](https://img.shields.io/badge/данные-локально-B4D9C2)
 
-### [⬇ Скачать для Windows](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Setup.exe) · [⬇ Скачать для Android](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Android.apk)
+### [⬇ Скачать для Windows](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Setup.exe) · [⬇ Android в RuStore](https://www.rustore.ru/catalog/app/ru.teachercompanion.app) · [⬇ Android-файлом (APK)](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Android.apk)
 
 [Инструкция](docs/GUIDE.md) · [Все версии](https://github.com/kuzmin-lemmi/Teacher_Companion/releases) · [Возможности](#возможности) · [Для разработчиков](#быстрый-старт) · [План развития](docs/ROADMAP.md)
 

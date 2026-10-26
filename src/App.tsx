@@ -122,6 +122,9 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
   const [day, setDay] = useState(1);
   const [mode, setMode] = useState<'day' | 'week'>('day');
   const [focusId, setFocusId] = useState<string | null>(null);
+  /** Каникулы, добавленные как промежуток: у них поле «По», даже пока даты совпадают. */
+  const [ranges, setRanges] = useState<string[]>([]);
+  const [openedEnd, setOpenedEnd] = useState<string | null>(null);
   const [copyOpen, setCopyOpen] = useState(false);
   const [targets, setTargets] = useState<number[]>([]);
   const popover = useRef<HTMLDivElement>(null);
@@ -621,22 +624,27 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                       >
                         + Праздники учебного года
                       </button>
-                      <button
-                        className="secondary"
-                        disabled={data.holidays.length >= 100}
-                        onClick={() => {
-                          const today = isoDate(new Date());
-                          change({
-                            ...data,
-                            holidays: [
-                              ...data.holidays,
-                              { id: crypto.randomUUID(), title: '', start: today, end: today },
-                            ],
-                          });
-                        }}
-                      >
-                        + Добавить период
-                      </button>
+                      {(['day', 'range'] as const).map((kind) => (
+                        <button
+                          key={kind}
+                          className="secondary"
+                          disabled={data.holidays.length >= 100}
+                          onClick={() => {
+                            const today = isoDate(new Date());
+                            const id = crypto.randomUUID();
+                            if (kind === 'range') setRanges((r) => [...r, id]);
+                            change({
+                              ...data,
+                              holidays: [
+                                ...data.holidays,
+                                { id, title: '', start: today, end: today },
+                              ],
+                            });
+                          }}
+                        >
+                          {kind === 'day' ? '+ Выходной день' : '+ Каникулы'}
+                        </button>
+                      ))}
                     </div>
                   </div>
                   {!data.holidays.length && (
@@ -688,14 +696,29 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                                 }
                               />
                             </label>
-                            <label>
-                              <Caption>По</Caption>
-                              <input
-                                type="date"
-                                value={h.end}
-                                onChange={(e) => patch({ end: e.target.value })}
-                              />
-                            </label>
+                            {h.start === h.end && !ranges.includes(h.id) ? (
+                              <button
+                                className="ed-oneday"
+                                title="Сделать промежуток от даты до даты"
+                                onClick={() => {
+                                  setRanges((r) => [...r, h.id]);
+                                  setOpenedEnd(h.id);
+                                }}
+                              >
+                                один день · <span>до даты…</span>
+                              </button>
+                            ) : (
+                              <label>
+                                <Caption>По</Caption>
+                                <input
+                                  type="date"
+                                  value={h.end}
+                                  // Кнопка «до даты…» пропала — фокус переходит в поле, которое она открыла.
+                                  autoFocus={openedEnd === h.id}
+                                  onChange={(e) => patch({ end: e.target.value })}
+                                />
+                              </label>
+                            )}
                             <button
                               className="delete"
                               aria-label={`Удалить период ${h.title || h.start}`}
@@ -714,8 +737,8 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                     </div>
                   )}
                   <p className="hint">
-                    Для одного дня укажите одинаковые даты. Переносы выходных каждый год свои —
-                    добавьте их сами.
+                    Выходной день — одна дата, каникулы — от даты до даты включительно. Переносы
+                    выходных каждый год свои — добавьте их сами.
                   </p>
                 </section>
                 <section className="ed-card">

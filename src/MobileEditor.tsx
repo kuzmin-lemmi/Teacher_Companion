@@ -800,9 +800,24 @@ export function BellsPage({ editor }: { editor: Editor }) {
   );
 }
 /* ───────────── Каникулы и сокращённые дни ───────────── */
-export function CalendarPage({ editor }: { editor: Editor }) {
+const addDays = (value: string, days: number) => {
+  const date = fromIso(value);
+  date.setDate(date.getDate() + days);
+  return isoDate(date);
+};
+export function CalendarPage({
+  editor,
+  open,
+}: {
+  editor: Editor;
+  /** Сразу открыть: `new` — новые каникулы, иначе id уже добавленных. */
+  open?: string;
+}) {
   const { data, change } = editor;
-  const [holiday, setHoliday] = useState<{ id: string; fresh: boolean } | null>(null);
+  /** `many` — каникулы на несколько дней, иначе один выходной день. */
+  const [holiday, setHoliday] = useState<{ id: string; fresh: boolean; many: boolean } | null>(
+    null,
+  );
   const [shortDay, setShortDay] = useState<number | null>(null);
   const [shorten, setShorten] = useState(false);
   const [shortLesson, setShortLesson] = useState(30);
@@ -815,6 +830,29 @@ export function CalendarPage({ editor }: { editor: Editor }) {
     });
   const holidays = [...data.holidays].sort((a, b) => a.start.localeCompare(b.start));
   const today = isoDate(new Date());
+  const addHoliday = () => {
+    const id = crypto.randomUUID();
+    change({
+      ...data,
+      holidays: [...data.holidays, { id, title: '', start: today, end: today }],
+    });
+    setHoliday({ id, fresh: true, many: true });
+  };
+  // Новые каникулы, которые закрыли, ничего не заполнив, — не нужны: иначе сегодня стал бы выходным.
+  const closeHoliday = () => {
+    if (holiday?.fresh && current && !current.title.trim() && current.start === today)
+      change({ ...data, holidays: data.holidays.filter((h) => h.id !== current.id) });
+    setHoliday(null);
+  };
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || !open) return;
+    opened.current = true;
+    const found = data.holidays.find((h) => h.id === open);
+    if (found) setHoliday({ id: found.id, fresh: false, many: found.start !== found.end });
+    else if (open === 'new' && data.holidays.length < 100) addHoliday();
+    // Только при открытии страницы.
+  }, []);
   return (
     <>
       <EditorStatus editor={editor} />
@@ -830,7 +868,7 @@ export function CalendarPage({ editor }: { editor: Editor }) {
                 key={h.id}
                 type="button"
                 className={`m-row ${h.end < today ? 'past' : ''}`}
-                onClick={() => setHoliday({ id: h.id, fresh: false })}
+                onClick={() => setHoliday({ id: h.id, fresh: false, many: h.start !== h.end })}
               >
                 <span className="m-row-main">
                   <strong>{h.title.trim() || 'Без названия'}</strong>
@@ -842,17 +880,7 @@ export function CalendarPage({ editor }: { editor: Editor }) {
           </div>
         )}
         <div className="m-actions">
-          <AddButton
-            disabled={data.holidays.length >= 100}
-            onClick={() => {
-              const id = crypto.randomUUID();
-              change({
-                ...data,
-                holidays: [...data.holidays, { id, title: '', start: today, end: today }],
-              });
-              setHoliday({ id, fresh: true });
-            }}
-          >
+          <AddButton disabled={data.holidays.length >= 100} onClick={addHoliday}>
             Каникулы
           </AddButton>
           <AddButton
@@ -924,9 +952,15 @@ export function CalendarPage({ editor }: { editor: Editor }) {
       </section>
       {current && holiday && (
         <Sheet
-          title={holiday.fresh ? 'Новые каникулы' : current.title.trim() || 'Без названия'}
-          subtitle="Для одного дня укажите одинаковые даты"
-          onClose={() => setHoliday(null)}
+          title={
+            holiday.fresh
+              ? holiday.many
+                ? 'Новые каникулы'
+                : 'Новый выходной'
+              : current.title.trim() || 'Без названия'
+          }
+          subtitle={holiday.many ? 'Первый и последний день — включительно' : undefined}
+          onClose={closeHoliday}
           footer={
             <SheetButtons
               onDelete={() => {
@@ -937,30 +971,67 @@ export function CalendarPage({ editor }: { editor: Editor }) {
             />
           }
         >
+          <div className="m-segmented m-segmented-2" role="group" aria-label="Сколько дней">
+            <button
+              type="button"
+              aria-pressed={!holiday.many}
+              onClick={() => {
+                setHoliday({ ...holiday, many: false });
+                patchHoliday({ end: current.start });
+              }}
+            >
+              Один день
+            </button>
+            <button
+              type="button"
+              aria-pressed={holiday.many}
+              onClick={() => {
+                setHoliday({ ...holiday, many: true });
+                // Чтобы было видно, что это промежуток: по умолчанию — до конца недели.
+                if (current.end === current.start && validIso(current.start))
+                  patchHoliday({ end: addDays(current.start, 6) });
+              }}
+            >
+              Несколько дней
+            </button>
+          </div>
           <TextField
             label="Название"
-            placeholder="Например, осенние каникулы"
+            placeholder={holiday.many ? 'Например, осенние каникулы' : 'Например, выходной'}
             value={current.title}
             autoFocus={holiday.fresh}
-            suggestions={[
-              'Осенние каникулы',
-              'Зимние каникулы',
-              'Весенние каникулы',
-              'Летние каникулы',
-            ]}
+            suggestions={
+              holiday.many
+                ? [
+                    'Осенние каникулы',
+                    'Зимние каникулы',
+                    'Весенние каникулы',
+                    'Летние каникулы',
+                    'Карантин',
+                  ]
+                : ['Выходной', 'Праздник', 'Методический день', 'Перенос выходного']
+            }
             onChange={(title) => patchHoliday({ title })}
           />
-          <div className="m-pair">
+          {holiday.many ? (
+            <div className="m-pair">
+              <DateField
+                label="С"
+                value={current.start}
+                onChange={(start) =>
+                  // Начало позже конца — сдвигаем и конец.
+                  patchHoliday({ start, ...(start > current.end ? { end: start } : {}) })
+                }
+              />
+              <DateField label="По" value={current.end} onChange={(end) => patchHoliday({ end })} />
+            </div>
+          ) : (
             <DateField
-              label="С"
+              label="Дата"
               value={current.start}
-              onChange={(start) =>
-                // Начало позже конца — сдвигаем и конец: чаще всего это один день.
-                patchHoliday({ start, ...(start > current.end ? { end: start } : {}) })
-              }
+              onChange={(date) => patchHoliday({ start: date, end: date })}
             />
-            <DateField label="По" value={current.end} onChange={(end) => patchHoliday({ end })} />
-          </div>
+          )}
         </Sheet>
       )}
       {shortDay !== null && shortDay < data.shortDays.length && (

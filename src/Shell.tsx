@@ -56,6 +56,8 @@ export function Shell({
 }) {
   const [data, setData] = useState<AppData | null>(null);
   const [page, setPage] = useState<Page>('widget');
+  /** Каникулы открыли с главного экрана: `new` или id; на телефоне «Назад» — сразу к расписанию. */
+  const [holidayIntent, setHolidayIntent] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [nativeError, setNativeError] = useState('');
@@ -315,6 +317,7 @@ export function Shell({
   function navigate(next: Page) {
     guard(() => {
       setHidden(false);
+      setHolidayIntent(undefined);
       setPage(next);
     });
   }
@@ -481,6 +484,13 @@ export function Shell({
           onMode={chooseDay}
           onSettings={() => navigate(isMobile() ? 'menu' : 'schedule')}
           onBackups={() => navigate('backups')}
+          onHolidays={(id) =>
+            guard(() => {
+              setHidden(false);
+              setHolidayIntent(isMobile() ? (id ?? 'new') : undefined);
+              setPage('calendar');
+            })
+          }
           layout={isMobile() ? 'screen' : 'widget'}
           // На телефоне виджет — это весь экран: закрывать и закреплять нечего.
           onClose={isMobile() ? undefined : () => void close()}
@@ -516,6 +526,7 @@ export function Shell({
     content = (
       <MobileSettings
         initial={page === 'schedule' ? 'lessons' : page}
+        open={holidayIntent}
         data={data}
         editorStorage={editorStorage}
         onDirty={setDraftPending}

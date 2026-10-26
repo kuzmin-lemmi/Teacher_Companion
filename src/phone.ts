@@ -152,6 +152,28 @@ export async function installSource(): Promise<InstallSource> {
   const { installer } = await call<{ installer: string }>('installer');
   return installer === 'ru.vk.store' ? 'rustore' : 'file';
 }
+/** Программа для Windows: ссылку отправляют себе с телефона и открывают на компьютере. */
+export const DESKTOP_URL =
+  'https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Setup.exe';
+/**
+ * Системное «Поделиться»: в мессенджер, почту, «Избранное». Где его нет (браузер на компьютере) —
+ * текст копируется. `false` — пользователь закрыл окно, ничего не отправив.
+ */
+export async function shareText(text: string, title: string): Promise<'shared' | 'copied' | false> {
+  if (phone()) {
+    await call('share', { text, title });
+    return 'shared';
+  }
+  if (navigator.share)
+    try {
+      await navigator.share({ title, text });
+      return 'shared';
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return false;
+    }
+  await navigator.clipboard.writeText(text);
+  return 'copied';
+}
 /** Предложить лаунчеру поставить виджет. `false` — лаунчер так не умеет. */
 export async function pinWidget(kind: 'now' | 'day'): Promise<boolean> {
   if (!phone()) return false;

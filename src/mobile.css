@@ -263,6 +263,26 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+  & .m-actions-column {
+    grid-template-columns: 1fr;
+  }
+  & .m-steps {
+    display: grid;
+    gap: 8px;
+    margin: 4px 4px 18px;
+    padding-left: 22px;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  & .m-desktop .hint {
+    margin: 0 4px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  & .m-segmented-2 {
+    grid-template-columns: repeat(2, 1fr);
+    margin-bottom: 14px;
+  }
   & button.m-primary,
   & button.m-danger,
   & button.m-secondary {

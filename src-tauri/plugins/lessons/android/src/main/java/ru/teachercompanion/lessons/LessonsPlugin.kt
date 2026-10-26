@@ -41,6 +41,12 @@ class PreviewArgs {
     var sound: String? = null
 }
 
+@InvokeArg
+class ShareArgs {
+    var text: String? = null
+    var title: String? = null
+}
+
 /** Команды для приложения: `plugin:lessons|sync` и другие (src/phone.ts). */
 @TauriPlugin
 class LessonsPlugin(private val activity: Activity) : Plugin(activity) {
@@ -149,6 +155,27 @@ class LessonsPlugin(private val activity: Activity) : Plugin(activity) {
         val result = JSObject()
         result.put("installer", source ?: "")
         invoke.resolve(result)
+    }
+
+    /** Системное «Поделиться» с текстом — например, ссылкой на версию для компьютера. */
+    @Command
+    fun share(invoke: Invoke) {
+        val args = invoke.parseArgs(ShareArgs::class.java)
+        val text = args.text
+        if (text.isNullOrBlank()) {
+            invoke.reject("Нечем поделиться")
+            return
+        }
+        val send = Intent(Intent.ACTION_SEND)
+            .setType("text/plain")
+            .putExtra(Intent.EXTRA_TEXT, text)
+        if (!args.title.isNullOrBlank()) send.putExtra(Intent.EXTRA_SUBJECT, args.title)
+        try {
+            activity.startActivity(Intent.createChooser(send, args.title))
+            invoke.resolve()
+        } catch (e: Exception) {
+            invoke.reject("Не удалось открыть «Поделиться»")
+        }
     }
 
     /** Предложить лаунчеру поставить виджет на рабочий стол. */

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import qrcode from 'qrcode-generator';
 import { useBackButton } from './back';
 import type { AppData } from './domain';
+import { SendDesktopLink } from './DesktopLink';
 import { QR_CAPACITY, decodeTransfer, encodeTransfer } from './transfer';
 /** Чёрное на белом при любой теме: иначе камера телефона код не прочитает. */
 function QrImage({ text }: { text: string }) {
@@ -138,15 +139,20 @@ export function ScanTransferCode({
   return (
     <section className="panel transfer">
       <p className="eyebrow">ПЕРЕНОС С КОМПЬЮТЕРА</p>
-      <h2>Сканируйте QR-код</h2>
-      <p className="muted">
-        На компьютере откройте «Расписание учителя» → ⚙ → «Резервные копии» → «Показать QR-код».
-        Затем нажмите кнопку ниже и наведите камеру телефона на код.
-      </p>
+      <h2>Расписание с компьютера по QR-коду</h2>
+      <ol className="transfer-steps muted">
+        <li>
+          Установите «Расписание учителя» на компьютер с Windows. Ещё не установлено — отправьте
+          себе ссылку в мессенджер или на почту и откройте её на компьютере.
+        </li>
+        <li>На компьютере: ⚙ → «Резервные копии» → «Показать QR-код».</li>
+        <li>Здесь нажмите «Сканировать QR-код» и наведите камеру на экран компьютера.</li>
+      </ol>
       <div className="backup-actions">
         <button className="primary" disabled={disabled || scanning} onClick={() => void start()}>
           Сканировать QR-код
         </button>
+        <SendDesktopLink />
       </div>
       {error && (
         <p role="alert" className="hint">

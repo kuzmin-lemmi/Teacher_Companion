@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useBackButton } from './back';
 import { Backups } from './Backups';
 import { lessonCount } from './calendar';
+import { SendDesktopLink } from './DesktopLink';
 import { COLOR_PRESETS, extractParallels, isoDate, type AppData, type Settings } from './domain';
 import {
   BellsPage,
@@ -35,6 +36,7 @@ export type MobilePage =
   | 'widgets'
   | 'preferences'
   | 'backups'
+  | 'desktop'
   | 'about';
 const titles: Record<Exclude<MobilePage, `notify:${NotifyKind}`>, string> = {
   menu: 'Настройки',
@@ -45,6 +47,7 @@ const titles: Record<Exclude<MobilePage, `notify:${NotifyKind}`>, string> = {
   widgets: 'Виджеты',
   preferences: 'Внешний вид',
   backups: 'Перенос и копии',
+  desktop: 'Версия для компьютера',
   about: 'О программе',
 };
 const titleOf = (page: MobilePage) =>
@@ -98,10 +101,13 @@ function EditorPage({
   page,
   storage,
   onDirty,
+  open,
 }: {
   page: 'lessons' | 'bells' | 'calendar';
   storage: Storage;
   onDirty: (dirty: boolean) => void;
+  /** Каникулы: сразу открыть новые (`new`) или эти (id). */
+  open?: string;
 }) {
   const editor = useEditor(storage, onDirty);
   if (editor.failure)
@@ -116,7 +122,7 @@ function EditorPage({
   if (!editor.ready) return <p role="status">Загрузка расписания…</p>;
   if (page === 'lessons') return <LessonsPage editor={editor} />;
   if (page === 'bells') return <BellsPage editor={editor} />;
-  return <CalendarPage editor={editor} />;
+  return <CalendarPage editor={editor} open={open} />;
 }
 function PreferencesPage({
   settings,
@@ -279,6 +285,34 @@ function PreferencesPage({
     </>
   );
 }
+/** Та же программа для Windows: виджет с расписанием поверх рабочего стола. */
+function DesktopPage({ onTransfer }: { onTransfer: () => void }) {
+  return (
+    <div className="m-desktop">
+      <section className="m-section">
+        <h2>Расписание и на компьютере</h2>
+        <p className="m-hint">
+          «Расписание учителя» есть для Windows — бесплатно. Небольшой виджет на рабочем столе
+          показывает сегодняшние уроки, отсчёт до звонка и окна, рядом с журналом и презентацией.
+        </p>
+        <ol className="m-steps">
+          <li>Отправьте себе ссылку — в мессенджер, на почту или в «Избранное».</li>
+          <li>Откройте её на компьютере и установите программу.</li>
+          <li>
+            Расписание не нужно набирать заново: перенесите его между телефоном и компьютером по
+            QR-коду.
+          </li>
+        </ol>
+        <div className="m-actions m-actions-column">
+          <SendDesktopLink className="m-primary" />
+          <button type="button" className="m-secondary" onClick={onTransfer}>
+            Перенести расписание по QR-коду
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
 function AboutPage() {
   // Пока не узнали, откуда установлено, — без подсказки про обновления, чтобы не мигала.
   const [source, setSource] = useState<InstallSource | null>(null);
@@ -316,8 +350,11 @@ export function MobileSettings({
   onRestore,
   onSaveSettings,
   onExit,
+  open,
 }: {
   initial: MobilePage;
+  /** Каникулы с главного экрана: `new` — добавить, id — изменить; «Назад» — сразу к расписанию. */
+  open?: string;
   data: AppData;
   editorStorage: Storage;
   onDirty: (dirty: boolean) => void;
@@ -327,7 +364,9 @@ export function MobileSettings({
 }) {
   const [page, setPage] = useState<MobilePage>(initial);
   const back = () =>
-    page === 'menu' ? onExit() : setPage(page.startsWith('notify:') ? 'notify' : 'menu');
+    page === 'menu' || (open && page === initial)
+      ? onExit()
+      : setPage(page.startsWith('notify:') ? 'notify' : 'menu');
   useBackButton(true, back);
   const info = summary(data);
   let content: ReactNode;
@@ -369,6 +408,11 @@ export function MobileSettings({
             onClick={() => setPage('backups')}
           />
           <MenuRow
+            title="Версия для компьютера"
+            detail="Виджет с расписанием на рабочем столе Windows"
+            onClick={() => setPage('desktop')}
+          />
+          <MenuRow
             title="О программе"
             detail={`Версия ${appVersion}`}
             onClick={() => setPage('about')}
@@ -377,7 +421,15 @@ export function MobileSettings({
       </>
     );
   else if (page === 'lessons' || page === 'bells' || page === 'calendar')
-    content = <EditorPage key={page} page={page} storage={editorStorage} onDirty={onDirty} />;
+    content = (
+      <EditorPage
+        key={page}
+        page={page}
+        storage={editorStorage}
+        onDirty={onDirty}
+        open={page === initial ? open : undefined}
+      />
+    );
   else if (page === 'notify')
     content = <NotifyList data={data} onOpen={(kind) => setPage(`notify:${kind}`)} />;
   else if (page.startsWith('notify:'))
@@ -393,6 +445,7 @@ export function MobileSettings({
         <Backups data={data} onRestore={onRestore} storage={editorStorage} />
       </div>
     );
+  else if (page === 'desktop') content = <DesktopPage onTransfer={() => setPage('backups')} />;
   else content = <AboutPage />;
   return (
     <div className="m-root">
@@ -401,7 +454,7 @@ export function MobileSettings({
           type="button"
           className="m-back"
           aria-label={
-            page === 'menu'
+            page === 'menu' || (open && page === initial)
               ? 'К расписанию'
               : page.startsWith('notify:')
                 ? 'К уведомлениям'

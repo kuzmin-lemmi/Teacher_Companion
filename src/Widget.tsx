@@ -45,6 +45,8 @@ type Props = {
   updateAvailable?: boolean;
   /** Заметка к уроку на дату (`YYYY-MM-DD`); пустой текст убирает её. Без обработчика строки не редактируются. */
   onNote?: (date: string, lessonNumber: number, text: string) => void;
+  /** Каникулы: без id — добавить новые, с id — открыть эти. Без обработчика кнопки нет. */
+  onHolidays?: (id?: string) => void;
   /** `screen` — телефон: весь экран, крупные строки, нижняя панель вместо кнопок в шапке. */
   layout?: 'widget' | 'screen';
 };
@@ -183,6 +185,12 @@ const weekIcon = icon(
     <path d="M2.25 6.5h11.5M5.5 1.75v2.5M10.5 1.75v2.5M6 9.5h.01M8 9.5h.01M10 9.5h.01M6 11.5h.01M8 11.5h.01" />
   </>,
 );
+const sunIcon = icon(
+  <>
+    <circle cx="8" cy="8" r="2.75" />
+    <path d="M8 1.5v1.25M8 13.25v1.25M1.5 8h1.25M13.25 8h1.25M3.4 3.4l.9.9M11.7 11.7l.9.9M3.4 12.6l.9-.9M11.7 4.3l.9-.9" />
+  </>,
+);
 const shortDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 function WeekTable({ data, today, compact }: { data: AppData; today: number; compact: boolean }) {
   const last = Math.max(0, ...data.lessons.map((l) => l.lessonNumber));
@@ -263,6 +271,7 @@ export function Widget({
   onMeasure,
   updateAvailable = false,
   onNote,
+  onHolidays,
   layout = 'widget',
 }: Props) {
   const now = useClock();
@@ -283,7 +292,13 @@ export function Widget({
       ? (dayOff(data, now) ??
         data.holidays.find((h) => h.end >= tomorrow && h.start < isoDate(next)))
       : undefined;
-  const notice = day?.short ? 'Сокращённые уроки' : skipped ? offLabel(skipped) : '';
+  // Сегодня каникулы или выходной — об этом плашка вверху, отдельная подсказка не нужна.
+  const vacation = dayOff(data, now);
+  const notice = day?.short
+    ? 'Сокращённые уроки'
+    : skipped && skipped !== vacation
+      ? offLabel(skipped)
+      : '';
   const compact = data.settings.widgetSize === 'compact';
   const { locked } = data.settings;
   const subject = shared(lessons.map((l) => l.subject));
@@ -363,7 +378,20 @@ export function Widget({
           <p>{week ? `Пн–Пт · ${lessonCount(data.lessons.length)}` : subtitle}</p>
           {screen && !week && meta && <p className="screen-meta">{meta}</p>}
         </div>
-        {screen ? null : week ? (
+        {screen ? (
+          !week &&
+          onHolidays && (
+            <div className="widget-actions screen-actions">
+              <button
+                aria-label="Добавить каникулы или выходной"
+                title="Каникулы или выходной"
+                onClick={() => onHolidays()}
+              >
+                {sunIcon}
+              </button>
+            </div>
+          )
+        ) : week ? (
           <div className="widget-actions">
             <button
               aria-label="Закрыть неделю"
@@ -383,6 +411,15 @@ export function Widget({
             >
               {weekIcon}
             </button>
+            {onHolidays && !compact && (
+              <button
+                aria-label="Каникулы и выходные"
+                title="Каникулы и выходные"
+                onClick={() => onHolidays()}
+              >
+                {sunIcon}
+              </button>
+            )}
             {onLock && (
               <button
                 aria-label={locked ? 'Открепить виджет' : 'Закрепить виджет'}
@@ -412,6 +449,25 @@ export function Widget({
         )}
       </div>
       <div ref={list} className="widget-lessons">
+        {!week && vacation && data.lessons.length > 0 && (
+          <button
+            type="button"
+            className="holiday-banner"
+            disabled={!onHolidays}
+            title={onHolidays ? 'Изменить даты' : undefined}
+            onClick={() => onHolidays?.(vacation.id)}
+          >
+            <span className="holiday-banner-icon">{sunIcon}</span>
+            <span className="holiday-banner-text">
+              <strong>{offLabel(vacation)}</strong>
+              {next && (
+                <small>
+                  Уроки снова: {weekdayName.format(next)}, {dayMonth.format(next)}
+                </small>
+              )}
+            </span>
+          </button>
+        )}
         {week ? (
           <WeekTable data={data} today={now.getDay()} compact={compact} />
         ) : !data.lessons.length ? (
@@ -436,7 +492,7 @@ export function Widget({
         ) : !lessons.length ? (
           <div className="widget-empty">
             <h2>{day?.off ? 'Сегодня выходной' : 'Сегодня занятий нет'}</h2>
-            <p>{day?.off ? offLabel(day.off) : 'Можно посмотреть следующий учебный день.'}</p>
+            {!vacation && <p>Можно посмотреть следующий учебный день.</p>}
             <button className="secondary" onClick={() => onMode('next')}>
               Следующий учебный день
             </button>

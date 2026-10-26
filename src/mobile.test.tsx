@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MobileSettings } from './MobileSettings';
 import { emptyData, type AppData } from './domain';
@@ -23,17 +23,23 @@ function memory(initial: AppData) {
   };
   return { state, storage };
 }
-function setup(data: AppData, initial: 'lessons' | 'bells' | 'notify' = 'lessons') {
+function setup(
+  data: AppData,
+  initial: 'lessons' | 'bells' | 'notify' | 'calendar' | 'menu' = 'lessons',
+  open?: string,
+  onExit = () => {},
+) {
   const { state, storage } = memory(data);
   render(
     <MobileSettings
       initial={initial}
+      open={open}
       data={data}
       editorStorage={storage}
       onDirty={() => {}}
       onRestore={async () => {}}
       onSaveSettings={async () => {}}
-      onExit={() => {}}
+      onExit={onExit}
     />,
   );
   return state;
@@ -118,5 +124,46 @@ describe('настройки на телефоне', () => {
     expect(screen.queryByRole('switch', { name: /Не звенеть на уроке/ })).toBeNull();
     expect(screen.getByRole('switch', { name: /Урок в шторке/ })).toBeTruthy();
     plus.on = true;
+  });
+  it('каникулы с главного экрана: один день — одна дата, несколько — от и до', async () => {
+    const user = userEvent.setup();
+    const state = setup(emptyData(), 'calendar', 'new');
+    expect(await screen.findByRole('dialog', { name: 'Новые каникулы' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Один день' }));
+    expect(screen.getByRole('dialog', { name: 'Новый выходной' })).toBeTruthy();
+    expect(screen.queryByLabelText('По')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Дата'), { target: { value: '2026-11-04' } });
+    await user.click(screen.getByRole('button', { name: 'Праздник' }));
+    await user.click(screen.getByRole('button', { name: 'Готово' }));
+    await waitFor(
+      () =>
+        expect(state.data.holidays).toMatchObject([
+          { title: 'Праздник', start: '2026-11-04', end: '2026-11-04' },
+        ]),
+      { timeout: 2000 },
+    );
+  });
+  it('новые каникулы, закрытые пустыми, не делают сегодня выходным', async () => {
+    const user = userEvent.setup();
+    const exit = vi.fn();
+    const state = setup(emptyData(), 'calendar', 'new', exit);
+    await screen.findByRole('dialog', { name: 'Новые каникулы' });
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await new Promise((r) => setTimeout(r, 600));
+    expect(state.data.holidays).toEqual([]);
+    // Открыли с главного экрана — «Назад» ведёт сразу к расписанию.
+    await user.click(screen.getByRole('button', { name: 'К расписанию' }));
+    expect(exit).toHaveBeenCalled();
+  });
+  it('версия для компьютера: ссылку можно отправить себе', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    setup(emptyData(), 'menu');
+    await user.click(screen.getByRole('button', { name: /Версия для компьютера/ }));
+    await user.click(screen.getByRole('button', { name: 'Отправить ссылку на компьютер' }));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('TeacherCompanion-Setup.exe'));
+    expect(screen.getByRole('status').textContent).toContain('Ссылка скопирована');
   });
 });

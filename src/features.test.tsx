@@ -480,6 +480,28 @@ describe('каникулы, сокращённые дни и заметки на
     expect(screen.getByText('Осенние каникулы · до 6 ноября')).toBeTruthy();
     expect(screen.getByText('7Б')).toBeTruthy();
   });
+  it('в каникулы вверху плашка: до какого числа и когда уроки; по нажатию — изменить', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 30, 9));
+    const onHolidays = vi.fn();
+    render(
+      <Widget
+        data={{ ...fixture(), holidays: [autumn] }}
+        mode="auto"
+        onMode={vi.fn()}
+        onSettings={vi.fn()}
+        onDrag={vi.fn()}
+        onHolidays={onHolidays}
+        layout="screen"
+      />,
+    );
+    const banner = screen.getByText('Осенние каникулы · до 6 ноября').closest('button')!;
+    expect(banner.textContent).toContain('Уроки снова: пятница, 13 ноября');
+    fireEvent.click(banner);
+    expect(onHolidays).toHaveBeenLastCalledWith('h');
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить каникулы или выходной' }));
+    expect(onHolidays).toHaveBeenLastCalledWith();
+  });
   it('в сокращённый день время и отсчёт — по сокращённым звонкам', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 8, 25, 9, 50));
