@@ -22,6 +22,8 @@ _На снимках — демонстрационное расписание._
 
 Нужен компьютер с Windows 10 или 11 (64-бит). Права администратора не нужны.
 
+**Windows 7 или 8.1?** Скачайте вместо обычного установщика **[TeacherCompanion-Setup-Win7.exe](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Setup-Win7.exe)** — дальше всё так же. Он больше (около 150 МБ), зато всё нужное уже внутри, интернет при установке не понадобится. Обычный установщик на Windows 7 остановится с ошибкой «Не удалось установить WebView2».
+
 1. Скачайте установщик **[TeacherCompanion-Setup.exe](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Setup.exe)** — или откройте [страницу последней версии](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest) и выберите его в разделе **Assets**.
 2. Запустите скачанный файл. Если появится синее окно **«Система Windows защитила ваш компьютер»**, нажмите **«Подробнее» → «Выполнить в любом случае»**. Предупреждение появляется потому, что у программы нет платного сертификата подписи; это не вирус.
 3. Установщик всё сделает сам: поставит программу в вашу папку пользователя, добавит ярлык **«Teacher Companion»** в меню «Пуск» и запустит её.

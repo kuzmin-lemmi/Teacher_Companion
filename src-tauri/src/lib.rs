@@ -84,6 +84,16 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Сборка для Windows 7 обновляется только своим установщиком (со встроенным WebView2 109):
+/// обычный на «семёрке» не запустится. В latest.json это ключ windows-x86_64-win7.
+#[cfg(desktop)]
+fn updater<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R, tauri_plugin_updater::Config> {
+    let builder = tauri_plugin_updater::Builder::new();
+    #[cfg(target_vendor = "win7")]
+    let builder = builder.target(format!("windows-{}-win7", std::env::consts::ARCH));
+    builder.build()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
@@ -94,7 +104,7 @@ pub fn run() {
             show_main(app);
         }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(updater())
         .plugin(tauri_plugin_process::init());
     // Сканер QR-кода — перенос расписания с компьютера на телефон;
     // расписание в шторке, напоминания и виджеты на рабочем столе.

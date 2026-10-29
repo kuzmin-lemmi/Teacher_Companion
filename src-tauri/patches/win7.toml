@@ -1,0 +1,12 @@
+# Настройки cargo только для сборки под Windows 7 (scripts/build-win7.mjs).
+
+# ctor 0.8, который нужен tauri-utils, узнаёт Windows по target_vendor = "pc", а у цели
+# x86_64-win7-windows-msvc vendor = "win7". В patches/ctor — тот же ctor 0.8.0, где win7
+# добавлен рядом с pc (src/macros/mod.rs).
+[patch.crates-io]
+ctor = { path = "patches/ctor" }
+
+# Библиотеку C встраиваем в программу: на Windows 7 без обновления KB2999226 нет Universal CRT
+# (api-ms-win-crt-*.dll), и программа бы не запустилась.
+[target.x86_64-win7-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

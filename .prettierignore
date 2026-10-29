@@ -6,3 +6,6 @@ src-tauri/gen
 package-lock.json
 PRD.md
 *.png
+src-tauri/webview2-109
+src-tauri/webview2-download
+src-tauri/patches

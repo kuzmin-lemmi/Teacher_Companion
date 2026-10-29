@@ -1,7 +1,9 @@
-// Манифест для встроенного обновления: node scripts/latest-json.mjs <tag> <файл .sig> <выходной файл>
+// Манифест для встроенного обновления:
+// node scripts/latest-json.mjs <tag> <файл .sig> <выходной файл> [<.sig установщика для Windows 7>]
 // Программа читает его по адресу releases/latest/download/latest.json и сверяет подпись установщика.
+// Сборка для Windows 7 ищет свой ключ windows-x86_64-win7 и ставит только свой установщик.
 import { readFileSync, writeFileSync } from 'node:fs';
-const [tag, sigFile, out] = process.argv.slice(2);
+const [tag, sigFile, out, win7SigFile] = process.argv.slice(2);
 if (!tag || !sigFile || !out) {
   console.error('Использование: node scripts/latest-json.mjs <tag> <sig> <out>');
   process.exit(1);
@@ -32,5 +34,11 @@ const manifest = {
     },
   },
 };
+if (win7SigFile) {
+  manifest.platforms['windows-x86_64-win7'] = {
+    signature: readFileSync(win7SigFile, 'utf8').trim(),
+    url: `${repo}/releases/download/${tag}/TeacherCompanion-Setup-Win7.exe`,
+  };
+}
 writeFileSync(out, JSON.stringify(manifest, null, 2));
 console.log(manifest.notes || '(нет пунктов «Что нового»)');

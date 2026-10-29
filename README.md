@@ -65,6 +65,8 @@ _На снимках — демонстрационное расписание, 
 
 Скачайте [**TeacherCompanion-Setup.exe**](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Setup.exe) со [страницы релизов](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest) и запустите. Если Windows покажет «Система Windows защитила ваш компьютер», нажмите «Подробнее» → «Выполнить в любом случае». Права администратора не нужны: приложение ставится в профиль пользователя (`%LOCALAPPDATA%\Teacher Companion`), появляется в меню «Пуск» и в списке «Установленные приложения», откуда его можно удалить. Если на компьютере нет WebView2, установщик загрузит его сам.
 
+**Windows 7 и 8.1** — отдельный установщик [**TeacherCompanion-Setup-Win7.exe**](https://github.com/kuzmin-lemmi/Teacher_Companion/releases/latest/download/TeacherCompanion-Setup-Win7.exe). Обычный на них не работает: и программа, и загрузчик WebView2 требуют Windows 10. В этот установщик встроен WebView2 109 — последний для «семёрки», поэтому он больше (около 150 МБ) и не требует интернета; обновляется программа тоже своим установщиком.
+
 После запуска компактный виджет сразу встанет в правый верхний угол экрана. Пока неделя пустая, на нём две кнопки: «Настроить расписание» и «Загрузить резервную копию» — второй вариант для переноса расписания с другого компьютера. Угол, размер, прозрачность, режим поверх окон и автозапуск меняются в разделе «Внешний вид и окно».
 
 Всё по шагам — в **[инструкции по установке и использованию](docs/GUIDE.md)**.
@@ -96,16 +98,17 @@ npm run dev
 
 ### Команды
 
-| Команда                | Результат                                              |
-| ---------------------- | ------------------------------------------------------ |
-| `npm run dev`          | Предпросмотр с обновлением при изменениях              |
-| `npm test`             | Тесты логики, хранилища, интерфейса и адаптера Windows |
-| `npm run build`        | Проверка TypeScript и сборка интерфейса                |
-| `npm run format:check` | Проверка оформления исходников                         |
-| `npm run format`       | Форматирование исходников                              |
-| `npm run tauri dev`    | Нативный запуск, когда готова среда Rust/MSVC          |
-| `npm run installer`    | Установщик `…_x64-setup.exe`                           |
-| `npm run portable`     | Переносной `.exe` без установщика                      |
+| Команда                  | Результат                                              |
+| ------------------------ | ------------------------------------------------------ |
+| `npm run dev`            | Предпросмотр с обновлением при изменениях              |
+| `npm test`               | Тесты логики, хранилища, интерфейса и адаптера Windows |
+| `npm run build`          | Проверка TypeScript и сборка интерфейса                |
+| `npm run format:check`   | Проверка оформления исходников                         |
+| `npm run format`         | Форматирование исходников                              |
+| `npm run tauri dev`      | Нативный запуск, когда готова среда Rust/MSVC          |
+| `npm run installer`      | Установщик `…_x64-setup.exe`                           |
+| `npm run portable`       | Переносной `.exe` без установщика                      |
+| `npm run installer:win7` | Установщик для Windows 7 и 8.1 (nightly Rust)          |
 
 ### Сборка Windows
 
@@ -113,6 +116,7 @@ npm run dev
 
 - Установщик: `src-tauri/target/release/bundle/nsis/Teacher Companion_<версия>_x64-setup.exe`.
 - Переносной файл: `src-tauri/target/release/teacher-companion.exe`. Для автозапуска держите его в постоянной папке.
+- Установщик для Windows 7 и 8.1 (`npm run installer:win7`): `src-tauri/target/x86_64-win7-windows-msvc/release/bundle/nsis/…_x64-setup.exe`. Нужен nightly Rust: `rustup toolchain install nightly --component rust-src`. Скрипт сам скачает WebView2 109 в `src-tauri/webview2-109` и соберёт цель `x86_64-win7-windows-msvc` вместе со стандартной библиотекой — обычный Rust с версии 1.78 «семёрку» не поддерживает.
 
 Данные хранятся отдельно от программы, в `%APPDATA%\ru.teacher-companion.desktop`, поэтому переустановка и обновление их не затирают. Ручной workflow **Windows build (manual)** собирает оба файла на GitHub Actions. Релиз публикуется автоматически при отправке тега `vX.Y.Z` (workflow **Release**): нужны совпадающая версия в `package.json` и заметки в `docs/releases/vX.Y.Z.md`. Release собирает Windows и Android параллельно и публикует страницу, только если собралось всё ([подробнее про Android](docs/ANDROID.md#сборка)).
 

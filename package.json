@@ -12,6 +12,7 @@
     "tauri": "tauri",
     "installer": "tauri build",
     "portable": "tauri build --no-bundle",
+    "installer:win7": "node scripts/build-win7.mjs",
     "version:check": "node scripts/version.mjs",
     "version:sync": "node scripts/version.mjs --write",
     "version": "node scripts/version.mjs --write && git add src-tauri/Cargo.toml src-tauri/Cargo.lock"

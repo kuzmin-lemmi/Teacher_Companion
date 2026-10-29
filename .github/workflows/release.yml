@@ -1,6 +1,6 @@
 name: Release
-# Тег vX.Y.Z → Windows (установщик, переносной EXE, latest.json) и Android (APK) на одной
-# странице релиза. Если не собралось что-то одно, релиз не публикуется вовсе.
+# Тег vX.Y.Z → Windows (установщик, переносной EXE, latest.json), Windows 7 (установщик со
+# встроенным WebView2 109) и Android (APK) на одной странице релиза. Если не собралось что-то одно, релиз не публикуется вовсе.
 on:
   push:
     tags: ['v*']
@@ -51,15 +51,50 @@ jobs:
           mkdir release
           setup="src-tauri/target/release/bundle/nsis/Teacher Companion_${version}_x64-setup.exe"
           cp "$setup" release/TeacherCompanion-Setup.exe
-          node scripts/latest-json.mjs "$GITHUB_REF_NAME" "$setup.sig" release/latest.json
+          cp "$setup.sig" release/TeacherCompanion-Setup.exe.sig
           cp src-tauri/target/release/teacher-companion.exe release/TeacherCompanion-Portable.exe
       - uses: actions/upload-artifact@v4
         with:
           name: windows
           path: release/
           if-no-files-found: error
+  # Windows 7 и 8.1: Rust для них собирается nightly-цели x86_64-win7-windows-msvc, а WebView2 109
+  # (последний для «семёрки») едет внутри установщика.
+  windows7:
+    needs: check
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+      - run: npm ci
+      - name: Build signed installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run installer:win7 -- --config src-tauri/tauri.release.conf.json
+      - name: Collect files
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir release
+          setup="src-tauri/target/x86_64-win7-windows-msvc/release/bundle/nsis/Teacher Companion_${version}_x64-setup.exe"
+          cp "$setup" release/TeacherCompanion-Setup-Win7.exe
+          cp "$setup.sig" release/TeacherCompanion-Setup-Win7.exe.sig
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows7
+          path: release/
+          if-no-files-found: error
   publish:
-    needs: [android, windows]
+    needs: [android, windows, windows7]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +102,10 @@ jobs:
         with:
           path: release
           merge-multiple: true
+      - name: Update manifest
+        run: >
+          node scripts/latest-json.mjs "$GITHUB_REF_NAME" release/TeacherCompanion-Setup.exe.sig
+          release/latest.json release/TeacherCompanion-Setup-Win7.exe.sig
       - name: Checksums
         run: cd release && ls -l && sha256sum *.exe *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Publish release
@@ -75,7 +114,7 @@ jobs:
         run: >
           gh release create "$GITHUB_REF_NAME"
           release/TeacherCompanion-Setup.exe release/TeacherCompanion-Portable.exe
-          release/TeacherCompanion-Android.apk release/SHA256SUMS.txt release/latest.json
+          release/TeacherCompanion-Setup-Win7.exe release/TeacherCompanion-Android.apk release/SHA256SUMS.txt release/latest.json
           --title "Помощник учителя ${GITHUB_REF_NAME}"
           --notes-file "docs/releases/$GITHUB_REF_NAME.md"
       # До 0.13.0 Android выкладывался на пре-релиз android-preview. Ссылки на него остались
