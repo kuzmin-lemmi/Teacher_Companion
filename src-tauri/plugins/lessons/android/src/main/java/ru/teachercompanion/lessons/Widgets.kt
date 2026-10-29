@@ -120,15 +120,22 @@ object Widgets {
         context.resources.getIdentifier(name, "id", context.packageName)
 
     /** Сколько строк уроков влезает в виджет высотой [height] dp; 0 — высота неизвестна. */
-    private fun capacity(height: Int, notice: Boolean): Int {
+    private fun capacity(height: Int, notice: Boolean, compact: Boolean): Int {
         if (height <= 0) return ROWS
-        // Отступы 22, заголовок 28, плашка «Сокращённые уроки» 20, строка 32 dp.
+        // Отступы 22, заголовок 28, плашка «Сокращённые уроки» 20, строка 32 dp (компактная — 26).
         val free = height - 22 - 28 - if (notice) 20 else 0
-        return (free / 32).coerceIn(1, ROWS)
+        return (free / if (compact) 26 else 32).coerceIn(1, ROWS)
     }
 
-    private fun dayViews(context: Context, plan: Plan?, now: Long, height: Int): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.tc_widget_day)
+    private fun dayViews(
+        context: Context,
+        plan: Plan?,
+        now: Long,
+        height: Int,
+        compact: Boolean = false,
+    ): RemoteViews {
+        val layout = if (compact) R.layout.tc_widget_day_compact else R.layout.tc_widget_day
+        val views = RemoteViews(context.packageName, layout)
         Scheduler.openApp(context, 2)?.let { views.setOnClickPendingIntent(R.id.tc_root, it) }
         // Лаунчер накладывает обновление на прошлый вид, поэтому всё задаётся явно, даже скрытое.
         views.setViewVisibility(R.id.tc_day_notice, View.GONE)
@@ -172,13 +179,16 @@ object Widgets {
             !isToday && today != null && today.off.isNotBlank() -> today.off
             else -> ""
         }
+        // Восемь уроков в виджет обычной высоты не влезают — строки помельче, чтобы день был виден весь.
+        if (!compact && day.lessons.size > capacity(height, notice.isNotEmpty(), false))
+            return dayViews(context, plan, now, height, compact = true)
         if (notice.isNotEmpty()) {
             views.setTextViewText(R.id.tc_day_notice, notice)
             views.setViewVisibility(R.id.tc_day_notice, View.VISIBLE)
         }
         views.setViewVisibility(R.id.tc_day_empty, View.GONE)
         // Не влезают все — первыми уступают место прошедшие уроки.
-        val fit = capacity(height, notice.isNotEmpty())
+        val fit = capacity(height, notice.isNotEmpty(), compact)
         val finished = if (isToday) day.lessons.count { now >= it.end } else 0
         val shown = day.lessons.drop(minOf(finished, maxOf(0, day.lessons.size - fit))).take(fit)
         val text = ContextCompat.getColor(context, R.color.tc_text)
