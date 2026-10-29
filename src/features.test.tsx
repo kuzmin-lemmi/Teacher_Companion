@@ -136,9 +136,12 @@ it('показывает время, окно и компактный режим
   expect(screen.getByText('08:30')).toBeTruthy();
   expect(screen.queryByText('08:30–09:15')).toBeNull();
   expect(screen.queryByText('Математика')).toBeNull();
+  // В узком виджете предмет сокращён.
+  expect(screen.getByText('Мат.')).toBeTruthy();
+  expect(screen.getByText('Алг.')).toBeTruthy();
   expect(screen.getByText('6А')).toBeTruthy();
 });
-it('выделяет текущий урок и выносит общий предмет в подвал', () => {
+it('выделяет текущий урок, предмет — в строках, общий кабинет — в подвале', () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(2026, 8, 25, 10, 30));
   const data = fixture();
@@ -155,7 +158,10 @@ it('выделяет текущий урок и выносит общий пре
       onDrag={vi.fn()}
     />,
   );
-  expect(screen.getByText('Информатика · каб. 12')).toBeTruthy();
+  expect(screen.getByText('каб. 12')).toBeTruthy();
+  expect(screen.getAllByText('Информатика').length).toBe(
+    data.lessons.filter((l) => l.weekday === 5).length,
+  );
   expect(screen.queryByText('каб. 201')).toBeNull();
   const current = screen.getByText('7Б').closest('.widget-row')!;
   expect(current.getAttribute('aria-current')).toBe('time');

@@ -344,8 +344,9 @@ export function Widget({
   const { locked } = data.settings;
   const subject = shared(lessons.map((l) => l.subject));
   const room = shared(lessons.map((l) => l.room));
-  // На телефоне места хватает: предмет виден и в короткой строке.
-  const showSubject = (screen || !compact) && !subject && lessons.some((l) => l.subject.trim());
+  // Предмет — в каждой строке; в узком виджете на компьютере — сокращённый: «Мат.».
+  const showSubject = lessons.some((l) => l.subject.trim());
+  const shortRows = compact && !screen;
   const showRoom = !compact && !room && lessons.some((l) => l.room.trim());
   const clock = now.toTimeString().slice(0, 5);
   const timer = shown === 'today' && day ? countdown(day, now) : null;
@@ -364,7 +365,8 @@ export function Widget({
         ? `${isNextDay(now, date) ? prefix('Завтра') : ''}${dayMonth.format(date)}`
         : 'Пока пусто';
   const meta = lessons.length
-    ? [subject, room && `каб. ${room}`].filter(Boolean).join(' · ') || lessonCount(lessons.length)
+    ? [!showSubject && subject, room && `каб. ${room}`].filter(Boolean).join(' · ') ||
+      lessonCount(lessons.length)
     : '';
   const root = useRef<HTMLElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -654,7 +656,11 @@ export function Widget({
                       {lesson.className}
                     </strong>
                     <span className="row-subject" title={showSubject ? lesson.subject : undefined}>
-                      {showSubject ? lesson.subject : ''}
+                      {!showSubject
+                        ? ''
+                        : shortRows
+                          ? shortSubject(lesson.subject)
+                          : lesson.subject}
                     </span>
                     <span
                       className={`row-time ${left ? 'row-countdown' : ''}`}
