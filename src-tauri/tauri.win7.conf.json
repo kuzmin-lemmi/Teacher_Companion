@@ -1,7 +1,27 @@
 {
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Расписание учителя",
+        "width": 1180,
+        "height": 800,
+        "minWidth": 200,
+        "minHeight": 100,
+        "transparent": false,
+        "center": true,
+        "visible": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-gpu"
+      }
+    ]
+  },
   "bundle": {
     "windows": {
-      "webviewInstallMode": { "type": "fixedRuntime", "path": "webview2-109/", "silent": null }
+      "webviewInstallMode": {
+        "type": "fixedRuntime",
+        "path": "webview2-109/",
+        "silent": null
+      }
     }
   }
 }

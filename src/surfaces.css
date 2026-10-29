@@ -329,6 +329,10 @@ html[data-native='true'][data-surface='widget'] body {
   background: transparent;
   overflow: hidden;
 }
+html[data-native='true'][data-opaque='true'][data-surface='widget'],
+html[data-native='true'][data-opaque='true'][data-surface='widget'] body {
+  background: var(--bg);
+}
 .widget-top {
   display: flex;
   align-items: flex-start;
