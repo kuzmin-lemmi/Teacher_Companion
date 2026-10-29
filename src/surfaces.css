@@ -947,6 +947,8 @@ html[data-native='true'][data-opaque='true'][data-surface='widget'] body {
   font-size: 14px;
 }
 .screen .row-class {
+  /* Одна ширина под «7Б» и «11А» — предметы встают ровной колонкой. */
+  min-width: 44px;
   max-width: 150px;
   font-size: 19px;
 }
@@ -1030,6 +1032,20 @@ html[data-native='true'][data-opaque='true'][data-surface='widget'] body {
 }
 .screen .week-table thead th {
   font-size: 13px;
+}
+/* Предмет под классом: две строки в клетке, поэтому клетка выше. */
+.screen .week-table.subjects tbody th,
+.screen .week-table.subjects tbody td {
+  height: 48px;
+  line-height: 1.15;
+}
+.week-subject {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
 }
 .screen-nav {
   position: sticky;

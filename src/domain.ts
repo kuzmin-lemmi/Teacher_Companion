@@ -232,6 +232,41 @@ export function autoColorId(lesson: Lesson): string | undefined {
 }
 
 /** Цвет урока: своя метка, иначе (если включено) цвет по предмету. Цвета — в «Плюсе». */
+// Сокращения, к которым привыкли в школьных журналах; остальное сокращается по правилу ниже.
+const subjectShort: Record<string, string> = {
+  'русский язык': 'Рус. яз',
+  литература: 'Лит-ра',
+  'литературное чтение': 'Лит. чт',
+  математика: 'Мат.',
+  алгебра: 'Алг.',
+  геометрия: 'Геом.',
+  'вероятность и статистика': 'ВиС',
+  информатика: 'Инф.',
+  физика: 'Физ.',
+  химия: 'Хим.',
+  биология: 'Биол.',
+  география: 'Геогр.',
+  история: 'Ист.',
+  обществознание: 'Общ.',
+  'английский язык': 'Англ.',
+  'немецкий язык': 'Нем.',
+  'французский язык': 'Фр.',
+  'физическая культура': 'Физ-ра',
+  'окружающий мир': 'Окр. мир',
+  музыка: 'Муз.',
+  технология: 'Техн.',
+};
+/** Короткое название предмета для узкой клетки «Недели»: «Математика» → «Мат.». */
+export function shortSubject(subject: string): string {
+  const name = subject.trim().replace(/\s+/g, ' ');
+  const known = subjectShort[name.toLowerCase()];
+  if (known) return known;
+  const words = name.split(/[\s—–-]+/).filter(Boolean);
+  // Несколько слов — по первым буквам, предлоги и союзы строчными: «Россия — мои горизонты» → «РМГ».
+  if (words.length > 1)
+    return words.map((w) => (w.length <= 2 ? w[0].toLowerCase() : w[0].toUpperCase())).join('');
+  return name.length <= 6 ? name : `${name.slice(0, 4)}.`;
+}
 export function lessonColor(
   lesson: Lesson,
   settings: Pick<Settings, 'colorTags' | 'autoColors'>,

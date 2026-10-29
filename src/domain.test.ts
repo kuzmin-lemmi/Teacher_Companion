@@ -22,6 +22,7 @@ import {
   type Lesson,
   type ColorTag,
   lessonColor,
+  shortSubject,
 } from './domain';
 // «Плюс» в тестах включается и выключается: по умолчанию — куплен.
 const plus = vi.hoisted(() => ({ on: true }));
@@ -511,5 +512,19 @@ describe('lessonColor', () => {
     const tags = [{ id: 't', target: 'subject' as const, pattern: 'матем', color: 'rose' }];
     expect(lessonColor(lesson, { colorTags: tags, autoColors: true })).toBeUndefined();
     plus.on = true;
+  });
+});
+describe('shortSubject', () => {
+  it('сокращает привычные предметы по словарю', () => {
+    expect(shortSubject('Математика')).toBe('Мат.');
+    expect(shortSubject('  вероятность и  статистика ')).toBe('ВиС');
+    expect(shortSubject('Физическая культура')).toBe('Физ-ра');
+  });
+  it('остальное — по первым буквам слов или первым буквам слова', () => {
+    expect(shortSubject('Россия — мои горизонты')).toBe('РМГ');
+    expect(shortSubject('Россия-мои горизонты')).toBe('РМГ');
+    expect(shortSubject('Астрономия')).toBe('Астр.');
+    expect(shortSubject('ОБЗР')).toBe('ОБЗР');
+    expect(shortSubject('')).toBe('');
   });
 });

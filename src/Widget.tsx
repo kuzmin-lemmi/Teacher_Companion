@@ -16,6 +16,7 @@ import {
   getNextSchoolDay,
   isoDate,
   lessonColor,
+  shortSubject,
   type AppData,
   type DayMode,
   type DayOff,
@@ -192,7 +193,17 @@ const sunIcon = icon(
   </>,
 );
 const shortDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
-function WeekTable({ data, today, compact }: { data: AppData; today: number; compact: boolean }) {
+function WeekTable({
+  data,
+  today,
+  compact,
+  subjects,
+}: {
+  data: AppData;
+  today: number;
+  compact: boolean;
+  subjects: boolean;
+}) {
   const last = Math.max(0, ...data.lessons.map((l) => l.lessonNumber));
   if (!last)
     return (
@@ -205,7 +216,7 @@ function WeekTable({ data, today, compact }: { data: AppData; today: number; com
   const at = (day: number, n: number) =>
     data.lessons.find((l) => l.weekday === day && l.lessonNumber === n);
   return (
-    <table className="week-table">
+    <table className={`week-table ${subjects ? 'subjects' : ''}`}>
       <thead>
         <tr>
           <th scope="col">
@@ -248,7 +259,16 @@ function WeekTable({ data, today, compact }: { data: AppData; today: number; com
                         : undefined
                     }
                   >
-                    {lesson ? lesson.className : <span className="week-empty">·</span>}
+                    {lesson ? (
+                      <>
+                        {lesson.className}
+                        {subjects && lesson.subject.trim() && (
+                          <small className="week-subject">{shortSubject(lesson.subject)}</small>
+                        )}
+                      </>
+                    ) : (
+                      <span className="week-empty">·</span>
+                    )}
                   </td>
                 );
               })}
@@ -303,7 +323,8 @@ export function Widget({
   const { locked } = data.settings;
   const subject = shared(lessons.map((l) => l.subject));
   const room = shared(lessons.map((l) => l.room));
-  const showSubject = !compact && !subject && lessons.some((l) => l.subject.trim());
+  // На телефоне места хватает: предмет виден и в короткой строке.
+  const showSubject = (screen || !compact) && !subject && lessons.some((l) => l.subject.trim());
   const showRoom = !compact && !room && lessons.some((l) => l.room.trim());
   const clock = now.toTimeString().slice(0, 5);
   const timer = shown === 'today' && day ? countdown(day, now) : null;
@@ -469,7 +490,7 @@ export function Widget({
           </button>
         )}
         {week ? (
-          <WeekTable data={data} today={now.getDay()} compact={compact} />
+          <WeekTable data={data} today={now.getDay()} compact={compact} subjects={screen} />
         ) : !data.lessons.length ? (
           <div className="widget-empty">
             <h2>Добавьте первые уроки</h2>

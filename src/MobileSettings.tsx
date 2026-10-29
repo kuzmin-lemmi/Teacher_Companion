@@ -177,7 +177,7 @@ function PreferencesPage({
         value={settings.widgetSize}
         options={[
           ['normal', 'Подробно', 'Время начала и конца, предмет, кабинет'],
-          ['compact', 'Коротко', 'Класс и время начала'],
+          ['compact', 'Коротко', 'Класс, предмет и время начала'],
         ]}
         onChange={(widgetSize) => save({ widgetSize })}
       />
