@@ -10,6 +10,7 @@ import {
 import {
   NOTE_MAX_LENGTH,
   autoDayMode,
+  classWeek,
   countdown,
   dayOf,
   dayOff,
@@ -198,23 +199,33 @@ function WeekTable({
   today,
   compact,
   subjects,
+  homeroom,
 }: {
   data: AppData;
   today: number;
   compact: boolean;
   subjects: boolean;
+  /** Неделя своего класса: в клетках предметы, а не классы. */
+  homeroom?: string;
 }) {
-  const last = Math.max(0, ...data.lessons.map((l) => l.lessonNumber));
+  const lessons: (Lesson & { mine?: boolean })[] = homeroom
+    ? classWeek(data).map((l) => ({ ...l, className: homeroom }))
+    : data.lessons;
+  const last = Math.max(0, ...lessons.map((l) => l.lessonNumber));
   if (!last)
     return (
       <div className="widget-empty">
-        <h2>Неделя пока пустая</h2>
-        <p>Добавьте уроки в настройках.</p>
+        <h2>{homeroom ? `Расписание ${homeroom} пока пустое` : 'Неделя пока пустая'}</h2>
+        <p>
+          {homeroom
+            ? 'Заполните его в настройках, в разделе «Мой класс».'
+            : 'Добавьте уроки в настройках.'}
+        </p>
       </div>
     );
   const numbers = Array.from({ length: last }, (_, i) => i + 1);
   const at = (day: number, n: number) =>
-    data.lessons.find((l) => l.weekday === day && l.lessonNumber === n);
+    lessons.find((l) => l.weekday === day && l.lessonNumber === n);
   return (
     <table className={`week-table ${subjects ? 'subjects' : ''}`}>
       <thead>
@@ -253,13 +264,19 @@ function WeekTable({
                             lesson.className,
                             lesson.subject,
                             lesson.room && `каб. ${lesson.room}`,
+                            lesson.mine && 'ваш урок',
                           ]
                             .filter(Boolean)
                             .join(' · ')
                         : undefined
                     }
                   >
-                    {lesson ? (
+                    {lesson && homeroom ? (
+                      <>
+                        {shortSubject(lesson.subject)}
+                        {lesson.mine && <small className="week-subject">вы</small>}
+                      </>
+                    ) : lesson ? (
                       <>
                         {lesson.className}
                         {subjects && lesson.subject.trim() && (
@@ -297,6 +314,10 @@ export function Widget({
   const now = useClock();
   const [week, setWeek] = useState(false);
   const screen = layout === 'screen';
+  // Классный руководитель смотрит на телефоне и неделю своего класса.
+  const homeroom = (screen && data.homeroom?.enabled && data.homeroom.className.trim()) || '';
+  const [classView, setClassView] = useState(false);
+  const showClass = week && classView && !!homeroom;
   useBackButton(week, () => setWeek(false));
   const [editing, setEditing] = useState<string | null>(null);
   const next = getNextSchoolDay(data, now);
@@ -395,8 +416,20 @@ export function Widget({
         }}
       >
         <div className="widget-title">
-          <h1>{week ? 'Неделя' : date ? capitalize(weekdayName.format(date)) : 'Расписание'}</h1>
-          <p>{week ? `Пн–Пт · ${lessonCount(data.lessons.length)}` : subtitle}</p>
+          <h1>
+            {showClass
+              ? `Класс ${homeroom}`
+              : week
+                ? 'Неделя'
+                : date
+                  ? capitalize(weekdayName.format(date))
+                  : 'Расписание'}
+          </h1>
+          <p>
+            {week
+              ? `Пн–Пт · ${lessonCount(showClass ? classWeek(data).length : data.lessons.length)}`
+              : subtitle}
+          </p>
           {screen && !week && meta && <p className="screen-meta">{meta}</p>}
         </div>
         {screen ? (
@@ -490,7 +523,25 @@ export function Widget({
           </button>
         )}
         {week ? (
-          <WeekTable data={data} today={now.getDay()} compact={compact} subjects={screen} />
+          <>
+            {week && homeroom && (
+              <div className="week-switch" role="group" aria-label="Чья неделя">
+                <button aria-pressed={!classView} onClick={() => setClassView(false)}>
+                  Мои уроки
+                </button>
+                <button aria-pressed={classView} onClick={() => setClassView(true)}>
+                  {homeroom}
+                </button>
+              </div>
+            )}
+            <WeekTable
+              data={data}
+              today={now.getDay()}
+              compact={compact}
+              subjects={screen}
+              homeroom={showClass ? homeroom : undefined}
+            />
+          </>
         ) : !data.lessons.length ? (
           <div className="widget-empty">
             <h2>Добавьте первые уроки</h2>

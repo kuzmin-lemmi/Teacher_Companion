@@ -10,6 +10,17 @@ export type Lesson = {
   room: string;
   customTime?: { start: string; end: string };
 };
+/** Урок класса, где учитель — классный руководитель. Время — по общим звонкам. */
+export type ClassLesson = {
+  id: string;
+  weekday: number;
+  lessonNumber: number;
+  subject: string;
+  room: string;
+  teacher: string;
+};
+/** Классное руководство: свой класс и его расписание. Выключили — расписание остаётся. */
+export type Homeroom = { enabled: boolean; className: string; lessons: ClassLesson[] };
 /** Каникулы или праздник: даты `YYYY-MM-DD` включительно, один день — `start === end`. */
 export type DayOff = { id: string; title: string; start: string; end: string };
 /** Заметка к уроку с этим номером в конкретную дату. */
@@ -164,6 +175,8 @@ export type AppData = {
   shortBells: LessonTime[];
   notes: LessonNote[];
   settings: Settings;
+  /** Появилось в 0.16: копии и программы постарше его не знают. */
+  homeroom?: Homeroom;
   /** Устарело: мастера первого запуска больше нет. Поле остаётся, чтобы читались старые копии. */
   onboardingComplete?: boolean;
 };
@@ -231,7 +244,6 @@ export function autoColorId(lesson: Lesson): string | undefined {
   return COLOR_PRESETS[hash % COLOR_PRESETS.length].id;
 }
 
-/** Цвет урока: своя метка, иначе (если включено) цвет по предмету. Цвета — в «Плюсе». */
 // Сокращения, к которым привыкли в школьных журналах; остальное сокращается по правилу ниже.
 const subjectShort: Record<string, string> = {
   'русский язык': 'Рус. яз',
@@ -267,6 +279,7 @@ export function shortSubject(subject: string): string {
     return words.map((w) => (w.length <= 2 ? w[0].toLowerCase() : w[0].toUpperCase())).join('');
   return name.length <= 6 ? name : `${name.slice(0, 4)}.`;
 }
+/** Цвет урока: своя метка, иначе (если включено) цвет по предмету. Цвета — в «Плюсе». */
 export function lessonColor(
   lesson: Lesson,
   settings: Pick<Settings, 'colorTags' | 'autoColors'>,
@@ -318,11 +331,16 @@ export function extractParallels(lessons: Lesson[]): string[] {
   return [...set].sort((a, b) => Number(a) - Number(b));
 }
 /** То, что правит редактор расписания. Заметки и настройки меняются в других местах. */
-export type Schedule = Pick<AppData, 'lessons' | 'bells' | 'holidays' | 'shortDays' | 'shortBells'>;
+export type Schedule = Pick<
+  AppData,
+  'lessons' | 'bells' | 'holidays' | 'shortDays' | 'shortBells' | 'homeroom'
+>;
 /** Документ `data` с расписанием из `schedule`: заметки и настройки остаются из `data`. */
 export function withSchedule(data: AppData, schedule: Schedule): AppData {
   const { lessons, bells, holidays, shortDays, shortBells } = schedule;
-  return { ...data, lessons, bells, holidays, shortDays, shortBells };
+  // В черновике прошлой версии расписания класса нет — оно не должно от этого пропасть.
+  const homeroom = schedule.homeroom ?? data.homeroom;
+  return { ...data, lessons, bells, holidays, shortDays, shortBells, homeroom };
 }
 const pad = (n: number) => String(n).padStart(2, '0');
 /** Дата `YYYY-MM-DD` по местному времени. */
@@ -342,10 +360,43 @@ export function timeOf(lesson: Lesson, bells: LessonTime[], short: LessonTime[] 
     bells.find((b) => b.lessonNumber === n)
   );
 }
-export function lessonsForDay(lessons: Lesson[], weekday: number) {
+export function lessonsForDay<T extends Pick<Lesson, 'weekday' | 'lessonNumber'>>(
+  lessons: T[],
+  weekday: number,
+) {
   return lessons
     .filter((l) => l.weekday === weekday)
     .sort((a, b) => a.lessonNumber - b.lessonNumber);
+}
+/** «7 б» и «7Б» — один класс. */
+export const sameClass = (a: string, b: string) => {
+  const key = (v: string) => v.replace(/\s+/g, '').toUpperCase();
+  return key(a) !== '' && key(a) === key(b);
+};
+export type ClassWeekLesson = ClassLesson & { mine: boolean };
+/**
+ * Неделя своего класса: введённые уроки класса и уроки самого учителя в этом классе —
+ * их второй раз вводить не нужно, и на занятом ими месте они главнее.
+ */
+export function classWeek(data: AppData): ClassWeekLesson[] {
+  const h = data.homeroom;
+  if (!h?.enabled || !h.className.trim()) return [];
+  const mine: ClassWeekLesson[] = data.lessons
+    .filter((l) => sameClass(l.className, h.className))
+    .map((l) => ({ ...l, teacher: '', mine: true }));
+  const taken = new Set(mine.map((l) => `${l.weekday}-${l.lessonNumber}`));
+  const own = h.lessons
+    .filter((l) => !taken.has(`${l.weekday}-${l.lessonNumber}`))
+    .map((l) => ({ ...l, mine: false }));
+  return [...mine, ...own].map(({ id, weekday, lessonNumber, subject, room, teacher, mine }) => ({
+    id,
+    weekday,
+    lessonNumber,
+    subject,
+    room,
+    teacher,
+    mine,
+  }));
 }
 export type Calendar = Pick<
   AppData,
@@ -612,6 +663,25 @@ export function validate(data: AppData): string[] {
     shortDays.add(date);
   }
   validateBells(data.shortBells, 'Сокращённые звонки: ', errors);
+  const h = data.homeroom;
+  if (h?.enabled) {
+    if (!h.className.trim()) errors.push('Мой класс: укажите, какой класс вы ведёте.');
+    const slots = new Set<string>();
+    for (const l of h.lessons) {
+      if (!l.id || ids.has(l.id)) errors.push('Идентификаторы уроков должны быть уникальными.');
+      ids.add(l.id);
+      if (!Number.isInteger(l.weekday) || l.weekday < 1 || l.weekday > 5)
+        errors.push('Занятия доступны только с понедельника по пятницу.');
+      if (!validNumber(l.lessonNumber)) errors.push('Номер урока должен быть от 1 до 20.');
+      if (!l.subject.trim()) errors.push('Мой класс: укажите предмет для каждого урока.');
+      const slot = `${l.weekday}-${l.lessonNumber}`;
+      if (slots.has(slot))
+        errors.push(
+          `Мой класс, ${weekdays[l.weekday - 1]?.toLowerCase()}: номер урока повторяется.`,
+        );
+      slots.add(slot);
+    }
+  }
   return [...new Set(errors)];
 }
 const isText = (v: unknown, max: number) => typeof v === 'string' && v.length <= max;
@@ -716,6 +786,26 @@ export function decode(raw: string): AppData {
     )
   )
     throw new Error('Повреждены каникулы, сокращённые дни или заметки.');
+  const h = data.homeroom;
+  if (
+    h !== undefined &&
+    (!h ||
+      typeof h.enabled !== 'boolean' ||
+      !isText(h.className, 40) ||
+      !Array.isArray(h.lessons) ||
+      h.lessons.length > 100 ||
+      h.lessons.some(
+        (l) =>
+          !l ||
+          !isText(l.id, 200) ||
+          !isText(l.subject, 200) ||
+          !isText(l.room, 200) ||
+          !isText(l.teacher, 200) ||
+          !Number.isInteger(l.weekday) ||
+          !Number.isInteger(l.lessonNumber),
+      ))
+  )
+    throw new Error('Повреждено расписание класса.');
   const errors = validate(data);
   if (errors.length) throw new Error(errors.join(' '));
   return data;

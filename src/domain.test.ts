@@ -23,6 +23,9 @@ import {
   type ColorTag,
   lessonColor,
   shortSubject,
+  classWeek,
+  sameClass,
+  withSchedule,
 } from './domain';
 // «Плюс» в тестах включается и выключается: по умолчанию — куплен.
 const plus = vi.hoisted(() => ({ on: true }));
@@ -526,5 +529,65 @@ describe('shortSubject', () => {
     expect(shortSubject('Астрономия')).toBe('Астр.');
     expect(shortSubject('ОБЗР')).toBe('ОБЗР');
     expect(shortSubject('')).toBe('');
+  });
+});
+describe('расписание своего класса', () => {
+  const data = (): AppData => {
+    const d = emptyData();
+    d.bells = generateBells('08:00', 8, 45, 10);
+    d.lessons = [
+      { id: 'm', weekday: 1, lessonNumber: 2, className: '7 б', subject: 'Математика', room: '12' },
+      { id: 'o', weekday: 1, lessonNumber: 3, className: '8А', subject: 'Математика', room: '12' },
+    ];
+    d.homeroom = {
+      enabled: true,
+      className: '7Б',
+      lessons: [
+        { id: 'c1', weekday: 1, lessonNumber: 1, subject: 'Русский язык', room: '', teacher: '' },
+        // На этом месте — свой урок учителя: он главнее.
+        { id: 'c2', weekday: 1, lessonNumber: 2, subject: 'Музыка', room: '', teacher: '' },
+      ],
+    };
+    return d;
+  };
+  it('«7 б» и «7Б» — один класс', () => {
+    expect(sameClass('7 б', '7Б')).toBe(true);
+    expect(sameClass('7Б', '7В')).toBe(false);
+    expect(sameClass('', '')).toBe(false);
+  });
+  it('неделя класса: введённые уроки и свои уроки учителя в этом классе', () => {
+    const week = classWeek(data());
+    expect(week.map((l) => [l.lessonNumber, l.subject, l.mine])).toEqual([
+      [2, 'Математика', true],
+      [1, 'Русский язык', false],
+    ]);
+  });
+  it('выключено — недели класса нет, но уроки сохраняются', () => {
+    const d = data();
+    d.homeroom!.enabled = false;
+    expect(classWeek(d)).toEqual([]);
+    expect(validate(d)).toEqual([]);
+  });
+  it('проверяет класс и предметы', () => {
+    const d = data();
+    expect(validate(d)).toEqual([]);
+    d.homeroom!.className = ' ';
+    d.homeroom!.lessons[0].subject = '';
+    expect(validate(d)).toEqual([
+      'Мой класс: укажите, какой класс вы ведёте.',
+      'Мой класс: укажите предмет для каждого урока.',
+    ]);
+  });
+  it('читает копию с классом и отклоняет испорченную', () => {
+    const d = data();
+    expect(decode(JSON.stringify(d)).homeroom).toEqual(d.homeroom);
+    expect(() =>
+      decode(JSON.stringify({ ...d, homeroom: { ...d.homeroom, lessons: 'нет' } })),
+    ).toThrow('Повреждено расписание класса');
+  });
+  it('черновик прошлой версии не стирает расписание класса', () => {
+    const d = data();
+    const { homeroom: _, ...old } = d;
+    expect(withSchedule(d, old).homeroom).toEqual(d.homeroom);
   });
 });

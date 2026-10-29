@@ -3,11 +3,19 @@ import { useBackButton } from './back';
 import { Backups } from './Backups';
 import { lessonCount } from './calendar';
 import { SendDesktopLink } from './DesktopLink';
-import { COLOR_PRESETS, extractParallels, isoDate, type AppData, type Settings } from './domain';
+import {
+  COLOR_PRESETS,
+  classWeek,
+  extractParallels,
+  isoDate,
+  type AppData,
+  type Settings,
+} from './domain';
 import {
   BellsPage,
   CalendarPage,
   Choice,
+  HomeroomPage,
   LessonsPage,
   chevronLeft,
   chevronRight,
@@ -31,6 +39,7 @@ export type MobilePage =
   | 'lessons'
   | 'bells'
   | 'calendar'
+  | 'homeroom'
   | 'notify'
   | `notify:${NotifyKind}`
   | 'widgets'
@@ -43,6 +52,7 @@ const titles: Record<Exclude<MobilePage, `notify:${NotifyKind}`>, string> = {
   lessons: 'Уроки',
   bells: 'Звонки',
   calendar: 'Каникулы',
+  homeroom: 'Мой класс',
   notify: 'Уведомления',
   widgets: 'Виджеты',
   preferences: 'Внешний вид',
@@ -76,6 +86,9 @@ function summary(data: AppData) {
       ]
         .filter(Boolean)
         .join(' · ') || 'Каникулы, праздники, сокращённые дни',
+    homeroom: data.homeroom?.enabled
+      ? `${data.homeroom.className.trim() || 'Класс не указан'} · ${lessonCount(classWeek(data).length)}`
+      : 'Для классного руководителя',
   };
 }
 function MenuRow({
@@ -103,7 +116,7 @@ function EditorPage({
   onDirty,
   open,
 }: {
-  page: 'lessons' | 'bells' | 'calendar';
+  page: 'lessons' | 'bells' | 'calendar' | 'homeroom';
   storage: Storage;
   onDirty: (dirty: boolean) => void;
   /** Каникулы: сразу открыть новые (`new`) или эти (id). */
@@ -122,6 +135,7 @@ function EditorPage({
   if (!editor.ready) return <p role="status">Загрузка расписания…</p>;
   if (page === 'lessons') return <LessonsPage editor={editor} />;
   if (page === 'bells') return <BellsPage editor={editor} />;
+  if (page === 'homeroom') return <HomeroomPage editor={editor} />;
   return <CalendarPage editor={editor} open={open} />;
 }
 function PreferencesPage({
@@ -382,6 +396,7 @@ export function MobileSettings({
             detail={info.calendar}
             onClick={() => setPage('calendar')}
           />
+          <MenuRow title="Мой класс" detail={info.homeroom} onClick={() => setPage('homeroom')} />
         </div>
         <h2 className="m-group">Приложение</h2>
         <div className="m-list">
@@ -420,7 +435,7 @@ export function MobileSettings({
         </div>
       </>
     );
-  else if (page === 'lessons' || page === 'bells' || page === 'calendar')
+  else if (page === 'lessons' || page === 'bells' || page === 'calendar' || page === 'homeroom')
     content = (
       <EditorPage
         key={page}

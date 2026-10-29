@@ -63,6 +63,21 @@ describe('перенос через QR-код', () => {
     );
     expect(back.notes).toEqual([data.notes[1]]);
   });
+  it('переносит расписание своего класса', async () => {
+    const data = week();
+    data.homeroom = {
+      enabled: true,
+      className: '7В',
+      lessons: [
+        { id: 'x', weekday: 1, lessonNumber: 8, subject: 'История', room: '14', teacher: '' },
+      ],
+    };
+    const back = await decodeTransfer(await encodeTransfer(data, new Date(2026, 8, 28)));
+    expect(back.homeroom?.className).toBe('7В');
+    expect(back.homeroom?.lessons.map(({ id: _, ...l }) => l)).toEqual([
+      { weekday: 1, lessonNumber: 8, subject: 'История', room: '14', teacher: '' },
+    ]);
+  });
   it('понятно отказывает на чужом или повреждённом коде', async () => {
     await expect(decodeTransfer('https://example.com')).rejects.toThrow('не QR-код «Расписания');
     const text = await encodeTransfer(week(), new Date(2026, 8, 28));

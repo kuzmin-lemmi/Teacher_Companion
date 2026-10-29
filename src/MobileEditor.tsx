@@ -8,11 +8,14 @@ import {
   minutesOf,
   nextBell,
   publicHolidays,
+  sameClass,
   shortenBells,
   timeOf,
   weekdays,
   type AppData,
+  type ClassLesson,
   type DayOff,
+  type Homeroom,
   type Lesson,
   type LessonTime,
 } from './domain';
@@ -602,6 +605,288 @@ function LessonSheet({
           />
         </div>
       )}
+    </Sheet>
+  );
+}
+/* ───────────── Мой класс ───────────── */
+const noHomeroom: Homeroom = { enabled: false, className: '', lessons: [] };
+export function HomeroomPage({ editor }: { editor: Editor }) {
+  const { data, change } = editor;
+  const homeroom = data.homeroom ?? noHomeroom;
+  const [day, setDay] = useState(() => {
+    const today = new Date().getDay();
+    return today >= 1 && today <= 5 ? today : 1;
+  });
+  const [editing, setEditing] = useState<{ id: string; fresh: boolean } | null>(null);
+  const save = (patch: Partial<Homeroom>) =>
+    change({ ...data, homeroom: { ...homeroom, ...patch } });
+  // Свои уроки в этом классе уже есть в расписании — показываем их, но не правим здесь.
+  const mine = data.lessons.filter((l) => sameClass(l.className, homeroom.className));
+  const mineOn = (weekday: number) => lessonsForDay(mine, weekday);
+  const lessons = lessonsForDay(homeroom.lessons, day);
+  const byNumber = new Map(lessons.map((l) => [l.lessonNumber, l]));
+  const mineByNumber = new Map(mineOn(day).map((l) => [l.lessonNumber, l]));
+  const numbers = [...byNumber.keys(), ...mineByNumber.keys()];
+  // У класса уроки идут с первого — пустые места до своего урока тоже видны, их и заполняют.
+  const last = numbers.length ? Math.max(...numbers) : 0;
+  const first = 1;
+  const subjects = popular([
+    ...homeroom.lessons.map((l) => l.subject),
+    ...data.lessons.map((l) => l.subject),
+  ]);
+  function add(number: number) {
+    const lesson: ClassLesson = {
+      id: crypto.randomUUID(),
+      weekday: day,
+      lessonNumber: number,
+      subject: '',
+      room: '',
+      teacher: '',
+    };
+    save({ lessons: [...homeroom.lessons, lesson] });
+    setEditing({ id: lesson.id, fresh: true });
+  }
+  function copyFrom(weekday: number) {
+    const copied = lessonsForDay(homeroom.lessons, weekday).map((l) => ({
+      ...l,
+      id: crypto.randomUUID(),
+      weekday: day,
+    }));
+    save({ lessons: [...homeroom.lessons.filter((l) => l.weekday !== day), ...copied] });
+    editor.setStatus(`Уроки скопированы: ${shortDays[weekday - 1]} → ${shortDays[day - 1]}`);
+  }
+  const current = editing && homeroom.lessons.find((l) => l.id === editing.id);
+  const rows: ReactNode[] = [];
+  for (let n = first; n <= last; n++) {
+    const bell = data.bells.find((b) => b.lessonNumber === n);
+    const time = (
+      <span className="m-row-time">
+        {bell ? (
+          <>
+            {bell.start}
+            <small>{bell.end}</small>
+          </>
+        ) : (
+          <small>нет звонка</small>
+        )}
+      </span>
+    );
+    const own = mineByNumber.get(n);
+    if (own) {
+      rows.push(
+        <div key={own.id} className="m-row m-row-mine">
+          <span className="m-num">{n}</span>
+          <span className="m-row-main">
+            <strong>{own.subject.trim() || 'Ваш урок'}</strong>
+            <small>
+              {['ваш урок', own.room.trim() && `каб. ${own.room.trim()}`]
+                .filter(Boolean)
+                .join(' · ')}
+            </small>
+          </span>
+          {time}
+        </div>,
+      );
+      continue;
+    }
+    const lesson = byNumber.get(n);
+    if (!lesson) {
+      rows.push(
+        <button key={`gap-${n}`} type="button" className="m-row m-gap" onClick={() => add(n)}>
+          <span className="m-num">{n}</span>
+          <span className="m-row-main">
+            <strong>Нет урока</strong>
+            <small>Нажмите, чтобы поставить урок</small>
+          </span>
+          {plusIcon}
+        </button>,
+      );
+      continue;
+    }
+    const details = [lesson.teacher.trim(), lesson.room.trim() && `каб. ${lesson.room.trim()}`]
+      .filter(Boolean)
+      .join(' · ');
+    rows.push(
+      <button
+        key={lesson.id}
+        type="button"
+        className={`m-row ${lesson.subject.trim() ? '' : 'invalid'}`}
+        onClick={() => setEditing({ id: lesson.id, fresh: false })}
+      >
+        <span className="m-num">{n}</span>
+        <span className="m-row-main">
+          <strong>{lesson.subject.trim() || 'Укажите предмет'}</strong>
+          {details && <small>{details}</small>}
+        </span>
+        {time}
+      </button>,
+    );
+  }
+  const filledDays = [1, 2, 3, 4, 5].filter(
+    (d) => d !== day && homeroom.lessons.some((l) => l.weekday === d),
+  );
+  const className = homeroom.className.trim();
+  return (
+    <>
+      <div className="m-card m-homeroom">
+        <Switch
+          label="Я классный руководитель"
+          hint="Расписание своего класса — на экране «Неделя»"
+          checked={homeroom.enabled}
+          onChange={(enabled) => save({ enabled })}
+        />
+        {homeroom.enabled && (
+          <TextField
+            label="Мой класс"
+            placeholder="Например, 7Б"
+            value={homeroom.className}
+            maxLength={40}
+            autoFocus={!className}
+            suggestions={popular(data.lessons.map((l) => l.className))}
+            onChange={(value) => save({ className: value })}
+          />
+        )}
+      </div>
+      <EditorStatus editor={editor} />
+      {homeroom.enabled && className && (
+        <>
+          <div className="m-days" role="tablist" aria-label="День недели">
+            {shortDays.map((name, i) => {
+              const count =
+                homeroom.lessons.filter((l) => l.weekday === i + 1).length + mineOn(i + 1).length;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  role="tab"
+                  aria-selected={day === i + 1}
+                  aria-label={`${weekdays[i]}, ${count}`}
+                  onClick={() => setDay(i + 1)}
+                >
+                  {name}
+                  <small>{count || '·'}</small>
+                </button>
+              );
+            })}
+          </div>
+          {rows.length ? (
+            <div className="m-list">{rows}</div>
+          ) : (
+            <div className="m-empty">
+              <h2>
+                У {className} на {inDay[day - 1]} уроков нет
+              </h2>
+              <p>Добавьте первый урок — время подставится из звонков.</p>
+              {filledDays.length > 0 && (
+                <div className="m-copy">
+                  <span>Или скопируйте день целиком:</span>
+                  <div className="m-chips">
+                    {filledDays.map((d) => (
+                      <button key={d} type="button" onClick={() => copyFrom(d)}>
+                        {shortDays[d - 1]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <AddButton disabled={last >= 20} onClick={() => add(last + 1)}>
+            Добавить {last + 1}-й урок
+          </AddButton>
+        </>
+      )}
+      {editor.status && !editor.failed && <p className="m-status">{editor.status}</p>}
+      {current && editing && (
+        <ClassLessonSheet
+          lesson={current}
+          data={data}
+          fresh={editing.fresh}
+          subjects={subjects}
+          taken={(n) =>
+            mineByNumber.has(n) || lessons.some((l) => l.id !== current.id && l.lessonNumber === n)
+          }
+          onChange={(patch) =>
+            save({
+              lessons: homeroom.lessons.map((l) => (l.id === current.id ? { ...l, ...patch } : l)),
+            })
+          }
+          onDelete={() => {
+            save({ lessons: homeroom.lessons.filter((l) => l.id !== current.id) });
+            setEditing(null);
+          }}
+          onClose={() => {
+            // Новый урок без предмета — передумали добавлять.
+            if (editing.fresh && !current.subject.trim())
+              save({ lessons: homeroom.lessons.filter((l) => l.id !== current.id) });
+            setEditing(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+function ClassLessonSheet({
+  lesson,
+  data,
+  fresh,
+  subjects,
+  taken,
+  onChange,
+  onDelete,
+  onClose,
+}: {
+  lesson: ClassLesson;
+  data: AppData;
+  fresh: boolean;
+  subjects: string[];
+  taken: (lessonNumber: number) => boolean;
+  onChange: (patch: Partial<ClassLesson>) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const bell = data.bells.find((b) => b.lessonNumber === lesson.lessonNumber);
+  const others = data.homeroom?.lessons ?? [];
+  return (
+    <Sheet
+      title={fresh ? 'Новый урок класса' : `${lesson.lessonNumber}-й урок`}
+      subtitle={`${weekdays[lesson.weekday - 1]}${bell ? ` · ${bell.start}–${bell.end}` : ''}`}
+      onClose={onClose}
+      footer={<SheetButtons onDelete={fresh ? undefined : onDelete} onDone={onClose} />}
+    >
+      <TextField
+        label="Предмет"
+        placeholder="Например, Математика"
+        value={lesson.subject}
+        autoFocus={fresh}
+        suggestions={subjects}
+        onChange={(subject) => onChange({ subject })}
+      />
+      <TextField
+        label="Кабинет"
+        placeholder="Необязательно"
+        value={lesson.room}
+        maxLength={40}
+        suggestions={popular(others.map((l) => l.room))}
+        onChange={(room) => onChange({ room })}
+      />
+      <TextField
+        label="Учитель"
+        placeholder="Необязательно"
+        value={lesson.teacher}
+        suggestions={popular(
+          others.filter((l) => l.subject.trim() === lesson.subject.trim()).map((l) => l.teacher),
+        )}
+        onChange={(teacher) => onChange({ teacher })}
+      />
+      <Stepper
+        label="Номер урока"
+        value={lesson.lessonNumber}
+        min={1}
+        max={20}
+        skip={taken}
+        onChange={(lessonNumber) => onChange({ lessonNumber })}
+      />
     </Sheet>
   );
 }

@@ -96,7 +96,8 @@
     border-radius: 16px;
     background: var(--panel);
   }
-  & button.m-row {
+  & button.m-row,
+  & .m-row-mine {
     display: flex;
     align-items: center;
     gap: 14px;
@@ -110,7 +111,8 @@
     color: var(--text);
     text-align: left;
   }
-  & button.m-row:last-child {
+  & button.m-row:last-child,
+  & .m-row-mine:last-child {
     border-bottom: 0;
   }
   & button.m-row:active {
@@ -171,6 +173,17 @@
   }
   & button.m-row.past {
     opacity: 0.55;
+  }
+  /* Свой урок в расписании класса: виден, но правится в «Уроках». */
+  & .m-row-mine .m-num {
+    background: transparent;
+    border: 1.5px solid var(--accent-soft);
+  }
+  & .m-row-mine .m-row-main small {
+    color: var(--accent);
+  }
+  & .m-homeroom {
+    margin-bottom: 14px;
   }
   & button.m-gap .m-num {
     border: 1.5px dashed var(--line);

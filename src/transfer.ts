@@ -1,4 +1,4 @@
-import { decode, isoDate, type AppData } from './domain';
+import { decode, isoDate, type AppData, type ClassLesson, type Homeroom } from './domain';
 /**
  * Перенос расписания с компьютера на телефон одним QR-кодом.
  * JSON сжимается (deflate) и записывается в Base45 (RFC 9285): эти 45 символов QR-код
@@ -71,6 +71,10 @@ export async function encodeTransfer(data: AppData, today = new Date()): Promise
     lessons: data.lessons.map(({ id: _id, ...lesson }) => lesson),
     holidays: data.holidays.map(({ id: _id, ...holiday }) => holiday),
     notes: data.notes.filter((n) => n.date >= from),
+    homeroom: data.homeroom && {
+      ...data.homeroom,
+      lessons: data.homeroom.lessons.map(({ id: _id, ...lesson }) => lesson),
+    },
   };
   const json = new TextEncoder().encode(JSON.stringify(payload));
   return TRANSFER_PREFIX + base45encode(await through(json, new CompressionStream('deflate-raw')));
@@ -81,9 +85,10 @@ export async function decodeTransfer(text: string): Promise<AppData> {
     throw new Error(
       'Это не QR-код «Расписания учителя». Откройте на компьютере «Перенос на телефон».',
     );
-  let parsed: Omit<AppData, 'lessons' | 'holidays'> & {
+  let parsed: Omit<AppData, 'lessons' | 'holidays' | 'homeroom'> & {
     lessons?: Omit<AppData['lessons'][number], 'id'>[];
     holidays?: Omit<AppData['holidays'][number], 'id'>[];
+    homeroom?: Omit<Homeroom, 'lessons'> & { lessons?: Omit<ClassLesson, 'id'>[] };
   };
   try {
     const packed = base45decode(value.slice(TRANSFER_PREFIX.length));
@@ -105,6 +110,13 @@ export async function decodeTransfer(text: string): Promise<AppData> {
       },
       lessons: parsed.lessons?.map((l) => ({ ...l, id: `${l.weekday}-${l.lessonNumber}` })),
       holidays: parsed.holidays?.map((h, i) => ({ ...h, id: `h${i + 1}` })),
+      homeroom: parsed.homeroom && {
+        ...parsed.homeroom,
+        lessons: parsed.homeroom.lessons?.map((l) => ({
+          ...l,
+          id: `c${l.weekday}-${l.lessonNumber}`,
+        })),
+      },
     }),
   );
 }
