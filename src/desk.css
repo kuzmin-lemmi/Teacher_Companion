@@ -1052,3 +1052,80 @@
 [data-theme='light'] .rail {
   background: #e3e9e4;
 }
+
+/* Мой класс: класс и неделя класса, в клетке — предмет и кабинет */
+.ed .hr-class {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.ed .hr-class input {
+  width: 140px;
+}
+.hr-week td {
+  vertical-align: top;
+}
+.hr-cell,
+.hr-mine {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 42px;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+.hr-cell.blank {
+  border-style: dashed;
+  background: transparent;
+}
+.hr-cell:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.ed .hr-cell input {
+  width: 100%;
+  min-width: 0;
+  padding: 1px 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ed .hr-cell input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.ed .hr-cell input.hr-room {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+/* Пустая клетка спокойная: «+» и «каб.» видны, только когда в неё вводят. */
+.hr-cell.blank input::placeholder {
+  color: var(--muted);
+  opacity: 0.5;
+}
+.hr-cell.blank:not(:focus-within) .hr-room::placeholder {
+  color: transparent;
+}
+.hr-mine {
+  border-style: solid;
+  border-color: var(--accent-soft, var(--line));
+  background: transparent;
+  padding: 5px 8px;
+}
+.hr-mine b {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hr-mine span {
+  font-size: 11px;
+  color: var(--accent);
+}

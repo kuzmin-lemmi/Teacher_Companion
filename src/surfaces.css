@@ -1669,3 +1669,14 @@ html.scanning #root {
   margin-left: 8px;
   font-weight: 500;
 }
+/* В окне-виджете на компьютере переключатель недели — мельче, под размер окна. */
+.schedule-widget:not(.screen) .week-switch {
+  margin-bottom: 6px;
+  padding: 2px;
+  border-radius: 7px;
+}
+.schedule-widget:not(.screen) .week-switch button {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+}

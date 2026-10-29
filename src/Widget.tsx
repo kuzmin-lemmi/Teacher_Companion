@@ -274,7 +274,7 @@ function WeekTable({
                     {lesson && homeroom ? (
                       <>
                         {shortSubject(lesson.subject)}
-                        {lesson.mine && <small className="week-subject">вы</small>}
+                        {subjects && lesson.mine && <small className="week-subject">вы</small>}
                       </>
                     ) : lesson ? (
                       <>
@@ -314,8 +314,8 @@ export function Widget({
   const now = useClock();
   const [week, setWeek] = useState(false);
   const screen = layout === 'screen';
-  // Классный руководитель смотрит на телефоне и неделю своего класса.
-  const homeroom = (screen && data.homeroom?.enabled && data.homeroom.className.trim()) || '';
+  // Классный руководитель смотрит и неделю своего класса.
+  const homeroom = (data.homeroom?.enabled && data.homeroom.className.trim()) || '';
   const [classView, setClassView] = useState(false);
   const showClass = week && classView && !!homeroom;
   useBackButton(week, () => setWeek(false));

@@ -16,6 +16,7 @@ import {
 import type { Storage } from './storage';
 import { useEditor } from './useEditor';
 import { WeekGrid } from './WeekGrid';
+import { HomeroomGrid } from './HomeroomGrid';
 type Props = {
   storage?: Storage;
   initialTab?: Tab;
@@ -24,11 +25,12 @@ type Props = {
   /** true, пока есть правки с ошибками: они лежат в черновике и ещё не видны в виджете. */
   onDirty?: (dirty: boolean) => void;
 };
-export type Tab = 'schedule' | 'bells' | 'calendar';
+export type Tab = 'schedule' | 'bells' | 'calendar' | 'homeroom';
 const titles: Record<Tab, string> = {
   schedule: 'Недельное расписание',
   bells: 'Расписание звонков',
   calendar: 'Каникулы и сокращённые дни',
+  homeroom: 'Мой класс',
 };
 const shortDay = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 const lessonWord = (n: number) =>
@@ -393,6 +395,12 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
           >
             ☼ &nbsp; Каникулы
           </button>
+          <button
+            className={tab === 'homeroom' ? 'active' : ''}
+            onClick={() => setOwnTab('homeroom')}
+          >
+            ◎ &nbsp; Мой класс
+          </button>
         </nav>
       )}
       <header className="ed-head">
@@ -405,6 +413,11 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
         )}
         {tab === 'calendar' && (
           <span className="muted">В эти дни виджет сразу показывает следующий учебный день.</span>
+        )}
+        {tab === 'homeroom' && (
+          <span className="muted">
+            Виджет, напоминания и заметки работают только по вашим урокам.
+          </span>
         )}
       </header>
       {failure ? (
@@ -595,6 +608,8 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                   </datalist>
                 </>
               )
+            ) : tab === 'homeroom' ? (
+              <HomeroomGrid data={data} change={change} />
             ) : tab === 'calendar' ? (
               <>
                 <section className="ed-card">

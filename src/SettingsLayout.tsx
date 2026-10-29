@@ -7,12 +7,13 @@ import type { AppData } from './domain';
 import type { Storage } from './storage';
 import { appVersion } from './version';
 export type SettingsPage = Tab | 'preferences' | 'backups' | 'about';
-const editorPages: SettingsPage[] = ['schedule', 'bells', 'calendar'];
+const editorPages: SettingsPage[] = ['schedule', 'bells', 'calendar', 'homeroom'];
 /** Разделы меню; пустая строка — разделитель групп. */
 const sections: ([SettingsPage, IconName, string] | null)[] = [
   ['schedule', 'table', 'Расписание'],
   ['bells', 'bell', 'Звонки'],
   ['calendar', 'beach', 'Каникулы'],
+  ['homeroom', 'users', 'Мой класс'],
   null,
   ['preferences', 'palette', 'Внешний вид'],
   ['backups', 'database', 'Копии'],
@@ -82,7 +83,7 @@ export function SettingsLayout({
         )}
         <small className="rail-version">v{appVersion}</small>
       </nav>
-      {/* Один и тот же редактор на трёх страницах: переключение не сбрасывает его правки. */}
+      {/* Один и тот же редактор на четырёх страницах: переключение не сбрасывает его правки. */}
       {editorPages.includes(page) ? (
         <ScheduleEditor storage={editorStorage} onDirty={onDirty} tab={page as Tab} />
       ) : (
