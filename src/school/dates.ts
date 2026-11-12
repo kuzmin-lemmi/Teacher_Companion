@@ -31,6 +31,13 @@ export function toIso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** «2026-11-13» + 3 → «2026-11-16». */
+export function addDays(iso: string, n: number): string {
+  const d = parseIso(iso);
+  d.setDate(d.getDate() + n);
+  return toIso(d);
+}
+
 /** 1 = понедельник … 7 = воскресенье. */
 export function weekdayOf(iso: string): number {
   const g = parseIso(iso).getDay();

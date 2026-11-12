@@ -16,6 +16,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { decodeXml, parseAscXml } from '../src/school/asc';
 import { checkSchedule } from '../src/school/checks';
+import { decryptJson, encryptJson, generateSchoolKey } from '../src/school/crypto';
+import { diffDay } from '../src/school/diff';
+import { nextPublication, scheduleForDate, type Publication } from '../src/school/publication';
 import { lookup } from '../src/school/model';
 import { teacherRows } from '../src/school/views';
 
@@ -121,6 +124,22 @@ else
         });
       }
       expect(diffs).toEqual([]);
+    });
+
+    it('публикация: шифруется, влезает в запрос к серверу и расшифровывается без потерь', async () => {
+      const school = 'abcd1234efgh5678';
+      const pub = nextPublication(
+        null,
+        { kind: 'base', validFrom: '2026-11-09', schedule: s },
+        { school: { id: school, name: '' }, today: '2026-11-12' },
+      );
+      const key = generateSchoolKey();
+      const blob = await encryptJson(pub, key, school);
+      expect(blob.length).toBeLessThan(3 * 1024 * 1024); // лимит тела запроса Cloud Functions — 3,5 МБ
+      const back = await decryptJson<Publication>(blob, key, school);
+      ['2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20'].forEach((d, i) =>
+        expect(diffDay(s, scheduleForDate(back, d)!, i + 1)).toEqual([]),
+      );
     });
 
     it('отчёт проверки (для чтения глазами)', () => {
