@@ -703,10 +703,14 @@ export function App({ storage, initialTab = 'schedule', tab: controlled, onDirty
                                 type="date"
                                 value={h.start}
                                 onChange={(e) =>
-                                  // Начало позже конца — сдвигаем и конец: чаще всего это один день.
+                                  // Один день — дата меняет и начало, и конец (как на телефоне);
+                                  // у промежутка начало позже конца сдвигает и конец.
                                   patch({
                                     start: e.target.value,
-                                    ...(e.target.value > h.end ? { end: e.target.value } : {}),
+                                    ...((h.start === h.end && !ranges.includes(h.id)) ||
+                                    e.target.value > h.end
+                                      ? { end: e.target.value }
+                                      : {}),
                                   })
                                 }
                               />
