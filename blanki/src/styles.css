@@ -1,0 +1,894 @@
+:root {
+  --ink: #1d2330;
+  --muted: #6b7280;
+  --line: #c9ced8;
+  --line-soft: #e4e7ec;
+  --bg: #eef0f4;
+  --panel: #ffffff;
+  --accent: #2f6f5e;
+  --accent-soft: #dcefe8;
+  --chg: #fff1a8;
+  --chg-ink: #6b5200;
+  --font: 'Segoe UI', system-ui, Arial, sans-serif;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button,
+select {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 7px;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: #9aa3b2;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+button.quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+button.link {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  padding: 0;
+  font-weight: 600;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Верхняя панель */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line-soft);
+}
+.brand {
+  font-weight: 700;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+.logo {
+  color: var(--accent);
+}
+.file {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.field input {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 4px 8px;
+}
+.tabs {
+  display: flex;
+  background: var(--bg);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+.tabs button {
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+}
+.tabs button.on {
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  font-weight: 600;
+}
+.count {
+  margin-left: 6px;
+  background: #e0a800;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+.spacer {
+  flex: 1;
+}
+
+/* Информация о файле */
+.info {
+  padding: 8px 16px;
+  background: #f8f9fb;
+  border-bottom: 1px solid var(--line-soft);
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+.facts,
+.base {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.facts b,
+.base b {
+  color: var(--ink);
+}
+.base button {
+  padding: 2px 9px;
+  font-size: 13px;
+}
+.warn {
+  border-color: #e7c66a;
+  background: #fff8e1;
+  color: #7a5a00;
+  padding: 1px 9px;
+}
+.school {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+}
+.school input {
+  width: 260px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 3px 8px;
+}
+.warnings {
+  margin: 0;
+  padding-left: 20px;
+  color: #7a5a00;
+}
+.error {
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+/* Сцена с листом */
+.stage {
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: safe center;
+  gap: 12px;
+  overflow-x: auto;
+}
+.paper {
+  background: #fff;
+  box-shadow: 0 2px 14px rgb(15 23 42 / 0.12);
+  padding: 8mm;
+}
+.sheet-opts {
+  align-self: stretch;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+}
+
+/* Бланк учеников «Предмет | Каб.» */
+.cgrid.split td.subj {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cgrid.split td.room {
+  font-size: 0.86em;
+  border-right-width: 0.5mm;
+  white-space: nowrap;
+}
+.cgrid.split th.sub:nth-child(even) {
+  border-right-width: 0.5mm;
+}
+.cgrid.split .item.tight {
+  font-size: 0.78em;
+  letter-spacing: -0.02em;
+}
+.cgrid.split .item + .item {
+  border-top: 0;
+}
+.cgrid td.num {
+  font-size: 0.85em;
+}
+
+/* Неделя */
+.wgrid td.cls {
+  font-weight: 700;
+  font-size: 1.25em;
+}
+.wgrid td.wcell {
+  vertical-align: top;
+  text-align: left;
+  padding: 0.6mm 1mm;
+}
+.wgrid tbody tr:nth-child(even) td {
+  background: #fafbfc;
+}
+.wl {
+  display: grid;
+  grid-template-columns: 1.3em 1fr auto;
+  gap: 0.8mm;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.wn {
+  color: #8a929e;
+}
+.ws {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.wr {
+  color: #4b5563;
+}
+.notice {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  padding: 16px 20px;
+  max-width: 680px;
+}
+.notice.big h3 {
+  margin: 0 0 8px;
+}
+.notice.big ol {
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+/* Лист: общие правила */
+.sheet {
+  background: #fff;
+  color: #111;
+  font-family: var(--font);
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8mm;
+  margin-bottom: 2.5mm;
+}
+.sheet-title {
+  font-size: 5mm;
+  font-weight: 700;
+}
+.sheet-note {
+  font-size: 3mm;
+  color: #555;
+  margin-top: 0.6mm;
+}
+.sheet-date {
+  font-size: 5mm;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.grid th,
+.grid td {
+  border: 0.25mm solid #9ba3af;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 0.6mm;
+  overflow: hidden;
+}
+.grid th {
+  background: #eef0f3;
+  font-weight: 600;
+}
+.grid .left {
+  text-align: left;
+}
+.grid tbody tr {
+  height: var(--row);
+}
+.grid tbody tr:nth-child(even) td {
+  background: #f6f7f9;
+}
+.grid td.chg,
+.grid tbody tr:nth-child(even) td.chg {
+  background: var(--chg);
+  color: var(--chg-ink);
+  font-weight: 700;
+}
+.lesson-h {
+  font-size: 1.15em;
+}
+.time {
+  display: block;
+  font-size: 0.72em;
+  font-weight: 400;
+  color: #555;
+}
+.sub {
+  font-size: 0.8em;
+  font-weight: 400;
+}
+.num {
+  color: #555;
+}
+.name {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pre {
+  display: inline-block;
+  min-width: 2.6em;
+  color: #6b7280;
+  font-size: 0.85em;
+}
+.tgrid .room,
+.cgrid .room {
+  color: #4b5563;
+}
+.tgrid td.cl {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tgrid td.room {
+  font-size: 0.88em;
+  white-space: nowrap;
+}
+/* граница между уроками толще, чем между «Класс» и «Каб.» */
+.tgrid td.room,
+.tgrid th.sub:nth-child(even) {
+  border-right-width: 0.5mm;
+}
+.cgrid td.cls {
+  font-weight: 700;
+  font-size: 1.2em;
+}
+.cgrid .item {
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cgrid .item + .item {
+  border-top: 0.2mm dashed #b8bec8;
+}
+.cgrid .who {
+  font-size: 0.8em;
+  color: #555;
+}
+
+/* Лист замен */
+.changes .zgrid {
+  font-size: 3.4mm;
+}
+.zgrid td {
+  padding: 1.2mm 1.5mm;
+}
+.zgrid tbody tr:nth-child(even) td {
+  background: none;
+}
+.zgrid tr.first td {
+  border-top-width: 0.5mm;
+}
+.zgrid td.cls {
+  font-weight: 700;
+  font-size: 1.3em;
+}
+.zgrid .was {
+  color: #6b7280;
+  text-decoration: line-through;
+  text-decoration-color: #c0c5cd;
+}
+.zgrid .now {
+  font-weight: 600;
+}
+.kind {
+  border-radius: 1mm;
+  padding: 0.3mm 1.4mm;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.k-sub {
+  background: #fff1a8;
+}
+.k-room {
+  background: #dbeafe;
+}
+.k-off {
+  background: #fde2e1;
+}
+.k-new {
+  background: #dcfce7;
+}
+.empty {
+  font-size: 4mm;
+  color: #555;
+}
+.who-list {
+  font-size: 3.2mm;
+  margin-top: 3mm;
+}
+
+/* Для чатов */
+.chat-view {
+  display: grid;
+  gap: 14px;
+  width: min(1100px, 100%);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chips button {
+  border-radius: 16px;
+  padding: 3px 12px;
+  position: relative;
+}
+.chips button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e0a800;
+  border: 2px solid var(--bg);
+}
+.chat-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.chat-pic {
+  display: grid;
+  gap: 10px;
+}
+.chat-text {
+  display: grid;
+  gap: 8px;
+}
+.chat-text textarea {
+  min-height: 330px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: vertical;
+  background: #fff;
+}
+.hint {
+  color: var(--muted);
+  margin: 0;
+  font-size: 13px;
+}
+.offscreen {
+  position: fixed;
+  left: -20000px;
+  top: 0;
+}
+
+.chat-card {
+  width: 540px;
+  background: #fff;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 2px 14px rgb(15 23 42 / 0.12);
+  font-family: var(--font);
+  color: #13201b;
+}
+.cc-head {
+  background: #2f6f5e;
+  color: #fff;
+  padding: 22px 26px 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.cc-class {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+}
+.cc-date {
+  font-size: 20px;
+  opacity: 0.92;
+}
+.cc-list {
+  list-style: none;
+  margin: 0;
+  padding: 10px 18px;
+}
+.cc-list li {
+  display: grid;
+  grid-template-columns: 34px 112px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf0ee;
+  font-size: 19px;
+}
+.cc-list li:last-child {
+  border-bottom: 0;
+}
+.cc-list li.chg {
+  background: #fff6c9;
+  border-radius: 10px;
+}
+.cc-n {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #dcefe8;
+  color: #2f6f5e;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+.cc-time {
+  color: #5b6b65;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.cc-subj {
+  font-weight: 600;
+}
+.cc-badge {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a5a00;
+  background: #ffe58a;
+  border-radius: 6px;
+  padding: 1px 6px;
+  vertical-align: 2px;
+}
+.cc-room {
+  color: #5b6b65;
+  font-size: 16px;
+}
+.cc-empty {
+  padding: 30px 26px;
+  font-size: 20px;
+  color: #5b6b65;
+}
+.cc-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 26px 18px;
+  background: #f4f8f6;
+  font-size: 17px;
+}
+.cc-school {
+  color: #7b8a84;
+  font-size: 14px;
+  text-align: right;
+}
+
+/* Приветствие */
+.welcome {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 0 16px;
+  display: grid;
+  gap: 18px;
+}
+.drop {
+  border: 2px dashed #9fb8ae;
+  border-radius: 18px;
+  background: var(--panel);
+  padding: 44px 20px;
+  text-align: center;
+  cursor: pointer;
+}
+.drop:hover {
+  border-color: var(--accent);
+}
+.drop-icon {
+  font-size: 40px;
+  color: var(--accent);
+}
+.drop-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+.drop-sub {
+  color: var(--muted);
+}
+.steps {
+  line-height: 1.55;
+  padding-left: 20px;
+  margin: 0;
+}
+.privacy {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.drop-hint {
+  position: fixed;
+  inset: 0;
+  background: rgb(47 111 94 / 0.16);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  pointer-events: none;
+}
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1d2330;
+  color: #fff;
+  padding: 9px 16px;
+  border-radius: 10px;
+  z-index: 10;
+}
+
+@media (max-width: 900px) {
+  .chat-grid {
+    grid-template-columns: 1fr;
+  }
+  .school {
+    margin-left: 0;
+  }
+}
+
+/* Печать: только лист, без панелей и теней */
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print,
+  .bar,
+  .info {
+    display: none !important;
+  }
+  .stage {
+    padding: 0;
+    display: block;
+  }
+  .paper {
+    box-shadow: none;
+    padding: 0;
+  }
+  .chat-card {
+    box-shadow: none;
+  }
+  .grid th,
+  .grid td.chg,
+  .grid tbody tr:nth-child(even) td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .grid thead {
+    display: table-header-group;
+  }
+  .grid tr {
+    break-inside: avoid;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Полные названия переносятся по словам */
+.cgrid .item {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+.cgrid.split td.subj {
+  white-space: normal;
+  padding: 0.3mm 0.8mm;
+}
+
+/* Проверка расписания */
+.check-ok {
+  color: #1f7a4d;
+  font-weight: 600;
+}
+.check-btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 10px;
+  border-color: #e7c66a;
+  background: #fff8e1;
+}
+.check-btn.has-err {
+  border-color: #f1a7a1;
+  background: #fef3f2;
+}
+.lv {
+  border-radius: 10px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lv-error {
+  background: #b42318;
+  color: #fff;
+}
+.lv-warn {
+  background: #f5c542;
+  color: #4a3700;
+}
+.lv-info {
+  background: #dbe4f0;
+  color: #1e3a5f;
+}
+.issues {
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  max-width: 1100px;
+}
+.issues-lead {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.issue {
+  background: #fff;
+  border: 1px solid var(--line-soft);
+  border-left: 4px solid #9aa3b2;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.issue.lvl-error {
+  border-left-color: #d92d20;
+}
+.issue.lvl-warn {
+  border-left-color: #e0a800;
+}
+.issue.lvl-info {
+  border-left-color: #6b8bb5;
+}
+.issue-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.issue-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+.issue-body p {
+  margin: 4px 0;
+}
+.issue-body ul {
+  margin: 4px 0 6px;
+  padding-left: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.muted {
+  color: var(--muted);
+}
+
+/* Окно названий предметов */
+.modal-back {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 23 42 / 0.35);
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  padding: 16px;
+}
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px 20px;
+  width: min(980px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+}
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-head h3 {
+  margin: 0;
+}
+table.names {
+  border-collapse: collapse;
+  width: 100%;
+}
+table.names th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 4px 6px;
+}
+table.names td {
+  padding: 3px 6px;
+  border-top: 1px solid var(--line-soft);
+}
+table.names td.orig {
+  color: var(--muted);
+}
+table.names input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+
+/* Разделитель «Начальная школа» на бланке учителей */
+.grid tr.section td,
+.grid tbody tr.section:nth-child(even) td {
+  background: #e3e7ed;
+  font-weight: 700;
+  text-align: left;
+  padding-left: 2mm;
+  height: auto;
+}
+
+.error-inline {
+  color: #b42318;
+  font-weight: 600;
+}
