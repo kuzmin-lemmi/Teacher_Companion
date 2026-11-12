@@ -1,3 +1,4 @@
+import { schoolStamp } from './schoolMode';
 import {
   Fragment,
   useEffect,
@@ -45,6 +46,8 @@ type Props = {
   onMeasure?: (height: number) => void;
   /** Есть новая версия — маленькая точка на кнопке настроек, без всплывающих окон. */
   updateAvailable?: boolean;
+  /** Открыть «Школа» — подключиться к расписанию от завуча. */
+  onSchool?: () => void;
   /** Заметка к уроку на дату (`YYYY-MM-DD`); пустой текст убирает её. Без обработчика строки не редактируются. */
   onNote?: (date: string, lessonNumber: number, text: string) => void;
   /** Каникулы: без id — добавить новые, с id — открыть эти. Без обработчика кнопки нет. */
@@ -307,6 +310,7 @@ export function Widget({
   onDrag,
   onMeasure,
   updateAvailable = false,
+  onSchool,
   onNote,
   onHolidays,
   layout = 'widget',
@@ -561,6 +565,11 @@ export function Widget({
                   {screen ? 'Перенести с компьютера' : 'Загрузить резервную копию'}
                 </button>
               )}
+              {onSchool && (
+                <button className="secondary" onClick={onSchool}>
+                  Подключиться к школе
+                </button>
+              )}
             </div>
           </div>
         ) : !lessons.length ? (
@@ -766,6 +775,14 @@ export function Widget({
               );
             })}
           </>
+        )}
+        {data.school && (
+          <p
+            className="widget-school"
+            title={`Расписание от завуча: ${data.school.schoolName || 'школа'}`}
+          >
+            Расписание школы · от {schoolStamp(data.school.publishedAt)}
+          </p>
         )}
       </div>
       {screen ? (

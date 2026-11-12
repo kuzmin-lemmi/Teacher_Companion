@@ -495,3 +495,92 @@ footer button {
     justify-content: start;
   }
 }
+
+/* Школьный режим */
+.school .school-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 8px 0;
+}
+.school .school-facts dt {
+  color: var(--muted, #8a948f);
+}
+.school .school-facts dd {
+  margin: 0;
+}
+.school-paste {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.school-paste label {
+  display: grid;
+  gap: 6px;
+}
+.school-paste textarea,
+.school-search {
+  width: 100%;
+  font: inherit;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #3a403d);
+  background: transparent;
+  color: inherit;
+  box-sizing: border-box;
+}
+.school-search {
+  font-family: inherit;
+  font-size: 15px;
+  margin: 8px 0;
+}
+.school-list {
+  display: grid;
+  gap: 4px;
+  max-height: 50vh;
+  overflow: auto;
+  margin-bottom: 10px;
+}
+.school-teacher {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.school-teacher small {
+  opacity: 0.7;
+}
+.school-teacher.on {
+  border-color: var(--accent, #8bcaaf);
+  background: color-mix(in srgb, var(--accent, #8bcaaf) 16%, transparent);
+}
+.school-teacher.current span::after {
+  content: ' · сейчас';
+  opacity: 0.6;
+}
+.school-confirm {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+.school-banner {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #8bcaaf) 14%, transparent);
+  font-size: 13px;
+}
+.widget-school {
+  margin: 6px 2px 0;
+  font-size: 11px;
+  opacity: 0.6;
+}

@@ -1,4 +1,5 @@
 import { hasPlus } from './plus';
+import type { SchoolState } from './schoolMode';
 export const weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'];
 export type LessonTime = { lessonNumber: number; start: string; end: string };
 export type Lesson = {
@@ -177,6 +178,10 @@ export type AppData = {
   settings: Settings;
   /** Появилось в 0.16: копии и программы постарше его не знают. */
   homeroom?: Homeroom;
+  /** Школьный режим: расписание от завуча. Нет — расписание учителя своё. */
+  school?: SchoolState;
+  /** Школьный режим: уроки учителя на даты, где они не как в обычной неделе (замены). */
+  schoolDays?: Record<string, Lesson[]>;
   /** Устарело: мастера первого запуска больше нет. Поле остаётся, чтобы читались старые копии. */
   onboardingComplete?: boolean;
 };
@@ -401,7 +406,8 @@ export function classWeek(data: AppData): ClassWeekLesson[] {
 export type Calendar = Pick<
   AppData,
   'lessons' | 'bells' | 'holidays' | 'shortDays' | 'shortBells' | 'notes'
->;
+> &
+  Partial<Pick<AppData, 'schoolDays'>>;
 export function dayOff(data: Pick<AppData, 'holidays'>, date: Date): DayOff | undefined {
   const key = isoDate(date);
   return data.holidays.find((h) => h.start <= key && key <= h.end);
@@ -426,7 +432,8 @@ export function dayOf(data: Calendar, date: Date): Day {
     date,
     off,
     short,
-    lessons: off ? [] : lessonsForDay(data.lessons, date.getDay()),
+    // Замена от школы на эту дату главнее обычной недели.
+    lessons: off ? [] : (data.schoolDays?.[key] ?? lessonsForDay(data.lessons, date.getDay())),
     bell: (n) =>
       shortBells.find((b) => b.lessonNumber === n) ?? data.bells.find((b) => b.lessonNumber === n),
     time: (lesson) => timeOf(lesson, data.bells, shortBells),
@@ -436,16 +443,22 @@ export function dayOf(data: Calendar, date: Date): Day {
 /** Каникулы бывают долгими — летние почти три месяца, поэтому ищем на год вперёд. */
 const SEARCH_DAYS = 366;
 export function getNextSchoolDay(
-  data: Pick<AppData, 'lessons' | 'holidays'>,
+  data: Pick<AppData, 'lessons' | 'holidays'> & Partial<Pick<AppData, 'schoolDays'>>,
   today = new Date(),
 ): Date | null {
-  if (!data.lessons.some((l) => l.weekday >= 1 && l.weekday <= 5)) return null;
+  const days = data.schoolDays ?? {};
+  if (
+    !data.lessons.some((l) => l.weekday >= 1 && l.weekday <= 5) &&
+    !Object.values(days).some((d) => d.length)
+  )
+    return null;
   for (let offset = 1; offset <= SEARCH_DAYS; offset++) {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
+    const dated = days[isoDate(date)];
     if (
       date.getDay() >= 1 &&
       date.getDay() <= 5 &&
-      data.lessons.some((l) => l.weekday === date.getDay()) &&
+      (dated ? dated.length > 0 : data.lessons.some((l) => l.weekday === date.getDay())) &&
       !dayOff(data, date)
     )
       return date;
