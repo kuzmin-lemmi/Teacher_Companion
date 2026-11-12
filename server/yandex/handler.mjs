@@ -5,6 +5,7 @@
  * и в QR-коде школы, сервер его не видит. Адрес функции один, операция — в ?op=…
  *
  *   GET  ?op=health                         — жив ли сервер
+ *   GET  ?op=selftest                       — может ли сервер писать в хранилище (пробный файл)
  *   POST ?op=setup                          — первая школа (только пока школ нет) → { school, publishToken }
  *   GET  ?op=meta&school=ID                 — { version, publishedAt, movedTo? } — дёшево, для проверки «есть ли новее»
  *   GET  ?op=current&school=ID              — { version, publishedAt, blob }
@@ -95,6 +96,18 @@ export async function handle(event, store, now = () => new Date()) {
 
   if (op === 'health')
     return reply(200, { ok: true, service: 'tc-school', time: now().toISOString() });
+
+  // Самопроверка хранилища: записать, прочитать и удалить пробный файл. Данные школ не трогает.
+  if (op === 'selftest') {
+    const key = 'selftest/probe.json';
+    const stamp = now().toISOString();
+    await putJson(store, key, { stamp });
+    const back = await getJson(store, key);
+    await store.del(key);
+    const gone = (await store.get(key)) == null;
+    const ok = back?.stamp === stamp && gone;
+    return reply(ok ? 200 : 500, { ok, write: back?.stamp === stamp, delete: gone });
+  }
 
   if (op === 'setup' && method === 'POST') {
     const index = (await getJson(store, K.index)) ?? { schools: [] };

@@ -97,6 +97,16 @@ describe('сервер расписания школы', () => {
     );
   });
 
+  it('самопроверка хранилища не оставляет следов', async () => {
+    const st = memoryStore();
+    expect((await call(st, 'GET', { op: 'selftest' })).json).toEqual({
+      ok: true,
+      write: true,
+      delete: true,
+    });
+    expect(st.m.size).toBe(0);
+  });
+
   it('CORS и ошибки ввода', async () => {
     const st = memoryStore();
     const opt = await handle({ httpMethod: 'OPTIONS', queryStringParameters: { op: 'meta' } }, st);
