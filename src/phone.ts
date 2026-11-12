@@ -174,6 +174,12 @@ export async function shareText(text: string, title: string): Promise<'shared' |
   await navigator.clipboard.writeText(text);
   return 'copied';
 }
+/** Школьный режим: уведомление «Завуч изменил расписание» (только телефон). */
+export async function notifySchoolPhone(title: string, text: string): Promise<boolean> {
+  if (!phone()) return false;
+  await call('school', { title, text });
+  return true;
+}
 /** Предложить лаунчеру поставить виджет. `false` — лаунчер так не умеет. */
 export async function pinWidget(kind: 'now' | 'day'): Promise<boolean> {
   if (!phone()) return false;

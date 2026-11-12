@@ -10,6 +10,7 @@ import {
   schoolStamp,
   teacherChoices,
 } from './schoolMode';
+import { applyWithChanges } from './schoolChanges';
 
 export type SchoolChange = (
   change: (current: AppData) => AppData,
@@ -112,7 +113,7 @@ export function SchoolPanel({
       if (r.kind === 'error') throw new Error(r.message);
       if (r.kind === 'update') {
         await onChange((current) =>
-          current.school ? applySchool(current, r.fetched, r.link, r.teacherId) : current,
+          current.school ? applyWithChanges(current, r.fetched, r.link, r.teacherId).data : current,
         );
         setStatus(
           r.fetched.version === st.version

@@ -21,6 +21,7 @@ import type { SchoolLink } from './school/link';
 import { compareClasses, lookup, type Id, type Schedule } from './school/model';
 import { baseFor, scheduleForDate, withHomerooms, type Publication } from './school/publication';
 import { classDayLines } from './school/text';
+import type { SchoolChanges } from './schoolChanges';
 
 export type SchoolState = SchoolLink & {
   schoolName: string;
@@ -33,6 +34,8 @@ export type SchoolState = SchoolLink & {
   appliedOn: string;
   /** Классное руководство из школы, если есть. */
   homeroomClass?: string;
+  /** Непросмотренные изменения от завуча — плашка в виджете до «Понятно». */
+  changes?: SchoolChanges;
   /** Личное расписание до подключения — вернётся при отключении. */
   personal: { lessons: Lesson[]; bells: LessonTime[]; homeroom?: Homeroom };
 };

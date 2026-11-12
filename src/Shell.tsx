@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { applySchool, checkSchool } from './schoolMode';
+import { checkSchool } from './schoolMode';
+import { applyWithChanges, notificationText, quietHours } from './schoolChanges';
+import { homeroomName } from './classText';
+import { notifySchoolPhone } from './phone';
+import { showSystemNotification } from './chime';
 /** Как часто проверять, не прислал ли завуч новое расписание. */
 const SCHOOL_CHECK_MS = 30 * 60 * 1000;
 import { isTauri } from '@tauri-apps/api/core';
@@ -266,12 +270,33 @@ export function Shell({
       const current = dataRef.current;
       if (!current?.school) return;
       const r = await checkSchool(current);
-      if (stopped || r.kind !== 'update') return;
-      await persist((latest) =>
-        latest.school?.school === schoolId
-          ? applySchool(latest, r.fetched, r.link, r.teacherId)
-          : latest,
-      ).catch(() => {});
+      if (stopped) return;
+      let fresh = false;
+      if (r.kind === 'update')
+        await persist((latest) => {
+          if (latest.school?.school !== schoolId) return latest;
+          const out = applyWithChanges(latest, r.fetched, r.link, r.teacherId);
+          fresh = !!out.fresh;
+          return out.data;
+        }).catch(() => {});
+      // Уведомление — сразу; пришедшее в тихие часы (21:00–6:30) — при первой проверке утром.
+      const changes = dataRef.current?.school?.changes;
+      if (!changes || quietHours(new Date()) || !(fresh || changes.notifyPending)) return;
+      const { title, text } = notificationText(changes, homeroomName(dataRef.current!));
+      if (!(await notifySchoolPhone(title, text).catch(() => false)))
+        showSystemNotification(title, text);
+      if (changes.notifyPending)
+        await persist((latest) =>
+          latest.school?.changes
+            ? {
+                ...latest,
+                school: {
+                  ...latest.school,
+                  changes: { ...latest.school.changes, notifyPending: false },
+                },
+              }
+            : latest,
+        ).catch(() => {});
     };
     void run();
     const timer = setInterval(() => void run(), SCHOOL_CHECK_MS);
@@ -527,6 +552,13 @@ export function Shell({
           onBackups={() => navigate('backups')}
           onSchool={data.school ? undefined : () => navigate('school')}
           onClassShare={() => navigate('homeroom')}
+          onDismissSchoolChanges={() =>
+            void persist((current) =>
+              current.school?.changes
+                ? { ...current, school: { ...current.school, changes: undefined } }
+                : current,
+            ).catch((e) => setNativeError(e.message))
+          }
           onHolidays={(id) =>
             guard(() => {
               setHidden(false);

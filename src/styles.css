@@ -655,3 +655,44 @@ footer button {
 .week-share {
   margin-left: auto;
 }
+
+/* «Изменения от завуча» */
+.school-changes {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #e0a800 55%, transparent);
+  background: color-mix(in srgb, #e0a800 14%, transparent);
+  font-size: 13px;
+}
+.school-changes ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
+}
+.school-changes .sc-off {
+  text-decoration-color: currentColor;
+}
+.school-changes .sc-class {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.school-changes .sc-more,
+.school-changes .sc-ok {
+  justify-self: start;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  padding: 0;
+  cursor: pointer;
+}
+.school-changes .sc-ok {
+  font-weight: 600;
+}

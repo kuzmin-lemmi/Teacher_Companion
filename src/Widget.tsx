@@ -1,4 +1,5 @@
 import { schoolStamp } from './schoolMode';
+import { shortDate, type SchoolChanges } from './schoolChanges';
 import {
   Fragment,
   useEffect,
@@ -48,6 +49,8 @@ type Props = {
   updateAvailable?: boolean;
   /** Открыть «Мой класс» с текстом расписания для родителей. */
   onClassShare?: () => void;
+  /** Скрыть плашку «Изменения от завуча». */
+  onDismissSchoolChanges?: () => void;
   /** Открыть «Школа» — подключиться к расписанию от завуча. */
   onSchool?: () => void;
   /** Заметка к уроку на дату (`YYYY-MM-DD`); пустой текст убирает её. Без обработчика строки не редактируются. */
@@ -314,6 +317,7 @@ export function Widget({
   updateAvailable = false,
   onSchool,
   onClassShare,
+  onDismissSchoolChanges,
   onNote,
   onHolidays,
   layout = 'widget',
@@ -530,6 +534,14 @@ export function Widget({
               )}
             </span>
           </button>
+        )}
+        {data.school?.changes && (
+          <SchoolChangesBanner
+            changes={data.school.changes}
+            className={homeroom}
+            onShare={onClassShare}
+            onDismiss={onDismissSchoolChanges}
+          />
         )}
         {week ? (
           <>
@@ -838,5 +850,62 @@ export function Widget({
         )
       )}
     </section>
+  );
+}
+
+/** «Изменения от завуча»: свои уроки и расписание класса — пока учитель не нажмёт «Понятно». */
+function SchoolChangesBanner({
+  changes,
+  className,
+  onShare,
+  onDismiss,
+}: {
+  changes: SchoolChanges;
+  className: string;
+  onShare?: () => void;
+  onDismiss?: () => void;
+}) {
+  const [all, setAll] = useState(false);
+  const LIMIT = 3;
+  const items = all ? changes.items : changes.items.slice(0, LIMIT);
+  return (
+    <div className="school-changes" role="status">
+      <strong>Изменения от завуча</strong>
+      {changes.items.length > 0 && (
+        <ul>
+          {items.map((x) => (
+            <li
+              key={`${x.date}-${x.lessonNumber}`}
+              className={
+                x.kind === 'отмена' ? 'sc-off' : x.kind === 'новый урок' ? 'sc-new' : 'sc-sub'
+              }
+            >
+              {x.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      {changes.items.length > LIMIT && (
+        <button type="button" className="sc-more" onClick={() => setAll(!all)}>
+          {all ? 'Свернуть' : `Ещё ${changes.items.length - LIMIT}`}
+        </button>
+      )}
+      {className && changes.classDates.length > 0 && (
+        <p className="sc-class">
+          У {className} изменилось расписание:{' '}
+          {changes.classDates.slice(0, 3).map(shortDate).join('; ')}
+          {onShare && (
+            <button type="button" className="secondary" onClick={onShare}>
+              Родителям
+            </button>
+          )}
+        </p>
+      )}
+      {onDismiss && (
+        <button type="button" className="sc-ok" onClick={onDismiss}>
+          Понятно
+        </button>
+      )}
+    </div>
   );
 }
