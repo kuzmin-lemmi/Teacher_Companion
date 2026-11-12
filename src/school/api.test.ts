@@ -24,6 +24,14 @@ function fakeCloud() {
   return vi.fn(async (input: URL | string, init: RequestInit = {}) => {
     const url = new URL(String(input));
     const headers = (init.headers ?? {}) as Record<string, string>;
+    // Как настоящий шлюз Yandex Cloud Functions: Authorization — это IAM-токен, чужой → 403 до функции.
+    if (Object.keys(headers).some((k) => k.toLowerCase() === 'authorization'))
+      return new Response(
+        JSON.stringify({ errorCode: 403, errorMessage: 'Forbidden: Not authorized' }),
+        {
+          status: 403,
+        },
+      );
     const r = await handle(
       {
         httpMethod: init.method ?? 'GET',

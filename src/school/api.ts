@@ -27,7 +27,8 @@ async function call<T>(server: string, op: string, o: Opts = {}): Promise<T> {
       method: o.method ?? 'GET',
       headers: {
         ...(o.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        ...(o.token ? { Authorization: `Bearer ${o.token}` } : {}),
+        // Не Authorization: его перехватывает шлюз Yandex Cloud Functions (ответ 403).
+        ...(o.token ? { 'X-School-Token': o.token } : {}),
       },
       body: o.body === undefined ? undefined : JSON.stringify(o.body),
       cache: 'no-store',

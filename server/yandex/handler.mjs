@@ -23,7 +23,7 @@ const ID_RE = /^[a-z0-9]{8,32}$/;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  'Access-Control-Allow-Headers': 'X-School-Token, Content-Type',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -58,10 +58,15 @@ function readBody(event) {
   }
 }
 
+/**
+ * Ключ завуча — в своём заголовке X-School-Token. Заголовок Authorization занят Yandex Cloud:
+ * шлюз функций считает его IAM-токеном и отвечает 403 ещё до нашего кода.
+ */
 function bearer(event) {
-  const h = event.headers ?? {};
-  const v = h.Authorization ?? h.authorization ?? '';
-  return v.startsWith('Bearer ') ? v.slice(7) : '';
+  const h = Object.fromEntries(
+    Object.entries(event.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]),
+  );
+  return String(h['x-school-token'] ?? '').trim();
 }
 
 /** Ключи в хранилище. */

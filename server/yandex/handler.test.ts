@@ -25,7 +25,7 @@ const call = async (
     {
       httpMethod,
       queryStringParameters: q,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: token ? { 'X-School-Token': token } : {},
       body: body === undefined ? undefined : JSON.stringify(body),
     },
     store,
