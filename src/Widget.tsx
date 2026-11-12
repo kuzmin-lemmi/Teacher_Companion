@@ -46,6 +46,8 @@ type Props = {
   onMeasure?: (height: number) => void;
   /** Есть новая версия — маленькая точка на кнопке настроек, без всплывающих окон. */
   updateAvailable?: boolean;
+  /** Открыть «Мой класс» с текстом расписания для родителей. */
+  onClassShare?: () => void;
   /** Открыть «Школа» — подключиться к расписанию от завуча. */
   onSchool?: () => void;
   /** Заметка к уроку на дату (`YYYY-MM-DD`); пустой текст убирает её. Без обработчика строки не редактируются. */
@@ -311,6 +313,7 @@ export function Widget({
   onMeasure,
   updateAvailable = false,
   onSchool,
+  onClassShare,
   onNote,
   onHolidays,
   layout = 'widget',
@@ -538,6 +541,15 @@ export function Widget({
                 <button aria-pressed={classView} onClick={() => setClassView(true)}>
                   {homeroom}
                 </button>
+                {classView && onClassShare && (
+                  <button
+                    className="week-share"
+                    title="Расписание класса текстом для чата родителей"
+                    onClick={onClassShare}
+                  >
+                    Родителям
+                  </button>
+                )}
               </div>
             )}
             <WeekTable

@@ -129,6 +129,13 @@ const sameLessons = (a: Lesson[], b: Lesson[]) => {
   return x.length === y.length && x.every((v, i) => v === y[i]);
 };
 
+const sameClassLessons = (a: ClassLesson[], b: ClassLesson[]) => {
+  const key = (l: ClassLesson) => `${l.lessonNumber}|${l.subject}|${l.room}|${l.teacher}`;
+  const x = a.map(key).sort();
+  const y = b.map(key).sort();
+  return x.length === y.length && x.every((v, i) => v === y[i]);
+};
+
 export class SchoolApplyError extends Error {}
 
 /**
@@ -176,6 +183,27 @@ export function applySchool(
     homeroom: data.homeroom,
   };
   const bells = schoolBells(weekly);
+  // Расписание класса на даты, где оно не как в обычной неделе (замены у класса) — для текста родителям.
+  const classWeekLessons = homeClass ? classLessons(weekly, homeClass.id) : [];
+  const schoolClassDays: Record<string, ClassLesson[]> = {};
+  if (homeClass)
+    for (let i = 0; i < AHEAD_DAYS; i++) {
+      const date = addDays(today, i);
+      const wd = weekdayOf(date);
+      if (wd < 1 || wd > 5) continue;
+      const s = scheduleForDate(pub, date);
+      if (!s) continue;
+      const day = classLessons(s, homeClass.id)
+        .filter((l) => l.weekday === wd)
+        .map((l) => ({ ...l, id: `school-class-${date}-${l.lessonNumber}` }));
+      if (
+        !sameClassLessons(
+          day,
+          classWeekLessons.filter((l) => l.weekday === wd),
+        )
+      )
+        schoolClassDays[date] = day;
+    }
   const school: SchoolState = {
     server: link.server,
     school: link.school,
@@ -194,8 +222,9 @@ export function applySchool(
     lessons,
     bells: bells.length ? bells : data.bells,
     schoolDays,
+    schoolClassDays,
     homeroom: homeClass
-      ? { enabled: true, className: homeClass.name, lessons: classLessons(weekly, homeClass.id) }
+      ? { enabled: true, className: homeClass.name, lessons: classWeekLessons }
       : personal.homeroom,
     school,
   };
@@ -208,8 +237,9 @@ export function applySchool(
 
 /** Отключиться от школы: вернуть личное расписание, забыть ключ школы. */
 export function disconnectSchool(data: AppData): AppData {
-  const { school, schoolDays: _days, ...rest } = data;
+  const { school, schoolDays: _days, schoolClassDays: _classDays, ...rest } = data;
   void _days;
+  void _classDays;
   if (!school) return data;
   return {
     ...rest,

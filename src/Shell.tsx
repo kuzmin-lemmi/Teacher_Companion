@@ -526,6 +526,7 @@ export function Shell({
           onSettings={() => navigate(isMobile() ? 'menu' : 'schedule')}
           onBackups={() => navigate('backups')}
           onSchool={data.school ? undefined : () => navigate('school')}
+          onClassShare={() => navigate('homeroom')}
           onHolidays={(id) =>
             guard(() => {
               setHidden(false);

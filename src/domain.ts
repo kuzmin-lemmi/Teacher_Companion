@@ -182,6 +182,8 @@ export type AppData = {
   school?: SchoolState;
   /** Школьный режим: уроки учителя на даты, где они не как в обычной неделе (замены). */
   schoolDays?: Record<string, Lesson[]>;
+  /** Школьный режим: расписание своего класса на даты с заменами — для текста родителям. */
+  schoolClassDays?: Record<string, ClassLesson[]>;
   /** Устарело: мастера первого запуска больше нет. Поле остаётся, чтобы читались старые копии. */
   onboardingComplete?: boolean;
 };

@@ -584,3 +584,74 @@ footer button {
   font-size: 11px;
   opacity: 0.6;
 }
+
+/* «Родителям» — расписание класса текстом */
+.class-share,
+.m-class-share {
+  display: grid;
+  gap: 10px;
+}
+.m-class-share {
+  margin: 0 0 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--card, rgba(255, 255, 255, 0.04));
+}
+.cs-head h2 {
+  margin: 0 0 2px;
+  font-size: 16px;
+}
+.cs-head p {
+  margin: 0;
+}
+.cs-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.cs-tabs button {
+  border-radius: 999px;
+  padding: 4px 12px;
+  border: 1px solid var(--line, #3a403d);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.cs-tabs button[aria-pressed='true'] {
+  border-color: var(--accent, #8bcaaf);
+  background: color-mix(in srgb, var(--accent, #8bcaaf) 18%, transparent);
+}
+.cs-opts {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+}
+.cs-opts label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.cs-opts input[type='checkbox'] {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+.cs-text {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line, #3a403d);
+  background: transparent;
+  color: inherit;
+  resize: vertical;
+}
+.week-share {
+  margin-left: auto;
+}

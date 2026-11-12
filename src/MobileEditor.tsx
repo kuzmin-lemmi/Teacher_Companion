@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ClassShare } from './ClassShare';
 import { createPortal } from 'react-dom';
 import { useBackButton } from './back';
 import {
@@ -748,6 +749,7 @@ export function HomeroomPage({ editor }: { editor: Editor }) {
         )}
       </div>
       <EditorStatus editor={editor} />
+      {homeroom.enabled && className && <ClassShare data={data} mobile />}
       {homeroom.enabled && className && (
         <>
           <div className="m-days" role="tablist" aria-label="День недели">

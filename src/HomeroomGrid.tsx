@@ -6,6 +6,7 @@ import {
   type ClassLesson,
   type Homeroom,
 } from './domain';
+import { ClassShare } from './ClassShare';
 
 const shortDay = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 const noHomeroom: Homeroom = { enabled: false, className: '', lessons: [] };
@@ -89,6 +90,7 @@ export function HomeroomGrid({ data, change }: { data: AppData; change: (next: A
           </label>
         )}
       </section>
+      {homeroom.enabled && className && <ClassShare data={data} mobile={false} />}
       {homeroom.enabled && className && (
         <section className="ed-card">
           <div className="ed-card-head">
