@@ -11,6 +11,7 @@
  * Модуль без React и сети: одинаково работает в «Бланках» и в Teacher Companion.
  */
 import { addDays, weekdayOf } from './dates';
+import { diffDay, type Change as DiffChange } from './diff';
 import {
   type Entry,
   type Id,
@@ -220,4 +221,58 @@ export function assertPublication(x: unknown): asserts x is Publication {
     );
   if (!Array.isArray(p.bases) || !p.bases.length)
     throw new Error('В расписании школы нет основного расписания.');
+}
+
+export type AheadChange = { date: string; change: DiffChange };
+
+/**
+ * Что увидят учителя по-новому в ближайшие `days` дней (с `from`), если отправить `next` вместо `prev`.
+ * Каждое изменение — с датой, классом, уроком и учителями, которых оно касается.
+ */
+export function changesAhead(
+  prev: Publication | null,
+  next: Publication,
+  from: string,
+  days = 14,
+): AheadChange[] {
+  const out: AheadChange[] = [];
+  for (let i = 0; i < days; i++) {
+    const date = addDays(from, i);
+    const day = weekdayOf(date);
+    const after = scheduleForDate(next, date);
+    if (!after || !after.days.some((d) => d.n === day)) continue;
+    const before = prev ? scheduleForDate(prev, date) : undefined;
+    if (!before) continue;
+    for (const change of diffDay(before, after, day)) out.push({ date, change });
+  }
+  return out;
+}
+
+/** Изменения, сгруппированные по учителю — для экрана «что изменится и у кого». */
+export function changesByTeacher(list: AheadChange[]): Map<string, AheadChange[]> {
+  const m = new Map<string, AheadChange[]>();
+  for (const x of list)
+    for (const t of x.change.teachers.length ? x.change.teachers : ['без учителя'])
+      m.set(t, [...(m.get(t) ?? []), x]);
+  return new Map([...m].sort((a, b) => a[0].localeCompare(b[0], 'ru')));
+}
+
+/** Изменения классного руководства: класс → [было, стало] (имена учителей). */
+export function homeroomChanges(
+  prev: Publication | null,
+  next: Publication,
+  date: string,
+): { cls: string; before: string; after: string }[] {
+  const a = prev ? scheduleForDate(prev, date) : undefined;
+  const b = scheduleForDate(next, date);
+  if (!a || !b) return [];
+  const name = (s: Schedule, id: Id | null) =>
+    id ? (s.teachers.find((t) => t.id === id)?.name ?? '—') : '—';
+  return b.classes
+    .map((c) => ({
+      cls: c.name,
+      before: name(a, a.classes.find((x) => x.id === c.id)?.teacher ?? null),
+      after: name(b, c.teacher),
+    }))
+    .filter((x) => x.before !== x.after);
 }

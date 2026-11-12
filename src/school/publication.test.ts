@@ -147,3 +147,35 @@ describe('публикация tc-school/2', () => {
     expect(() => assertPublication({ format: 'tc-school/9' })).toThrow('обновите приложение');
   });
 });
+
+describe('что изменится и у кого', async () => {
+  const { changesAhead, changesByTeacher, homeroomChanges } = await import('./publication');
+  const opt = { school, today: '2026-11-12' };
+  const p1 = nextPublication(null, { kind: 'base', validFrom: '2026-11-09', schedule: base }, opt);
+
+  it('замена на 13-е видна только 13-го и только у тех, кого касается', () => {
+    const p2 = nextPublication(p1, { kind: 'override', date: FRI, schedule: changed }, opt);
+    const list = changesAhead(p1, p2, '2026-11-12');
+    expect(new Set(list.map((x) => x.date))).toEqual(new Set([FRI]));
+    expect(list.length).toBe(diffDay(base, changed, 5).length);
+    const byT = changesByTeacher(list);
+    expect([...byT.keys()].some((t) => t.startsWith('Петрова'))).toBe(true);
+  });
+
+  it('первая отправка — сравнивать не с чем', () => {
+    expect(changesAhead(null, p1, '2026-11-12')).toEqual([]);
+  });
+
+  it('назначенное классное руководство видно в изменениях', () => {
+    const cls = base.classes.find((c) => c.name === '8б')!;
+    const t = base.teachers.find((x) => x.name.startsWith('Кузнецов'))!;
+    const p2 = nextPublication(
+      p1,
+      { kind: 'base', validFrom: '2026-11-09', schedule: base },
+      { ...opt, homerooms: { [cls.id]: t.id } },
+    );
+    expect(homeroomChanges(p1, p2, FRI)).toEqual([
+      expect.objectContaining({ cls: '8б', after: t.name }),
+    ]);
+  });
+});

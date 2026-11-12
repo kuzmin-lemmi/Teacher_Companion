@@ -892,3 +892,188 @@ table.names input {
   color: #b42318;
   font-weight: 600;
 }
+
+/* Вкладка «Учителям» */
+.send {
+  display: grid;
+  gap: 14px;
+  width: min(1000px, 100%);
+}
+.send-card {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: grid;
+  gap: 10px;
+}
+.send-card h3,
+.send-card h4 {
+  margin: 0;
+}
+.send-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.field-col {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+}
+.field-col input {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6px 10px;
+  max-width: 480px;
+}
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.modes label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.modes label.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.modes input[type='date'] {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.preview {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 8px;
+  display: grid;
+  gap: 6px;
+  max-height: 420px;
+  overflow: auto;
+}
+.who-changes ul {
+  margin: 2px 0 4px;
+  padding-left: 20px;
+}
+.who-changes .kind {
+  font-size: 12px;
+}
+.warn-confirm {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: #7a5a00;
+  background: #fff8e1;
+  border: 1px solid #e7c66a;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+button.big {
+  padding: 8px 18px;
+  font-size: 15px;
+}
+table.hr select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 6px;
+  width: 100%;
+}
+table.hr tr.changed td {
+  background: #fff8e1;
+}
+.qr-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: start;
+}
+.qr-actions {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.qr-sheet {
+  width: 300px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  background: #fff;
+  color: #111;
+  text-align: center;
+  display: grid;
+  gap: 6px;
+}
+.qs-title {
+  font-weight: 800;
+  font-size: 18px;
+}
+.qs-school {
+  color: #333;
+}
+.qs-qr {
+  width: 100%;
+  height: auto;
+}
+.qs-steps {
+  text-align: left;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.qs-foot {
+  font-size: 11px;
+  color: #666;
+}
+@media (max-width: 800px) {
+  .modes,
+  .qr-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Печать листа с QR: только лист, крупно, на всю страницу A4 */
+@media print {
+  body.print-qr * {
+    visibility: hidden;
+  }
+  body.print-qr .qr-sheet,
+  body.print-qr .qr-sheet * {
+    visibility: visible;
+  }
+  body.print-qr .qr-sheet {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 194mm;
+    border: 0;
+    gap: 6mm;
+    padding: 10mm 12mm;
+  }
+  body.print-qr .qs-title {
+    font-size: 11mm;
+  }
+  body.print-qr .qs-school {
+    font-size: 7mm;
+  }
+  body.print-qr .qs-qr {
+    width: 120mm;
+    margin: 0 auto;
+  }
+  body.print-qr .qs-steps {
+    font-size: 5.5mm;
+    line-height: 1.5;
+  }
+  body.print-qr .qs-foot {
+    font-size: 4mm;
+  }
+}

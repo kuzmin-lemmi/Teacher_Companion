@@ -41,6 +41,7 @@ import {
   zip,
 } from './export';
 import { ChangesSheet, ChatCard, TeacherSheet, type Orient } from './Sheets';
+import { SendView } from './SendView';
 import { ClassSheet, GRADE_RANGES, type ClassLayout, type GradeRange } from './ClassSheets';
 
 const CLASS_LAYOUTS: { id: ClassLayout; label: string; hint: string }[] = [
@@ -49,7 +50,7 @@ const CLASS_LAYOUTS: { id: ClassLayout; label: string; hint: string }[] = [
   { id: 'week', label: 'На неделю', hint: 'Дни сверху, в клетке — уроки по порядку' },
 ];
 
-type View = 'teachers' | 'classes' | 'chat' | 'changes';
+type View = 'teachers' | 'classes' | 'chat' | 'changes' | 'send';
 type Baseline = { schedule: Schedule; savedAt: string; demo?: boolean };
 type Prefs = {
   school: string;
@@ -74,13 +75,20 @@ const DEFAULT_PREFS: Prefs = {
   classRange: '5-11',
   fullNames: true,
   names: {},
-  orient: { teachers: 'portrait', classes: 'landscape', chat: 'portrait', changes: 'portrait' },
+  orient: {
+    teachers: 'portrait',
+    classes: 'landscape',
+    chat: 'portrait',
+    changes: 'portrait',
+    send: 'portrait',
+  },
 };
 const VIEWS: { id: View; label: string }[] = [
   { id: 'teachers', label: 'Учителя' },
   { id: 'classes', label: 'Классы' },
   { id: 'chat', label: 'Для чатов' },
   { id: 'changes', label: 'Замены' },
+  { id: 'send', label: 'Учителям' },
 ];
 
 async function readSchedule(file: File): Promise<Schedule> {
@@ -178,7 +186,7 @@ export default function App() {
   const dayExists = !!schedule?.days.some((d) => d.n === day);
   const dateText = capitalize(dateLabel(date));
   const title = (what: string) => (prefs.school ? `${prefs.school} — ${what}` : what);
-  const orient = prefs.orient[view];
+  const orient: Orient = prefs.orient[view] ?? DEFAULT_PREFS.orient[view];
 
   const diff = useMemo(() => {
     if (!schedule || !baseline || !dayExists || baseline.schedule === schedule) return null;
@@ -302,7 +310,7 @@ export default function App() {
               ))}
             </div>
             <div className="spacer" />
-            {view !== 'chat' && (
+            {view !== 'chat' && view !== 'send' && (
               <>
                 <select
                   value={orient}
@@ -461,6 +469,14 @@ export default function App() {
                   />
                 </Paper>
               </>
+            ) : view === 'send' ? (
+              <SendView
+                schedule={schedule}
+                issues={issues}
+                date={date}
+                schoolName={prefs.school}
+                say={say}
+              />
             ) : view === 'changes' ? (
               !baseline || baseline.schedule === schedule ? (
                 <NoBaseline

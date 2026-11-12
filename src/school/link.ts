@@ -46,7 +46,12 @@ export async function parseSchoolLink(text: string): Promise<SchoolLink> {
   const server = q.get('u') ?? DEFAULT_SERVER;
   const school = q.get('s') ?? '';
   const key = q.get('k') ?? '';
-  if (!/^https:\/\//.test(server)) throw new SchoolKeyError('В коде школы неверный адрес сервера.');
+  // https — всегда; http — только локальный сервер разработки на этом же компьютере.
+  if (
+    !/^https:\/\//.test(server) &&
+    !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/.test(server)
+  )
+    throw new SchoolKeyError('В коде школы неверный адрес сервера.');
   if (!SCHOOL_RE.test(school)) throw new SchoolKeyError('В коде школы неверный номер школы.');
   let keyOk = false;
   try {
