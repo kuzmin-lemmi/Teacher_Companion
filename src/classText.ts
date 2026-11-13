@@ -9,6 +9,7 @@ import {
   classWeek,
   dayOff,
   isoDate,
+  schoolClassDay,
   timeOf,
   type AppData,
   type DayOff,
@@ -42,7 +43,9 @@ export function classDay(data: AppData, date: Date): ClassDay {
   const short = data.shortDays.includes(key) && data.shortBells.length > 0;
   if (off || !homeroomName(data)) return { date, off, short, lines: [] };
   const wd = date.getDay();
-  const list = data.schoolClassDays?.[key] ?? classWeek(data).filter((l) => l.weekday === wd);
+  const list =
+    schoolClassDay(data, key, homeroomName(data)) ??
+    classWeek(data).filter((l) => l.weekday === wd);
   const shortBells = short ? data.shortBells : [];
   const lines = [...list]
     .sort((a, b) => a.lessonNumber - b.lessonNumber)

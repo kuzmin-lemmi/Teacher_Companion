@@ -696,3 +696,25 @@ footer button {
 .school-changes .sc-ok {
   font-weight: 600;
 }
+
+/* Школьный режим: неделя своего класса только для чтения */
+.school-class-note {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.school-class-row {
+  cursor: default;
+}
+.school-class-week td {
+  vertical-align: top;
+}
+.school-class-week td strong {
+  display: block;
+  font-weight: 600;
+}
+.school-class-week td small {
+  display: block;
+}
+.school-class-week td.mine {
+  background: color-mix(in srgb, var(--accent, #8bcaaf) 14%, transparent);
+}

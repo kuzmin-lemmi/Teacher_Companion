@@ -124,3 +124,45 @@ describe('расписание класса для родителей', () => {
     );
   });
 });
+
+describe('классный руководитель выбрал класс сам (завуч не назначил)', () => {
+  it('«Мой класс» и текст родителям — всё расписание класса из школы, с заменами', () => {
+    const base = parseAscXml(readFileSync('src/school/samples/demo-asc.xml', 'utf8'));
+    const changed = parseAscXml(readFileSync('src/school/samples/demo-asc-zameny.xml', 'utf8'));
+    const school = { id: 'abcd1234efgh5678', name: 'Демо' };
+    const opt = { school, today: '2026-11-12' };
+    const p1 = nextPublication(
+      null,
+      { kind: 'base', validFrom: '2026-11-09', schedule: base },
+      opt,
+    );
+    const p2 = nextPublication(
+      p1,
+      { kind: 'override', date: '2026-11-13', schedule: changed },
+      opt,
+    );
+    const t = base.teachers.find((x) => x.name.startsWith('Кузнецов'))!;
+    const link = { server: 'https://x', school: school.id, key: 'k' };
+    // До подключения учитель вписал «5 А» сам; после подключения он не классный руководитель по школе
+    const mine = { ...emptyData(), homeroom: { enabled: true, className: '5 А', lessons: [] } };
+    const d = applySchool(
+      mine,
+      { version: 2, publishedAt: 'x', publication: p2 },
+      link,
+      t.id,
+      new Date(2026, 10, 12, 9),
+    );
+    expect(d.school!.homeroomClass).toBeUndefined();
+    expect(d.homeroom!.className).toBe('5 А');
+    const fri20 = classDay(d, new Date(2026, 10, 20)).lines;
+    expect(fri20.length).toBeGreaterThanOrEqual(5); // вся пятница класса, а не только уроки учителя
+    expect(fri20.every((l) => l.subject && l.teacher)).toBe(true);
+    expect(classDay(d, FRI).lines.map((l) => l.teacher)).not.toEqual(fri20.map((l) => l.teacher)); // замена 13-го
+    // Сменил класс в «Моём классе» — сразу другой класс, без интернета
+    const other = { ...d, homeroom: { ...d.homeroom!, className: '7б' } };
+    expect(
+      classDayText(other, new Date(2026, 10, 20), { rooms: false, teachers: false }),
+    ).toContain('📅 7б — пятница, 20 ноября');
+    expect(classDay(other, new Date(2026, 10, 20)).lines.length).toBeGreaterThan(3);
+  });
+});

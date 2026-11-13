@@ -182,8 +182,10 @@ export type AppData = {
   school?: SchoolState;
   /** Школьный режим: уроки учителя на даты, где они не как в обычной неделе (замены). */
   schoolDays?: Record<string, Lesson[]>;
-  /** Школьный режим: расписание своего класса на даты с заменами — для текста родителям. */
-  schoolClassDays?: Record<string, ClassLesson[]>;
+  /** Школьный режим: обычная неделя каждого класса школы (название класса → уроки). */
+  schoolClasses?: Record<string, ClassLesson[]>;
+  /** Школьный режим: замены у классов — дата → класс → уроки этого дня. */
+  schoolClassDays?: Record<string, Record<string, ClassLesson[]>>;
   /** Устарело: мастера первого запуска больше нет. Поле остаётся, чтобы читались старые копии. */
   onboardingComplete?: boolean;
 };
@@ -385,9 +387,34 @@ export type ClassWeekLesson = ClassLesson & { mine: boolean };
  * Неделя своего класса: введённые уроки класса и уроки самого учителя в этом классе —
  * их второй раз вводить не нужно, и на занятом ими месте они главнее.
  */
+/** Школьный режим: неделя класса из школы, если он там есть («7 б» и «7Б» — один класс). */
+export function schoolClassWeek(data: AppData, className: string): ClassLesson[] | undefined {
+  if (!data.school || !data.schoolClasses) return undefined;
+  const key = Object.keys(data.schoolClasses).find((k) => sameClass(k, className));
+  return key ? data.schoolClasses[key] : undefined;
+}
+/** Школьный режим: уроки класса на дату с заменами — или `undefined`, если в этот день как обычно. */
+export function schoolClassDay(
+  data: AppData,
+  date: string,
+  className: string,
+): ClassLesson[] | undefined {
+  const day = data.school ? data.schoolClassDays?.[date] : undefined;
+  const key = day && Object.keys(day).find((k) => sameClass(k, className));
+  return key ? day![key] : undefined;
+}
 export function classWeek(data: AppData): ClassWeekLesson[] {
   const h = data.homeroom;
   if (!h?.enabled || !h.className.trim()) return [];
+  // Подключены к школе и класс в ней есть — вся неделя класса из школы, свои уроки отмечены.
+  const fromSchool = schoolClassWeek(data, h.className);
+  if (fromSchool) {
+    const slot = (l: { weekday: number; lessonNumber: number }) => `${l.weekday}-${l.lessonNumber}`;
+    const mineAt = new Set(
+      data.lessons.filter((l) => sameClass(l.className, h.className)).map(slot),
+    );
+    return fromSchool.map((l) => ({ ...l, mine: mineAt.has(slot(l)) }));
+  }
   const mine: ClassWeekLesson[] = data.lessons
     .filter((l) => sameClass(l.className, h.className))
     .map((l) => ({ ...l, teacher: '', mine: true }));

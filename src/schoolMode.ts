@@ -186,27 +186,35 @@ export function applySchool(
     homeroom: data.homeroom,
   };
   const bells = schoolBells(weekly);
-  // Расписание класса на даты, где оно не как в обычной неделе (замены у класса) — для текста родителям.
-  const classWeekLessons = homeClass ? classLessons(weekly, homeClass.id) : [];
-  const schoolClassDays: Record<string, ClassLesson[]> = {};
-  if (homeClass)
-    for (let i = 0; i < AHEAD_DAYS; i++) {
-      const date = addDays(today, i);
-      const wd = weekdayOf(date);
-      if (wd < 1 || wd > 5) continue;
-      const s = scheduleForDate(pub, date);
-      if (!s) continue;
-      const day = classLessons(s, homeClass.id)
+  // Неделя КАЖДОГО класса школы и замены у классов по датам: классный руководитель видит свой класс,
+  // даже если завуч не отметил его в «Бланках», — достаточно выбрать класс в «Моём классе».
+  const used = new Set(weekly.entries.flatMap((e) => e.classes));
+  const schoolClasses: Record<string, ClassLesson[]> = {};
+  for (const c of weekly.classes)
+    if (used.has(c.id)) schoolClasses[c.name] = classLessons(weekly, c.id);
+  const schoolClassDays: Record<string, Record<string, ClassLesson[]>> = {};
+  for (let i = 0; i < AHEAD_DAYS; i++) {
+    const date = addDays(today, i);
+    const wd = weekdayOf(date);
+    if (wd < 1 || wd > 5) continue;
+    const s = scheduleForDate(pub, date);
+    if (!s || s === weekly) continue;
+    for (const c of s.classes) {
+      const base = schoolClasses[c.name];
+      if (!base) continue;
+      const day = classLessons(s, c.id)
         .filter((l) => l.weekday === wd)
         .map((l) => ({ ...l, id: `school-class-${date}-${l.lessonNumber}` }));
       if (
         !sameClassLessons(
           day,
-          classWeekLessons.filter((l) => l.weekday === wd),
+          base.filter((l) => l.weekday === wd),
         )
       )
-        schoolClassDays[date] = day;
+        (schoolClassDays[date] ??= {})[c.name] = day;
     }
+  }
+  const classWeekLessons = homeClass ? (schoolClasses[homeClass.name] ?? []) : [];
   const school: SchoolState = {
     server: link.server,
     school: link.school,
@@ -225,10 +233,15 @@ export function applySchool(
     lessons,
     bells: bells.length ? bells : data.bells,
     schoolDays,
+    schoolClasses,
     schoolClassDays,
+    // Назначен завучем — класс из школы; иначе «Мой класс» как выбрал учитель
+    // (если раньше класс назначал завуч, а теперь нет — возвращаем свой).
     homeroom: homeClass
       ? { enabled: true, className: homeClass.name, lessons: classWeekLessons }
-      : personal.homeroom,
+      : data.school?.homeroomClass
+        ? personal.homeroom
+        : data.homeroom,
     school,
   };
   // Звонки aSc иногда не подходят под правила приложения (пересекаются) — тогда оставляем свои.
@@ -240,9 +253,16 @@ export function applySchool(
 
 /** Отключиться от школы: вернуть личное расписание, забыть ключ школы. */
 export function disconnectSchool(data: AppData): AppData {
-  const { school, schoolDays: _days, schoolClassDays: _classDays, ...rest } = data;
+  const {
+    school,
+    schoolDays: _days,
+    schoolClassDays: _classDays,
+    schoolClasses: _classes,
+    ...rest
+  } = data;
   void _days;
   void _classDays;
+  void _classes;
   if (!school) return data;
   return {
     ...rest,
