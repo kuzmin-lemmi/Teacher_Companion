@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ClassShare } from './ClassShare';
+import { SchoolClassView } from './SchoolClassView';
 import { createPortal } from 'react-dom';
 import { useBackButton } from './back';
 import {
@@ -18,6 +20,7 @@ import {
   type Homeroom,
   type Lesson,
   type LessonTime,
+  schoolClassWeek,
 } from './domain';
 import type { useEditor } from './useEditor';
 /** Телефон: редактор расписания — списки со строками и нижняя панель для правки одной записи. */
@@ -726,6 +729,8 @@ export function HomeroomPage({ editor }: { editor: Editor }) {
     (d) => d !== day && homeroom.lessons.some((l) => l.weekday === d),
   );
   const className = homeroom.className.trim();
+  // Подключены к школе и класс в ней есть — уроки класса из школы, вводить их не нужно.
+  const fromSchool = !!schoolClassWeek(data, className);
   return (
     <>
       <div className="m-card m-homeroom">
@@ -742,13 +747,19 @@ export function HomeroomPage({ editor }: { editor: Editor }) {
             value={homeroom.className}
             maxLength={40}
             autoFocus={!className}
-            suggestions={popular(data.lessons.map((l) => l.className))}
+            suggestions={
+              data.schoolClasses
+                ? Object.keys(data.schoolClasses)
+                : popular(data.lessons.map((l) => l.className))
+            }
             onChange={(value) => save({ className: value })}
           />
         )}
       </div>
       <EditorStatus editor={editor} />
-      {homeroom.enabled && className && (
+      {homeroom.enabled && className && <ClassShare data={data} mobile />}
+      {homeroom.enabled && className && fromSchool && <SchoolClassView data={data} mobile />}
+      {homeroom.enabled && className && !fromSchool && (
         <>
           <div className="m-days" role="tablist" aria-label="День недели">
             {shortDays.map((name, i) => {

@@ -1,4 +1,5 @@
 import { hasPlus } from './plus';
+import type { SchoolState } from './schoolMode';
 export const weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'];
 export type LessonTime = { lessonNumber: number; start: string; end: string };
 export type Lesson = {
@@ -177,6 +178,14 @@ export type AppData = {
   settings: Settings;
   /** Появилось в 0.16: копии и программы постарше его не знают. */
   homeroom?: Homeroom;
+  /** Школьный режим: расписание от завуча. Нет — расписание учителя своё. */
+  school?: SchoolState;
+  /** Школьный режим: уроки учителя на даты, где они не как в обычной неделе (замены). */
+  schoolDays?: Record<string, Lesson[]>;
+  /** Школьный режим: обычная неделя каждого класса школы (название класса → уроки). */
+  schoolClasses?: Record<string, ClassLesson[]>;
+  /** Школьный режим: замены у классов — дата → класс → уроки этого дня. */
+  schoolClassDays?: Record<string, Record<string, ClassLesson[]>>;
   /** Устарело: мастера первого запуска больше нет. Поле остаётся, чтобы читались старые копии. */
   onboardingComplete?: boolean;
 };
@@ -378,9 +387,34 @@ export type ClassWeekLesson = ClassLesson & { mine: boolean };
  * Неделя своего класса: введённые уроки класса и уроки самого учителя в этом классе —
  * их второй раз вводить не нужно, и на занятом ими месте они главнее.
  */
+/** Школьный режим: неделя класса из школы, если он там есть («7 б» и «7Б» — один класс). */
+export function schoolClassWeek(data: AppData, className: string): ClassLesson[] | undefined {
+  if (!data.school || !data.schoolClasses) return undefined;
+  const key = Object.keys(data.schoolClasses).find((k) => sameClass(k, className));
+  return key ? data.schoolClasses[key] : undefined;
+}
+/** Школьный режим: уроки класса на дату с заменами — или `undefined`, если в этот день как обычно. */
+export function schoolClassDay(
+  data: AppData,
+  date: string,
+  className: string,
+): ClassLesson[] | undefined {
+  const day = data.school ? data.schoolClassDays?.[date] : undefined;
+  const key = day && Object.keys(day).find((k) => sameClass(k, className));
+  return key ? day![key] : undefined;
+}
 export function classWeek(data: AppData): ClassWeekLesson[] {
   const h = data.homeroom;
   if (!h?.enabled || !h.className.trim()) return [];
+  // Подключены к школе и класс в ней есть — вся неделя класса из школы, свои уроки отмечены.
+  const fromSchool = schoolClassWeek(data, h.className);
+  if (fromSchool) {
+    const slot = (l: { weekday: number; lessonNumber: number }) => `${l.weekday}-${l.lessonNumber}`;
+    const mineAt = new Set(
+      data.lessons.filter((l) => sameClass(l.className, h.className)).map(slot),
+    );
+    return fromSchool.map((l) => ({ ...l, mine: mineAt.has(slot(l)) }));
+  }
   const mine: ClassWeekLesson[] = data.lessons
     .filter((l) => sameClass(l.className, h.className))
     .map((l) => ({ ...l, teacher: '', mine: true }));
@@ -401,7 +435,8 @@ export function classWeek(data: AppData): ClassWeekLesson[] {
 export type Calendar = Pick<
   AppData,
   'lessons' | 'bells' | 'holidays' | 'shortDays' | 'shortBells' | 'notes'
->;
+> &
+  Partial<Pick<AppData, 'schoolDays'>>;
 export function dayOff(data: Pick<AppData, 'holidays'>, date: Date): DayOff | undefined {
   const key = isoDate(date);
   return data.holidays.find((h) => h.start <= key && key <= h.end);
@@ -426,7 +461,8 @@ export function dayOf(data: Calendar, date: Date): Day {
     date,
     off,
     short,
-    lessons: off ? [] : lessonsForDay(data.lessons, date.getDay()),
+    // Замена от школы на эту дату главнее обычной недели.
+    lessons: off ? [] : (data.schoolDays?.[key] ?? lessonsForDay(data.lessons, date.getDay())),
     bell: (n) =>
       shortBells.find((b) => b.lessonNumber === n) ?? data.bells.find((b) => b.lessonNumber === n),
     time: (lesson) => timeOf(lesson, data.bells, shortBells),
@@ -436,16 +472,22 @@ export function dayOf(data: Calendar, date: Date): Day {
 /** Каникулы бывают долгими — летние почти три месяца, поэтому ищем на год вперёд. */
 const SEARCH_DAYS = 366;
 export function getNextSchoolDay(
-  data: Pick<AppData, 'lessons' | 'holidays'>,
+  data: Pick<AppData, 'lessons' | 'holidays'> & Partial<Pick<AppData, 'schoolDays'>>,
   today = new Date(),
 ): Date | null {
-  if (!data.lessons.some((l) => l.weekday >= 1 && l.weekday <= 5)) return null;
+  const days = data.schoolDays ?? {};
+  if (
+    !data.lessons.some((l) => l.weekday >= 1 && l.weekday <= 5) &&
+    !Object.values(days).some((d) => d.length)
+  )
+    return null;
   for (let offset = 1; offset <= SEARCH_DAYS; offset++) {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
+    const dated = days[isoDate(date)];
     if (
       date.getDay() >= 1 &&
       date.getDay() <= 5 &&
-      data.lessons.some((l) => l.weekday === date.getDay()) &&
+      (dated ? dated.length > 0 : data.lessons.some((l) => l.weekday === date.getDay())) &&
       !dayOff(data, date)
     )
       return date;

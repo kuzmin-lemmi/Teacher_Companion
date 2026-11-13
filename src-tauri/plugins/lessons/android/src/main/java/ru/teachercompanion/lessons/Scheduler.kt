@@ -38,6 +38,7 @@ object Scheduler {
 
     private const val CHANNEL_SCHEDULE = "schedule"
     private const val CHANNEL_PLAN = "plan"
+    private const val CHANNEL_SCHOOL = "school"
     private val REMINDERS = Alerting(
         "reminders_chime", "reminders_vibrate", R.string.tc_channel_reminders,
         R.string.tc_channel_reminders_vibrate, R.string.tc_channel_reminders_description,
@@ -65,6 +66,7 @@ object Scheduler {
     private const val ID_PLAN = 3
     private const val ID_PREVIEW = 4
     private const val ID_EVENING = 5
+    private const val ID_SCHOOL = 6
     private const val ID_REMINDER = 100
     private const val ID_ENDING = 200
 
@@ -116,13 +118,19 @@ object Scheduler {
             NotificationManager.IMPORTANCE_DEFAULT,
         )
         plan.description = context.getString(R.string.tc_channel_plan_description)
+        val school = NotificationChannel(
+            CHANNEL_SCHOOL,
+            context.getString(R.string.tc_channel_school),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        school.description = context.getString(R.string.tc_channel_school_description)
         val alerting = listOf(REMINDERS, ENDING, MORNING, EVENING).flatMap {
             listOf(
                 channel(context, it.chime, it.name, it, true),
                 channel(context, it.vibrate, it.quietName, it, false),
             )
         }
-        manager.createNotificationChannels(listOf(schedule) + alerting + plan)
+        manager.createNotificationChannels(listOf(schedule) + alerting + plan + school)
         for (id in OLD_CHANNELS) manager.deleteNotificationChannel(id)
     }
 
@@ -386,6 +394,18 @@ object Scheduler {
      * «Проверить звук» в настройках: настоящее уведомление выбранного вида — на ближайших
      * уроках из плана, чтобы было видно и как оно выглядит.
      */
+    /** Изменения от завуча: первая строка — заголовок свёрнутого уведомления, всё — в развёрнутом. */
+    fun school(context: Context, title: String, text: String) {
+        val app = context.applicationContext
+        channels(app)
+        val builder = base(app, CHANNEL_SCHOOL)
+            .setContentTitle(title)
+            .setContentText(text.lineSequence().firstOrNull() ?: "")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+        notify(app, ID_SCHOOL, builder)
+    }
+
     fun preview(context: Context, kind: String, sound: Sound) {
         val app = context.applicationContext
         channels(app)

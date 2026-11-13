@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { SchoolPanel, type SchoolChange } from './SchoolPanel';
+import { schoolStamp } from './schoolMode';
 import { useBackButton } from './back';
 import { Backups } from './Backups';
 import { lessonCount } from './calendar';
@@ -40,6 +42,7 @@ export type MobilePage =
   | 'bells'
   | 'calendar'
   | 'homeroom'
+  | 'school'
   | 'notify'
   | `notify:${NotifyKind}`
   | 'widgets'
@@ -53,6 +56,7 @@ const titles: Record<Exclude<MobilePage, `notify:${NotifyKind}`>, string> = {
   bells: 'Звонки',
   calendar: 'Каникулы',
   homeroom: 'Мой класс',
+  school: 'Школа',
   notify: 'Уведомления',
   widgets: 'Виджеты',
   preferences: 'Внешний вид',
@@ -342,7 +346,8 @@ function AboutPage() {
       <p>Версия {appVersion} для Android</p>
       <p className="m-hint">
         Расписание хранится только на этом телефоне и работает без интернета. Приложение не
-        отправляет данные на сервер и не требует аккаунта.
+        отправляет данные на сервер и не требует аккаунта. Если вы подключились к школе, оно
+        скачивает расписание школы — зашифрованным, сервер его не видит.
       </p>
       {source === 'rustore' && (
         <p className="m-hint">Новые версии приходят через RuStore, как у других приложений.</p>
@@ -362,6 +367,7 @@ export function MobileSettings({
   editorStorage,
   onDirty,
   onRestore,
+  onSchool,
   onSaveSettings,
   onExit,
   open,
@@ -373,6 +379,7 @@ export function MobileSettings({
   editorStorage: Storage;
   onDirty: (dirty: boolean) => void;
   onRestore: (data: AppData) => Promise<void>;
+  onSchool: SchoolChange;
   onSaveSettings: (patch: Partial<Settings>) => Promise<void>;
   onExit: () => void;
 }) {
@@ -389,6 +396,15 @@ export function MobileSettings({
       <>
         <h2 className="m-group">Расписание</h2>
         <div className="m-list">
+          <MenuRow
+            title="Школа"
+            detail={
+              data.school
+                ? `${data.school.schoolName || 'Школа'} · от ${schoolStamp(data.school.publishedAt)}`
+                : 'Расписание от завуча по QR-коду'
+            }
+            onClick={() => setPage('school')}
+          />
           <MenuRow title="Уроки" detail={info.lessons} onClick={() => setPage('lessons')} />
           <MenuRow title="Звонки" detail={info.bells} onClick={() => setPage('bells')} />
           <MenuRow
@@ -437,14 +453,22 @@ export function MobileSettings({
     );
   else if (page === 'lessons' || page === 'bells' || page === 'calendar' || page === 'homeroom')
     content = (
-      <EditorPage
-        key={page}
-        page={page}
-        storage={editorStorage}
-        onDirty={onDirty}
-        open={page === initial ? open : undefined}
-      />
+      <>
+        {data.school && (page === 'lessons' || page === 'bells') && (
+          <p className="school-banner">
+            Уроки и звонки приходят от завуча. Правки здесь заменятся при следующем обновлении.
+          </p>
+        )}
+        <EditorPage
+          key={page}
+          page={page}
+          storage={editorStorage}
+          onDirty={onDirty}
+          open={page === initial ? open : undefined}
+        />
+      </>
     );
+  else if (page === 'school') content = <SchoolPanel data={data} onChange={onSchool} mobile />;
   else if (page === 'notify')
     content = <NotifyList data={data} onOpen={(kind) => setPage(`notify:${kind}`)} />;
   else if (page.startsWith('notify:'))

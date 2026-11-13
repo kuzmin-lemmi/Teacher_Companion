@@ -20,4 +20,6 @@
     <string name="tc_channel_morning_description">Какой сегодня день, сколько уроков и когда первый</string>
     <string name="tc_channel_plan">Обновление расписания</string>
     <string name="tc_channel_plan_description">Расписание на телефоне заканчивается — пора открыть приложение</string>
+    <string name="tc_channel_school">Изменения в расписании</string>
+    <string name="tc_channel_school_description">Завуч изменил ваши уроки или расписание вашего класса</string>
 </resources>

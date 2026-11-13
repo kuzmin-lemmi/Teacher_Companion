@@ -42,6 +42,12 @@ class PreviewArgs {
 }
 
 @InvokeArg
+class SchoolArgs {
+    var title: String? = null
+    var text: String? = null
+}
+
+@InvokeArg
 class ShareArgs {
     var text: String? = null
     var title: String? = null
@@ -155,6 +161,14 @@ class LessonsPlugin(private val activity: Activity) : Plugin(activity) {
         val result = JSObject()
         result.put("installer", source ?: "")
         invoke.resolve(result)
+    }
+
+    /** Школьный режим: завуч изменил расписание — уведомление сразу, со своим каналом. */
+    @Command
+    fun school(invoke: Invoke) {
+        val args = invoke.parseArgs(SchoolArgs::class.java)
+        Scheduler.school(activity, args.title ?: "Изменения в расписании", args.text ?: "")
+        invoke.resolve()
     }
 
     /** Системное «Поделиться» с текстом — например, ссылкой на версию для компьютера. */

@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { checkSchool } from './schoolMode';
+import { applyWithChanges, notificationText, quietHours } from './schoolChanges';
+import { homeroomName } from './classText';
+import { notifySchoolPhone } from './phone';
+import { showSystemNotification } from './chime';
+/** Как часто проверять, не прислал ли завуч новое расписание. */
+const SCHOOL_CHECK_MS = 30 * 60 * 1000;
 import { isTauri } from '@tauri-apps/api/core';
 import { Backups } from './Backups';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -253,6 +260,54 @@ export function Shell({
     }),
     [persist, baseStorage],
   );
+  // Школьный режим: при запуске, раз в полчаса и при возвращении в приложение — нет ли нового
+  // расписания от завуча. Без сети молча остаётся последнее полученное.
+  const schoolId = data?.school?.school;
+  useEffect(() => {
+    if (!schoolId) return;
+    let stopped = false;
+    const run = async () => {
+      const current = dataRef.current;
+      if (!current?.school) return;
+      const r = await checkSchool(current);
+      if (stopped) return;
+      let fresh = false;
+      if (r.kind === 'update')
+        await persist((latest) => {
+          if (latest.school?.school !== schoolId) return latest;
+          const out = applyWithChanges(latest, r.fetched, r.link, r.teacherId);
+          fresh = !!out.fresh;
+          return out.data;
+        }).catch(() => {});
+      // Уведомление — сразу; пришедшее в тихие часы (21:00–6:30) — при первой проверке утром.
+      const changes = dataRef.current?.school?.changes;
+      if (!changes || quietHours(new Date()) || !(fresh || changes.notifyPending)) return;
+      const { title, text } = notificationText(changes, homeroomName(dataRef.current!));
+      if (!(await notifySchoolPhone(title, text).catch(() => false)))
+        showSystemNotification(title, text);
+      if (changes.notifyPending)
+        await persist((latest) =>
+          latest.school?.changes
+            ? {
+                ...latest,
+                school: {
+                  ...latest.school,
+                  changes: { ...latest.school.changes, notifyPending: false },
+                },
+              }
+            : latest,
+        ).catch(() => {});
+    };
+    void run();
+    const timer = setInterval(() => void run(), SCHOOL_CHECK_MS);
+    const onVisible = () => document.visibilityState === 'visible' && void run();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [schoolId, persist]);
   // Телефон: план уроков для шторки, напоминаний и виджетов — после каждого изменения
   // и при возвращении в приложение (мог смениться день).
   useEffect(() => {
@@ -437,6 +492,17 @@ export function Shell({
       }}
     />
   ) : null;
+  /**
+   * Школьный режим: изменение данных от школы. Перед первым подключением — копия текущего
+   * состояния (как перед восстановлением), черновик редактора сбрасывается: в нём прежние уроки.
+   */
+  const schoolChange = async (change: (current: AppData) => AppData, firstConnect = false) => {
+    const storage = await baseStorage();
+    const current = dataRef.current;
+    if (firstConnect && current) await storage.snapshot?.(current, 'before-restore');
+    await storage.saveDraft?.(null);
+    await persist(change);
+  };
   const restore = async (value: AppData) => {
     const storage = await baseStorage();
     // Перед заменой данных — копия текущего состояния, чтобы восстановление можно было отменить.
@@ -484,6 +550,15 @@ export function Shell({
           onMode={chooseDay}
           onSettings={() => navigate(isMobile() ? 'menu' : 'schedule')}
           onBackups={() => navigate('backups')}
+          onSchool={data.school ? undefined : () => navigate('school')}
+          onClassShare={() => navigate('homeroom')}
+          onDismissSchoolChanges={() =>
+            void persist((current) =>
+              current.school?.changes
+                ? { ...current, school: { ...current.school, changes: undefined } }
+                : current,
+            ).catch((e) => setNativeError(e.message))
+          }
           onHolidays={(id) =>
             guard(() => {
               setHidden(false);
@@ -531,6 +606,7 @@ export function Shell({
         editorStorage={editorStorage}
         onDirty={setDraftPending}
         onRestore={restore}
+        onSchool={schoolChange}
         onSaveSettings={(patch) =>
           persist((current) => ({ ...current, settings: { ...current.settings, ...patch } }))
         }
@@ -547,6 +623,7 @@ export function Shell({
         onDirty={setDraftPending}
         onNavigate={navigate}
         onRestore={restore}
+        onSchool={schoolChange}
         updatePanel={updatePanel}
         updateVersion={showUpdateBadge ? update!.version : null}
       />

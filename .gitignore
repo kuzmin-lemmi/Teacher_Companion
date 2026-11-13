@@ -9,3 +9,5 @@ coverage/
 editor-check.png
 src-tauri/webview2-109/
 src-tauri/webview2-download/
+dist-blanki
+.dev-server-data

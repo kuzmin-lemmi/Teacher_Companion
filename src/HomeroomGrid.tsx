@@ -5,7 +5,10 @@ import {
   type AppData,
   type ClassLesson,
   type Homeroom,
+  schoolClassWeek,
 } from './domain';
+import { ClassShare } from './ClassShare';
+import { SchoolClassView } from './SchoolClassView';
 
 const shortDay = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 const noHomeroom: Homeroom = { enabled: false, className: '', lessons: [] };
@@ -23,6 +26,7 @@ export function HomeroomGrid({ data, change }: { data: AppData; change: (next: A
   const save = (patch: Partial<Homeroom>) =>
     change({ ...data, homeroom: { ...homeroom, ...patch } });
   const className = homeroom.className.trim();
+  const fromSchool = !!schoolClassWeek(data, className);
   const mine = data.lessons.filter((l) => sameClass(l.className, homeroom.className));
   const last = Math.min(
     20,
@@ -82,14 +86,22 @@ export function HomeroomGrid({ data, change }: { data: AppData; change: (next: A
               onChange={(e) => save({ className: e.target.value })}
             />
             <datalist id="hr-classes">
-              {unique(data.lessons.map((l) => l.className)).map((v) => (
+              {unique(
+                data.schoolClasses
+                  ? Object.keys(data.schoolClasses)
+                  : data.lessons.map((l) => l.className),
+              ).map((v) => (
                 <option key={v} value={v} />
               ))}
             </datalist>
           </label>
         )}
       </section>
-      {homeroom.enabled && className && (
+      {homeroom.enabled && className && <ClassShare data={data} mobile={false} />}
+      {homeroom.enabled && className && fromSchool && (
+        <SchoolClassView data={data} mobile={false} />
+      )}
+      {homeroom.enabled && className && !fromSchool && (
         <section className="ed-card">
           <div className="ed-card-head">
             <div>

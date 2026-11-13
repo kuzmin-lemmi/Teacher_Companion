@@ -86,12 +86,18 @@ export function ShowTransferCode({ data }: { data: AppData }) {
     </section>
   );
 }
-function ScanOverlay({ onCancel }: { onCancel: () => void }) {
+export function ScanOverlay({
+  onCancel,
+  text = 'Наведите камеру на QR-код на экране компьютера',
+}: {
+  onCancel: () => void;
+  text?: string;
+}) {
   useBackButton(true, onCancel);
   return createPortal(
     <div className="scan-overlay" role="dialog" aria-label="Сканирование QR-кода">
       <div className="scan-frame" />
-      <p>Наведите камеру на QR-код на экране компьютера</p>
+      <p>{text}</p>
       <button onClick={onCancel}>Отмена</button>
     </div>,
     document.body,

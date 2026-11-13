@@ -38,6 +38,7 @@ function setup(
       editorStorage={storage}
       onDirty={() => {}}
       onRestore={async () => {}}
+      onSchool={async () => {}}
       onSaveSettings={async () => {}}
       onExit={onExit}
     />,
